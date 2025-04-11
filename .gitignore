@@ -3,6 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# .DS_Store files
+.DS_Store
+
+# Ignore large dataset
+src/data_encoding/dataset/MNIST_CSV/mnist_train.csv
+
 # C extensions
 *.so
 
