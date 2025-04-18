@@ -2,6 +2,9 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 
+from qiskit.quantum_info import DensityMatrix
+from qiskit.visualization import array_to_latex
+
 
 def get_dataset():
     with open("src/data_encoding/dataset/MNIST_CSV/mnist_test.csv", "r") as file:
@@ -56,6 +59,20 @@ def gram_matrix_encoding(data_vector):
     rho = gram_matrix / np.trace(gram_matrix)
     return rho
 
+def gram_matrix_decoding(rho):
+    # Eigen-decomposition
+    eigenvalues, eigenvectors = np.linalg.eigh(rho)
+    # Find the eigenvector with the largest eigenvalue
+    idx = np.argmax(eigenvalues)
+    decoded_vector = eigenvectors[:, idx]
+    # Ensure the vector is real if the original was real
+    if np.all(np.isreal(decoded_vector)):
+        decoded_vector = np.real(decoded_vector)
+    # Return as column vector
+    return decoded_vector.reshape(-1, 1)
+ 
+
+
 if __name__ == "__main__":
     dataset = get_dataset()
     print("Sample vector (label 1):")
@@ -64,9 +81,29 @@ if __name__ == "__main__":
     data_vector = dataset[1][1]
     rho = gram_matrix_encoding(data_vector)
 
+    # Show data vector as image
+    plt.imshow(data_vector.reshape(28, 28), cmap="gray")
+    plt.title("Data Vector Image")
+    plt.axis("off")
+    plt.show()
+
+
     print("\nDensity matrix:")
     print(rho)
 
     print("\nIs valid density matrix?")
     print(is_density_matrix(rho))
 
+    print("\nVisualizing density matrix:")
+    plt.imshow(rho, cmap="gray")
+    plt.colorbar()
+    plt.title("Density Matrix Visualization")
+    plt.show()
+
+    print("\nDecoded vector:")
+    decoded_vector = gram_matrix_decoding(rho)
+    plt.imshow(decoded_vector.reshape(28, 28), cmap="gray")
+    plt.title("Decoded Vector Image")
+    plt.axis("off")
+    plt.show()
+    
