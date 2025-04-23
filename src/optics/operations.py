@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 class OpticalSystem:
     def __init__(self, name):
         self.name = name
@@ -23,21 +24,24 @@ class OpticalSystem:
     def __str__(self):
         return f"Optical System: {self.name}, Components: {', '.join(str(c) for c in self.components)}"
 
+
 from scipy.fft import fft2, ifft2, fftshift
+
 
 def fourier_optical_system(image):
     # Simulate 4f system: FT -> Process -> IFT
-    ft_image = fftshift(fft2(image))        # Forward FT (via lens 1)
-    
+    ft_image = fftshift(fft2(image))  # Forward FT (via lens 1)
+
     # Optionally apply filter or axis swap (simulate spatial mask)
     processed = ft_image.T  # Transpose in frequency domain (for example)
 
     output = np.abs(ifft2(fftshift(processed)))  # Back to spatial (via lens 2)
     return output
 
+
 processed_image = fourier_optical_system(A)
 
-plt.imshow(processed_image, cmap='inferno')
+plt.imshow(processed_image, cmap="inferno")
 plt.title("Output Field from Simulated 4f System")
 plt.colorbar()
 plt.show()
@@ -46,9 +50,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Original matrix A (can be non-square)
-A = np.array([[1, 2],
-              [3, 4],
-              [5, 6]])
+A = np.array([[1, 2], [3, 4], [5, 6]])
 
 # Step 1: Compute SVD
 U, S, VT = np.linalg.svd(A, full_matrices=False)
@@ -69,4 +71,3 @@ print("A† (Pseudoinverse of A):\n", A_pseudo)
 # Optional: Check A * A† * A ≈ A
 reconstructed_A = A @ A_pseudo @ A
 print("Reconstructed A (A * A† * A):\n", reconstructed_A)
-

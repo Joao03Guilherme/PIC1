@@ -1,0 +1,132 @@
+% !TEX root = main.tex
+
+\input{preamble.sty}
+
+% Begin document
+\begin{document}
+
+% Insert Cover Page
+\coverpage
+
+% Example Section
+\section{Introduction}
+This is an example introduction.
+
+\section{Encoding of the data}
+\subsection{Gram matrix encoding}
+
+Considering a column vector with data, $u$, the gram encoding is given by:
+$$
+\rho = \frac{uu^T}{\sqrt{\| uu^T \|}} = \frac{uu^T}{Tr(uu^T)}
+$$
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{figures/nmist_1_data.png}
+    \caption{Image from the nmist dataset of the number 1}
+    \label{fig:dataset_one}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{figures/density_matrix_nmist_one.png}
+    \caption{Density matrix of the image from the dataset}
+    \label{fig:enter-label}
+\end{figure}
+
+How to decode the image:
+
+\section{Radial Basis Function Model}
+Each point ($x_n$, $y_n$) $\in D$ influences the hypotesis, $h(x)$, based on $\| x - x_n \|$ (a near point affects more than a far away point)
+
+Standard form:
+$$
+h(x) = \sum_{n=1} ^N w_n\exp\left({-\gamma\| x - x_n \|^2}\right)
+$$
+
+Radial - depends on $\| x - x_n \|$
+
+Basis Function - in this case the basis function is $\exp{}$, but we could use other symmetric function
+
+\textbf{The learning algorithm:}
+Based on $D = (x_1,y_1), (x_2, y_2),...,(x_n,y_n)$
+
+We want to set the in sample error to zero: $E_{in} = 0 \iff h(x_n) = y_n$, so we get:
+$$
+\sum_{m = 1}^N w_m\exp{\left( -\gamma\|x_n - x_m \|^2\right)} = y_n
+$$
+Translating into matrix form:
+
+\[
+\Phi \mathbf{w} = \mathbf{y}, \quad \text{where} \quad \Phi_{n,m} = \exp\left( -\gamma\|x_n - x_m\|^2 \right)
+\]
+
+To exist a solution, $\Phi$ must be invertible, and the solution is given by $w = \Phi^{-1} y$ - exact interpolation 
+
+The $\gamma$ factor controlls the size of the gaussian functions, and will be chosen optmimally.
+
+\textbf{Classification using RBF:}
+$$
+h(\textbf{x}) = \text{sign}\left(\sum_{n=1}^N w_n\exp\left(-\gamma\|x - x_n \|^2\right)\right) = \text{sign}(s)
+$$
+
+We will use something similar to linear regression classificaiton
+
+s = $\sum_{n=1}^N w_n\exp\left(-\gamma\|x - x_n \|^2\right)$
+
+\textbf{The learning algorithm:}
+Minimize the error function: $(s - y)^2$ on the training set $D$, with $y \in \{-1, 1\}$ , this is a form of least squares regression.
+
+\textbf{RBF with K centers}
+$N$ parameters: $w_1, w_2, ..., w_N$ based on $N$ data points, can be reduced to using $K$ centers, $\mu_1, \mu_2, ..., \mu_K$ with $K \ll N$, so the new hypothesis is:
+$$
+h(x) = \sum_{k=1}^K w_k\exp\left(-\gamma\|x - \mu_k \|^2\right)
+$$
+
+There are then two questions:
+1. How to choose the centers?
+2. How to choose the weights?
+
+\subsection{Choosing the centers}
+The idea is to, instead of having a center for each data point, we will cluster the data points around a center, and we choose the centers by minimizing the distance between the data point, $x_n$, and the closest center, $\mu_k$. For this clustering, we will use K-Means clustering:
+
+Split the data into $K$ and minimize our objective function $\sum_{k=1}^K\sum_{x_n \in S_k}\|x_n - \mu_k\|^2$.
+
+But there is a problem! This is an NP-Hard problem.
+
+To solve this problem we will use the Lloyd's algorithm to iteratively minimize the objective function. The algorithm is as follows:
+$$
+\mu_k = \frac{1}{|S_k|}\sum_{x_n \in S_k} x_n
+$$
+
+$$
+S_k = \{ x_n \in D | \|x_n - \mu_k\| \leq \|x_n - \mu_j\|, j \neq k \}
+$$
+
+Both of this steps reduce the objective function, and we can repeat this until convergence, and we will reach a local minimum. 
+To run this algorithm, we need to run the algorithm for a number of times, and choose the best solution.
+
+\begin{figure}
+    \centering
+    \input{plots/rbf_gaussian}
+    \caption{Caption}
+    \label{fig:asd}
+\end{figure} 
+
+% Example Gnuplot
+\begin{figure}
+    \centering
+    \input{plots/test}
+    \caption{Example Figure}
+    \label{fig:gnuplot_example}
+\end{figure}
+
+\lipsum[1-20]
+
+\cite{Cruzeiro2024}
+
+
+\bibliography{references}{}
+\bibliographystyle{plain}
+
+\end{document}

@@ -1,0 +1,52 @@
+\documentclass[twocolumn]{article}
+
+% Required packages
+\usepackage{graphicx}  % For images
+\usepackage{amsmath, amssymb} % Math symbols
+\usepackage[external]{gnuplottex}
+\usepackage{titlesec} % Formatting sections
+\usepackage{fancyhdr} % Header and Footer customization
+\usepackage{abstract} % Abstract formatting
+\usepackage{titling} % Title customization
+\usepackage{authblk} % Author affiliations
+\usepackage{babel} % For figure legends
+\usepackage{siunitx} % For SI units
+\usepackage{hyperref} % For hyperlinks in the PDF
+\usepackage{lipsum} 
+
+\usepackage{blindtext} % Package to generate dummy text throughout this template 
+\usepackage[sc]{mathpazo} % Use the Palatino font
+\usepackage[T1]{fontenc} % Use 8-bit encoding that has 256 glyphs
+\linespread{1.05} % Line spacing - Palatino needs more space between lines
+\usepackage{microtype} % Slightly tweak font spacing for aesthetics
+\usepackage{float}
+\usepackage[a4paper, margin=1in,hmarginratio=1:1,top=15mm,left=12mm,bottom=25mm,columnsep=15pt]{geometry} % Document margins
+\usepackage{enumitem} % Customized lists
+\setlist[itemize]{noitemsep} % Make itemize lists more compact
+\usepackage{abstract} % Allows abstract customization
+\renewcommand{\abstractnamefont}{\normalfont\bfseries} % Set the "Abstract" text to bold
+\renewcommand{\abstracttextfont}{\normalfont\small\itshape} % Set the abstract itself to small italic text
+\usepackage{titlesec} % Allows customization of titles
+\renewcommand\thesection{\Roman{section}} % Roman numerals for the sections
+\renewcommand\thesubsection{\roman{subsection}} % roman numerals for subsections
+\titleformat{\section}[block]{\large\scshape\centering}{\thesection.}{1em}{} % Change the look of the section titles
+\titleformat{\subsection}[block]{\large}{\thesubsection.}{1em}{} % Change the look of the section titles
+
+
+% Define Cover Page
+\newcommand{\coverpage}{
+    \begin{titlepage}
+        \centering
+        \vspace*{2cm}
+        {\Huge \textbf{Quantum-inspired machine learning on a quantum computer}}\\[1cm]
+        {\Large João Guilherme}\\[0.5cm]
+        {\large Instituto Superior Técnico, Department of Physics}\\[2cm]
+        {\large \today}\\[3cm]
+        \vfill
+        \begin{abstract}
+            This document presents...
+        \end{abstract}
+        \vfill
+    \end{titlepage}
+}
+
