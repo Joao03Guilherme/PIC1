@@ -178,7 +178,7 @@ if __name__ == "__main__":
     print("train shape:", X_train.shape, " test shape:", X_test.shape)
 
     net = RBFNet(
-        n_centers=None,        # None → all points
+        n_centers=5000,        # None → all points
         k_sigma=1.0,
         use_perceptron=False,  # ridge is default & recommended
         lambda_ridge=1e-3,
