@@ -7,7 +7,7 @@ __pycache__/
 .DS_Store
 
 # Ignore large dataset
-src/data_encoding/dataset/MNIST_CSV/mnist_train.csv
+src/RBF/mnist_csv/mnist_train.csv
 
 # C extensions
 *.so
