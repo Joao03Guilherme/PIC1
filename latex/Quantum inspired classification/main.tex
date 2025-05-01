@@ -2,129 +2,112 @@
 
 \input{preamble.sty}
 
-% Begin document
 \begin{document}
 
-% Insert Cover Page
 \coverpage
 
-% Example Section
 \section{Introduction}
-This is an example introduction.
+Radial Basis Function (RBF) networks are a class of machine learning models well-suited for interpolation and classification tasks. Their foundation lies in constructing a hypothesis as a weighted sum of radial basis functions---functions whose output depends solely on the distance from a central point. This property allows RBF networks to capture local structures in the data efficiently.
 
-\section{Encoding of the data}
-\subsection{Gram matrix encoding}
+This report details the construction and training of an RBF network applied to image classification, particularly using the MNIST dataset. We describe the mathematical formulation of the model, data encoding strategies including quantum-inspired Gram matrix encodings, and practical training methods including both full and reduced center approaches.
 
-Considering a column vector with data, $u$, the gram encoding is given by:
-$$
-\rho = \frac{uu^T}{\sqrt{\| uu^T \|}} = \frac{uu^T}{Tr(uu^T)}
-$$
+\section{Data Encoding}
+\subsection{Gram Matrix Encoding}
 
-\begin{figure}
+We consider a column vector $u$ representing an image sample. To embed this into a higher-order representation, we construct the normalized outer product:
+\[
+\rho = \frac{uu^T}{\text{Tr}(uu^T)}
+\]
+This yields a density-like matrix $\rho$ with trace 1, encoding pairwise correlations between pixels. Such an encoding is inspired by quantum mechanical density operators and preserves structural information in the image.
+
+\begin{figure}[h!]
     \centering
-    \includegraphics[width=\linewidth]{figures/nmist_1_data.png}
-    \caption{Image from the nmist dataset of the number 1}
+    \includegraphics[width=0.6\linewidth]{figures/nmist_1_data.png}
+    \caption{Example MNIST image (digit 1)}
     \label{fig:dataset_one}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[h!]
     \centering
-    \includegraphics[width=\linewidth]{figures/density_matrix_nmist_one.png}
-    \caption{Density matrix of the image from the dataset}
-    \label{fig:enter-label}
+    \includegraphics[width=0.6\linewidth]{figures/density_matrix_nmist_one.png}
+    \caption{Gram matrix encoding $\rho$ of the digit 1 image}
+    \label{fig:density_matrix}
 \end{figure}
 
-How to decode the image:
+\section{Radial Basis Function Network}
 
-\section{Radial Basis Function Model}
-Each point ($x_n$, $y_n$) $\in D$ influences the hypotesis, $h(x)$, based on $\| x - x_n \|$ (a near point affects more than a far away point)
-
-Standard form:
-$$
-h(x) = \sum_{n=1} ^N w_n\exp\left({-\gamma\| x - x_n \|^2}\right)
-$$
-
-Radial - depends on $\| x - x_n \|$
-
-Basis Function - in this case the basis function is $\exp{}$, but we could use other symmetric function
-
-\textbf{The learning algorithm:}
-Based on $D = (x_1,y_1), (x_2, y_2),...,(x_n,y_n)$
-
-We want to set the in sample error to zero: $E_{in} = 0 \iff h(x_n) = y_n$, so we get:
-$$
-\sum_{m = 1}^N w_m\exp{\left( -\gamma\|x_n - x_m \|^2\right)} = y_n
-$$
-Translating into matrix form:
-
+RBF networks model the hypothesis function $h(x)$ using a radial function centered around key points (called \emph{centers}). Each center influences the prediction based on its proximity to the input $x$. The standard form is:
 \[
-\Phi \mathbf{w} = \mathbf{y}, \quad \text{where} \quad \Phi_{n,m} = \exp\left( -\gamma\|x_n - x_m\|^2 \right)
+h(x) = \sum_{n=1}^N w_n\exp\left(-\gamma\| x - x_n \|^2\right)
 \]
+where $\gamma$ determines the width of the radial functions, and $w_n$ are the learned weights.
 
-To exist a solution, $\Phi$ must be invertible, and the solution is given by $w = \Phi^{-1} y$ - exact interpolation 
+\subsection{Exact Interpolation}
+Given training data $D = \{(x_1, y_1), \dots, (x_N, y_N)\}$, we can formulate the interpolation condition:
+\[
+\sum_{m=1}^N w_m\exp\left(-\gamma\| x_n - x_m \|^2\right) = y_n, \quad \forall n
+\]
+In matrix notation:
+\[
+\Phi \mathbf{w} = \mathbf{y}, \quad \text{where } \Phi_{n,m} = \exp\left(-\gamma\|x_n - x_m\|^2\right)
+\]
+If $\Phi$ is invertible, we can directly solve:
+\[
+\mathbf{w} = \Phi^{-1} \mathbf{y}
+\]
+This yields an exact interpolating function.
 
-The $\gamma$ factor controlls the size of the gaussian functions, and will be chosen optmimally.
+\subsection{Classification}
+For classification, we apply a decision rule such as:
+\[
+h(x) = \operatorname{sign}\left(\sum_{n=1}^N w_n\exp(-\gamma\|x - x_n\|^2)\right)
+\]
+In multi-class settings, this can be extended to a softmax output over class scores.
 
-\textbf{Classification using RBF:}
-$$
-h(\textbf{x}) = \text{sign}\left(\sum_{n=1}^N w_n\exp\left(-\gamma\|x - x_n \|^2\right)\right) = \text{sign}(s)
-$$
+\subsection{Training with Least Squares}
+Instead of enforcing exact interpolation, we may use a least squares approach to minimize:
+\[
+E = \sum_{n=1}^N (h(x_n) - y_n)^2
+\]
+This leads to the ridge-regularized solution:
+\[
+\mathbf{w} = (\Phi^T\Phi + \lambda I)^{-1}\Phi^T \mathbf{y}
+\]
+where $\lambda$ is a regularization parameter.
 
-We will use something similar to linear regression classificaiton
+\section{Choosing RBF Centers}
+Using every data point as a center is computationally expensive. Instead, we reduce the number of centers to $K \ll N$ by clustering the dataset using \textbf{K-Means}:
 
-s = $\sum_{n=1}^N w_n\exp\left(-\gamma\|x - x_n \|^2\right)$
+We define:
+\[
+J = \sum_{k=1}^K \sum_{x_n \in S_k} \| x_n - \mu_k \|^2
+\]
+and use Lloyd's algorithm to iteratively minimize $J$:
+\begin{align*}
+\mu_k &= \frac{1}{|S_k|}\sum_{x_n \in S_k} x_n \\
+S_k &= \{ x_n : \|x_n - \mu_k\| \leq \|x_n - \mu_j\|,\ \forall j \neq k \}
+\end{align*}
 
-\textbf{The learning algorithm:}
-Minimize the error function: $(s - y)^2$ on the training set $D$, with $y \in \{-1, 1\}$ , this is a form of least squares regression.
+Repeat these steps until convergence. Since the process is sensitive to initialization, we typically run K-Means multiple times and choose the best clustering.
 
-\textbf{RBF with K centers}
-$N$ parameters: $w_1, w_2, ..., w_N$ based on $N$ data points, can be reduced to using $K$ centers, $\mu_1, \mu_2, ..., \mu_K$ with $K \ll N$, so the new hypothesis is:
-$$
-h(x) = \sum_{k=1}^K w_k\exp\left(-\gamma\|x - \mu_k \|^2\right)
-$$
-
-There are then two questions:
-1. How to choose the centers?
-2. How to choose the weights?
-
-\subsection{Choosing the centers}
-The idea is to, instead of having a center for each data point, we will cluster the data points around a center, and we choose the centers by minimizing the distance between the data point, $x_n$, and the closest center, $\mu_k$. For this clustering, we will use K-Means clustering:
-
-Split the data into $K$ and minimize our objective function $\sum_{k=1}^K\sum_{x_n \in S_k}\|x_n - \mu_k\|^2$.
-
-But there is a problem! This is an NP-Hard problem.
-
-To solve this problem we will use the Lloyd's algorithm to iteratively minimize the objective function. The algorithm is as follows:
-$$
-\mu_k = \frac{1}{|S_k|}\sum_{x_n \in S_k} x_n
-$$
-
-$$
-S_k = \{ x_n \in D | \|x_n - \mu_k\| \leq \|x_n - \mu_j\|, j \neq k \}
-$$
-
-Both of this steps reduce the objective function, and we can repeat this until convergence, and we will reach a local minimum. 
-To run this algorithm, we need to run the algorithm for a number of times, and choose the best solution.
-
-\begin{figure}
+\begin{figure}[h!]
     \centering
+    % Consider plotting a 3D Gaussian RBF here with Gnuplot
     \input{plots/rbf_gaussian}
-    \caption{Caption}
-    \label{fig:asd}
+    \caption{Example of a Gaussian RBF centered at $\mu$}
+    \label{fig:gaussian_rbf}
 \end{figure} 
 
-% Example Gnuplot
-\begin{figure}
-    \centering
-    \input{plots/test}
-    \caption{Example Figure}
-    \label{fig:gnuplot_example}
-\end{figure}
+\section{Implementation Notes}
+The RBF network was implemented in Python using NumPy and scikit-learn. To avoid memory issues, we:
+\begin{itemize}
+    \item Use MiniBatchKMeans to find centers efficiently.
+    \item Use perceptron-based or regularized least squares learning.
+    \item Avoid computing large $\Phi^T\Phi$ matrices when possible.
+\end{itemize}
 
-\lipsum[1-20]
-
-\cite{Cruzeiro2024}
-
+\section{Conclusion}
+RBF networks provide an elegant and powerful framework for classification. Through Gaussian kernel construction and data-driven center selection, they can adapt to local structures in the data. When combined with efficient encodings such as Gram matrices and practical training algorithms, they scale to real-world tasks like digit recognition.
 
 \bibliography{references}{}
 \bibliographystyle{plain}

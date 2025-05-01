@@ -71,3 +71,6 @@ print("A† (Pseudoinverse of A):\n", A_pseudo)
 # Optional: Check A * A† * A ≈ A
 reconstructed_A = A @ A_pseudo @ A
 print("Reconstructed A (A * A† * A):\n", reconstructed_A)
+
+# Adaptive, optical, radial basis function neural network for handwritten digit recognition
+# https://chatgpt.com/s/dr_681208a2a60c8191816c11d202dec7e2
