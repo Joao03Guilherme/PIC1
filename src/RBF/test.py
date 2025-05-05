@@ -2,23 +2,14 @@ import numpy as np
 from sklearn.metrics import pairwise_distances
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.preprocessing import StandardScaler
-import csv
+from joblib import dump, load
 
+# Import the data loading functions from our new module
+from .data import load_csv, get_train_data, get_test_data
+
+# Define file paths for reference (if needed)
 FILENAME_TRAIN = "src/data_encoding/dataset/MNIST_CSV/mnist_train.csv"
 FILENAME_TEST = "src/data_encoding/dataset/MNIST_CSV/mnist_test.csv"
-
-def get_dataset(filename=FILENAME_TRAIN):
-    with open(filename, "r") as file:
-        reader = csv.reader(file)
-        data = np.array([list(map(int, row)) for row in reader], dtype=np.uint8)
-    return [(row[1:], row[0]) for row in data]     # (vector, label)
-
-def get_vectors(dataset):
-    # ravel() flattens in case the vector already has a second dim
-    return np.array([vec.ravel() for vec, _ in dataset], dtype=np.float32)
-
-def get_labels(dataset):
-    return np.array([label for _, label in dataset], dtype=np.int64)
 
 class RBFNet:
     def __init__(self, n_centers=None, k_sigma=1.0, n_classes=10,
@@ -78,13 +69,13 @@ class RBFNet:
         return (Φ @ self.W_.T).argmax(1)
 
 
-from joblib import dump, load
+# -----------------------------------------------------------------------------
+# Main script for training and evaluation
+# -----------------------------------------------------------------------------
 
-dataset_train = get_dataset(FILENAME_TRAIN)
-dataset_test = get_dataset(FILENAME_TEST)
-
-X_train, y_train = get_vectors(dataset_train), get_labels(dataset_train)
-X_test, y_test = get_vectors(dataset_test), get_labels(dataset_test)
+# Load data directly with the new functions
+X_train, y_train = get_train_data(return_tuple=True)
+X_test, y_test = get_test_data(return_tuple=True)
 
 print("Training set size:", len(X_train))
 print("Test set size:", len(X_test))
