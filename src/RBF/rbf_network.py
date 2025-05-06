@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import csv
@@ -11,7 +10,11 @@ from sklearn.cluster import MiniBatchKMeans
 from sklearn.metrics import pairwise_distances
 from sklearn.preprocessing import StandardScaler
 
-from JTCorrelator import jtc_binary, jtc_classical, phase_corr_similarity  # ↔ your C/Numba implementation
+from JTCorrelator import (
+    jtc_binary,
+    jtc_classical,
+    phase_corr_similarity,
+)  # ↔ your C/Numba implementation
 
 # ----------------------------------------------------------------------------
 # Constants & helpers
@@ -49,9 +52,11 @@ def make_distance_fn(name: str = "phase", *, squared: bool = False):
       – non-negative
     """
     if name == "phase":
+
         def _d(X, Y):
             d, _, _ = phase_corr_similarity(X, Y, shape=(28, 28))
             return d
+
     elif name == "jtc_binary":
         # higher peak ⇒ more similar ⇒ distance should be *smaller*
         def _d(X, Y):
@@ -60,14 +65,17 @@ def make_distance_fn(name: str = "phase", *, squared: bool = False):
                 Y.reshape(28, 28),
                 binarize_inputs=True,
             )
-            return max(0.0, 1.0 - peak)      # invert similarity
+            return max(0.0, 1.0 - peak)  # invert similarity
+
     elif name == "jtc_classical":
+
         def _d(X, Y):
             peak = jtc_classical(
                 X.reshape(28, 28),
                 Y.reshape(28, 28),
             )
             return max(0.0, 1.0 - peak)
+
     elif name == "euclidean":
         # Let sklearn handle it natively
         return "euclidean" if not squared else "sqeuclidean"
@@ -99,7 +107,7 @@ class RBFNet:
         # kernel choice
         # misc
         min_sigma: float = 1e-2,
-        distance_name: str = "phase",   # <── NEW
+        distance_name: str = "phase",  # <── NEW
         distance_squared: bool = True,  # <── NEW
     ) -> None:
         # ­-- hyper-parameters
@@ -139,23 +147,20 @@ class RBFNet:
                 .cluster_centers_.astype(np.float32)
             )
 
-        dist_fn = make_distance_fn(self.distance_name,
-                           squared=self.distance_squared)
-        
+        dist_fn = make_distance_fn(self.distance_name, squared=self.distance_squared)
+
         # 2. compute distances ---------------------------------------------
         d2 = pairwise_distances(self.centers_, metric=dist_fn, n_jobs=-1)
-        np.fill_diagonal(d2, np.inf)  
-        nn2 = d2.min(axis=1)                  # shape (M,)
-        sigma2 = np.maximum((self.k_sigma ** 2) * nn2,
-                            self.min_sigma ** 2)
+        np.fill_diagonal(d2, np.inf)
+        nn2 = d2.min(axis=1)  # shape (M,)
+        sigma2 = np.maximum((self.k_sigma**2) * nn2, self.min_sigma**2)
         self.gammas_ = 0.5 / sigma2
-        
+
         # 3. Build design matrix ------------------------------------------
         phi = np.exp(
-            -pairwise_distances(X_raw, self.centers_,
-                                metric=dist_fn, n_jobs=-1)
+            -pairwise_distances(X_raw, self.centers_, metric=dist_fn, n_jobs=-1)
             * self.gammas_[None, :]
-)
+        )
         # 4. train output layer --------------------------------------------
         if self.use_perceptron:
             self._train_perceptron(phi, y)
@@ -165,14 +170,16 @@ class RBFNet:
 
     # --------------------------- predictors ----------------------------------
     def _rbf_layer(self, X: np.ndarray) -> np.ndarray:
-        dist_fn = make_distance_fn(self.distance_name,
-                           squared=self.distance_squared)
+        dist_fn = make_distance_fn(self.distance_name, squared=self.distance_squared)
         return np.exp(
-            -pairwise_distances(X.astype(np.float32, copy=False),
-                                self.centers_,
-                                metric=dist_fn, n_jobs=-1)
+            -pairwise_distances(
+                X.astype(np.float32, copy=False),
+                self.centers_,
+                metric=dist_fn,
+                n_jobs=-1,
+            )
             * self.gammas_[None, :]
-)
+        )
 
     def predict(self, X: np.ndarray) -> np.ndarray:
         phi = self._rbf_layer(X)
@@ -220,33 +227,33 @@ if __name__ == "__main__":
 
     X_train_total, y_train_total = _load_csv(TRAIN_CSV)
     X_test_total, y_test_total = _load_csv(TEST_CSV)
-    
+
     # -------------------------------------------------------------------------
     # how many samples of each class?
-    train_per_class = 150     # 10×60 = 600 total
-    test_per_class  = 25     # 10×10 = 100 total
-    n_classes       = 10
+    train_per_class = 150  # 10×60 = 600 total
+    test_per_class = 25  # 10×10 = 100 total
+    n_classes = 10
 
     # allocate the right size up-front
     X_train = np.zeros((n_classes * train_per_class, 784), dtype=np.float32)
     y_train = np.zeros((n_classes * train_per_class,), dtype=np.int64)
-    X_test  = np.zeros((n_classes * test_per_class,  784), dtype=np.float32)
-    y_test  = np.zeros((n_classes * test_per_class,),  dtype=np.int64)
+    X_test = np.zeros((n_classes * test_per_class, 784), dtype=np.float32)
+    y_test = np.zeros((n_classes * test_per_class,), dtype=np.int64)
 
     row_t, row_v = 0, 0
     for cls in range(n_classes):
         # indices of all samples belonging to this class
         tr_idx = np.where(y_train_total == cls)[0][:train_per_class]
-        te_idx = np.where(y_test_total  == cls)[0][:test_per_class]
+        te_idx = np.where(y_test_total == cls)[0][:test_per_class]
 
         # copy them into the next free slice
         next_t = row_t + train_per_class
         next_v = row_v + test_per_class
         X_train[row_t:next_t] = X_train_total[tr_idx]
         y_train[row_t:next_t] = y_train_total[tr_idx]
-        X_test [row_v:next_v] = X_test_total [te_idx]
-        y_test [row_v:next_v] = y_test_total [te_idx]
-        row_t, row_v = next_t, next_v   # advance cursors
+        X_test[row_v:next_v] = X_test_total[te_idx]
+        y_test[row_v:next_v] = y_test_total[te_idx]
+        row_t, row_v = next_t, next_v  # advance cursors
 
     print("train shape:", X_train.shape, " test shape:", X_test.shape)
 
@@ -265,3 +272,14 @@ if __name__ == "__main__":
     preds = net.predict(X_test)
     acc = (preds == y_test).mean()
     print(f"Test accuracy: {acc * 100:.2f} %")
+
+    # Calculate per-class accuracy
+    print("\nPer-class accuracy:")
+    for cls in range(n_classes):
+        # Get indices for this class
+        cls_indices = np.where(y_test == cls)[0]
+        cls_correct = (preds[cls_indices] == y_test[cls_indices]).sum()
+        cls_total = len(cls_indices)
+        print(
+            f"Class {cls}: {cls_correct} out of {cls_total} correct ({cls_correct/cls_total*100:.2f}%)"
+        )
