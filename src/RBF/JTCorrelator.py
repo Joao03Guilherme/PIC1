@@ -7,33 +7,8 @@ import numpy as np
 from typing import Tuple
 
 
-def classical_jtc(img1_vec, img2_vec, shape):
-    """
-    Classical Joint Transform Correlator (JTC) for two grayscale images.
-    - img1_vec, img2_vec: Flattened 1D numpy arrays of the two images (must be same length).
-    - shape: Tuple (H, W) giving the height and width to reshape the images.
-    Returns: distance, (dy, dx), peak_corr
-      distance: Mean squared error after aligning img2 to img1 (lower = more similar).
-      (dy, dx): Estimated shift of img2 relative to img1 (in pixels).
-      peak_corr: Peak cross-correlation value (a similarity score, 1.0 = perfect match).
-    """
-    # Reshape vectors to 2D images
-    img1 = np.reshape(img1_vec, shape)
-    img2 = np.reshape(img2_vec, shape)
-    
-    # Combine the two images side by side into a single image
-    combined_img = np.concatenate((img1, img2), axis=1)
+import numpy as np
 
-    # Compute 2D FFT of the combined image
-    F_combined = np.fft.fft2(combined_img)
-
-    # Calculate the intensity of the fourier transform
-    intensity = np.abs(F_combined) ** 2
-
-    # Perform the inverse FFT to get the correlation result
-    corr = np.fft.ifft2(intensity)
-
-    return np.abs(corr)
 
 def binarize(img, treshold="median"):
     """
@@ -51,46 +26,125 @@ def binarize(img, treshold="median"):
             treshold_value = treshold
         else:
             raise ValueError("Invalid treshold value. Use 'median' or a numeric value.")
-    
+
     # Binarize the image: -1 for pixels below median, 1 for pixels above
     binary_img = np.where(img < treshold_value, -1, 1)
 
     return binary_img
 
-def binary_jtc(img1_vec, img2_vec, shape):
+
+import numpy as np
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# helper: mask out the zero-order patch and locate the true JTC peak
+# ──────────────────────────────────────────────────────────────────────────────
+def _peak_and_shift(corr_plane, img_shape):
     """
-    Binary Joint Transform Correlator (JTC) for two binary images.
-    - img1_vec, img2_vec: Flattened 1D numpy arrays of the two images (must be same length).
-    - shape: Tuple (H, W) giving the height and width to reshape the images.
-    Returns: distance, (dy, dx), peak_corr
-      distance: Mean squared error after aligning img2 to img1 (lower = more similar).
-      (dy, dx): Estimated shift of img2 relative to img1 (in pixels).
-      peak_corr: Peak cross-correlation value (a similarity score, 1.0 = perfect match).
+    corr_plane : real-valued array shape (H,2W) after fftshift
+    img_shape  : original image shape (H,W)
+
+    Returns
+        peak_val     : amplitude of strongest off-axis peak
+        (dy, dx_real): shift of img2 w.r.t img1 (same convention as phase_corr)
     """
-    # Reshape vectors to 2D images
+    H, W = img_shape
+    cy, cx = corr_plane.shape[0] // 2, corr_plane.shape[1] // 2
+
+    # mask: kill central region (size of one image) that contains zero-order & autos
+    mask = np.ones_like(corr_plane, dtype=bool)
+    mask[cy - H // 2 : cy + H // 2 + 1, cx - W // 2 : cx + W // 2 + 1] = False
+
+    masked = np.where(mask, corr_plane, -np.inf)
+    py, px = np.unravel_index(masked.argmax(), masked.shape)
+    peak_val = corr_plane[py, px]
+
+    # raw shift from array centre
+    dy = py - cy
+    dx = px - cx
+
+    # subtract the expected ±W offset of the cross-correlation lobes
+    dx -= np.sign(dx) * W  # now dx is the real shift between the two images
+
+    # unwrap circular shifts to range (-H/2,H/2], (-W/2,W/2]
+    if dy > H // 2:
+        dy -= H
+    if dy <= -H // 2:
+        dy += H
+    if dx > W // 2:
+        dx -= W
+    if dx <= -W // 2:
+        dx += W
+    return peak_val, (dy, dx)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Classical JTC  (grey-scale, un-thresholded)
+# ──────────────────────────────────────────────────────────────────────────────
+def classical_jtc(img1_vec, img2_vec, shape):
     img1 = np.reshape(img1_vec, shape)
     img2 = np.reshape(img2_vec, shape)
 
-    combined_img = np.concatenate((img1, img2), axis=1)
-    combined_reference = np.concatenate((img1, img1), axis=1)
+    # Concatenate left and right halves to form the joint input plane
+    joint = np.hstack((img1, img2))  # shape (H, 2W)
 
-    # Calculate the treshold (media of the pixels of img1 + img1)
-    median_value = float(np.median(combined_reference))
-    
-    # Combine the two images side by side into a single image
-    combined_img = binarize(np.concatenate((img1, img2), axis=1), treshold=median_value)
+    # Compute joint power spectrum: |F1 + F2|²
+    joint_power_spectrum = np.abs(np.fft.fft2(joint)) ** 2
 
-    # Compute 2D FFT of the combined image
-    F_combined = np.fft.fft2(combined_img)
+    # Correlation plane: inverse FFT of power spectrum
+    corr = np.fft.ifft2(joint_power_spectrum)
+    corr = np.fft.fftshift(np.real(corr))
 
-    # Calculate the intensity of the fourier transform
-    intensity = binarize(np.abs(F_combined) ** 2)
+    # Mask out central zero-order region and extract cross-correlation peak
+    peak, (dy, dx) = _peak_and_shift(corr, shape)
 
-    # Perform the inverse FFT to get the correlation result
-    corr = np.fft.ifft2(intensity)
+    # Compute normalized similarity from the peak
+    norm = np.linalg.norm(img1) * np.linalg.norm(img2)
+    similarity = peak / (2 * norm) if norm else 0.0
 
-    return np.abs(corr)
+    # Use inverse similarity as a distance
+    distance = 1 / similarity
 
+    return distance, (dy, dx), similarity, corr
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Binary JTC  (images and spectrum binarised, per Javidi & Horner)
+# ──────────────────────────────────────────────────────────────────────────────
+def binary_jtc(img1_vec, img2_vec, shape, *, threshold="median"):
+    from typing import Tuple  # keeps original imports intact
+
+    # --- reshape + binarise input images (±1) ---
+    img1 = np.reshape(img1_vec, shape)
+    img2 = np.reshape(img2_vec, shape)
+    bin1 = binarize(img1, threshold)
+    bin2 = binarize(img2, threshold)
+
+    # joint plane (binary inputs) and FFT
+    joint_bin = np.hstack((bin1, bin2))
+    F = np.fft.fft2(joint_bin)
+    power = np.abs(F) ** 2
+
+    # binarise Fourier-plane intensity to ±1 (median threshold):contentReference[oaicite:3]{index=3}:contentReference[oaicite:4]{index=4}
+    power_bin = np.where(power >= np.median(power), 1.0, -1.0)
+
+    # inverse FFT → correlation plane (binary JTC output)
+    corr = np.fft.ifft2(power_bin)
+    corr = np.fft.fftshift(np.real(corr))
+
+    # peak & shift
+    peak, (dy, dx) = _peak_and_shift(corr, shape)
+
+    # —— normalise using binary images’ energy (each pixel ±1) ——
+    # norms are √N where N = H·W
+    norm = np.linalg.norm(bin1) * np.linalg.norm(bin2)
+    peak_norm = peak / norm if norm else 0.0
+
+    # distance on *binary* images (as in Javidi’s digital simulations)
+    img2_aligned = np.roll(np.roll(bin2, -dy, axis=0), -dx, axis=1)
+    distance = np.mean((bin1 - img2_aligned) ** 2)
+
+    return distance, (dy, dx), peak_norm, corr
 
 
 def phase_corr_similarity(img1_vec, img2_vec, shape):
@@ -106,15 +160,19 @@ def phase_corr_similarity(img1_vec, img2_vec, shape):
     # Reshape vectors to 2D images
     img1 = np.reshape(img1_vec, shape)
     img2 = np.reshape(img2_vec, shape)
+
     # Compute 2D FFTs
     F1 = np.fft.fft2(img1)
     F2 = np.fft.fft2(img2)
+
     # Compute normalized cross-power spectrum (avoid division by zero)
     eps = 1e-8
     cross_power = F1 * np.conj(F2)
     cross_power /= np.abs(cross_power) + eps
+
     # Inverse FFT to get cross-correlation
     corr = np.fft.ifft2(cross_power)
+
     # Find peak correlation and location
     corr_mag = np.abs(corr)
     peak_corr = corr_mag.max()
@@ -126,8 +184,10 @@ def phase_corr_similarity(img1_vec, img2_vec, shape):
         dy -= H
     if dx > W // 2:
         dx -= W
+
     # Align img2 by the estimated shift (using roll for circular shift)
     aligned_img2 = np.roll(np.roll(img2, -dy, axis=0), -dx, axis=1)
+
     # Compute MSE as distance
     diff = img1 - aligned_img2
     distance = np.mean(diff**2)
@@ -140,6 +200,7 @@ def phase_corr_similarity(img1_vec, img2_vec, shape):
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     from matplotlib.gridspec import GridSpec
+
     np.random.seed(0)
 
     shape = (28, 28)
@@ -147,132 +208,92 @@ if __name__ == "__main__":
     # -----------------------------------------------------------------
     # Generate a variety of related / unrelated images
     # -----------------------------------------------------------------
-    img_base   = np.random.randint(0, 255, shape).astype(np.float32)
+    # Recompute distances with same synthetic images
+    np.random.seed(0)
+    shape = (28, 28)
 
-    img_ident  = img_base.copy()                                   # identical
-    img_shift  = np.roll(np.roll(img_base, 5, axis=0), 3, axis=1)  # shifted
-    img_noise  = img_base + np.random.normal(0, 1, shape)          # noisy
-    img_bright = np.clip(img_base * 1.3, 0, 255)                   # brighter
-    img_rotate = np.rot90(img_base)                                # 90° rotation
-    img_random = np.random.randint(0, 255, shape).astype(np.float32)  
-    
+    # images as before
+    img_base = np.random.randint(0, 255, shape).astype(np.float32)
+    img_ident = img_base.copy()
+    img_shift = np.roll(np.roll(img_base, 5, axis=0), 3, axis=1)
+    img_noise = img_base + np.random.normal(0, 1, shape)
+    img_bright = np.clip(img_base * 1.3, 0, 255)
+    img_rotate = np.rot90(img_base)
+    img_random = np.random.randint(0, 255, shape).astype(np.float32)
 
-    correlation_binary = binary_jtc(
-        img_base.flatten(), img_ident.flatten(), shape
-    )
-    correlation_classical = classical_jtc(
-        img_base.flatten(), img_ident.flatten(), shape
-    )
-    _,_,c,correlation_phase = phase_corr_similarity(
-        img_base.flatten(), img_ident.flatten(), shape
-    )
+    variants = [
+        img_base,
+        img_ident,
+        img_shift,
+        img_noise,
+        img_bright,
+        img_rotate,
+        img_random,
+    ]
 
+    eucl_dists = []
+    jtc_dists = []
 
-    fig = plt.figure(figsize=(18, 6))
+    for v in variants:
+        eucl_dists.append(np.linalg.norm(img_base.flatten() - v.flatten()))
+        jtc_dist, _, _, _ = classical_jtc(img_base.flatten(), v.flatten(), shape)
+        jtc_dists.append(jtc_dist)
 
-    # Get shapes for plotting
-    Hb, Wb = correlation_binary.shape
-    Hp, Wp = correlation_phase.shape
-
-    # Meshgrids
-    Xb, Yb = np.meshgrid(np.arange(Wb), np.arange(Hb))  # for binary and classical
-    Xp, Yp = np.meshgrid(np.arange(Wp), np.arange(Hp))  # for phase
-
-    # Plot 1: Binary JTC Correlation
-    ax1 = fig.add_subplot(1, 3, 1, projection='3d')
-    ax1.plot_surface(Xb, Yb, correlation_binary, cmap='plasma', edgecolor='none')
-    ax1.set_title('Binary JTC Correlation')
-    ax1.set_xlabel('X')
-    ax1.set_ylabel('Y')
-    ax1.set_zlabel('Amplitude')
-
-    # Plot 2: Classical JTC Correlation
-    ax2 = fig.add_subplot(1, 3, 2, projection='3d')
-    ax2.plot_surface(Xb, Yb, correlation_classical, cmap='viridis', edgecolor='none')
-    ax2.set_title('Classical JTC Correlation')
-    ax2.set_xlabel('X')
-    ax2.set_ylabel('Y')
-    ax2.set_zlabel('Amplitude')
-
-    # Plot 3: Phase Correlation
-    ax3 = fig.add_subplot(1, 3, 3, projection='3d')
-    ax3.plot_surface(Xp, Yp, np.abs(correlation_phase), cmap='inferno', edgecolor='none')
-    ax3.set_title('Phase-Only Correlation')
-    ax3.set_xlabel('X')
-    ax3.set_ylabel('Y')
-    ax3.set_zlabel('Amplitude')
-
-    plt.tight_layout()
-    plt.show()
+    # Convert to numpy arrays
+    eucl_dists = np.array(eucl_dists)
+    jtc_dists = np.array(jtc_dists)
 
 
+    # polyfit for Euclidean = f(JTC)
+    m, c = np.polyfit(jtc_dists, eucl_dists, 1)
+    y_pred = m * jtc_dists + c
 
-    """
+    # R^2
+    ss_res = np.sum((eucl_dists - y_pred) ** 2)
+    ss_tot = np.sum((eucl_dists - eucl_dists.mean()) ** 2)
+    r2 = 1 - ss_res / ss_tot
 
-    images = {
-        "ident" : img_ident,
-        "shift" : img_shift,
-        "bright": img_bright,
-        "rotate": img_rotate,
-        "random": img_random,
-    }
+    # bar plot peaks
+    labels = [
+        "base vs ident",
+        "base vs ident",
+        "base vs shift",
+        "base vs noise",
+        "base vs bright",
+        "base vs rotate",
+        "base vs random",
+    ]
+    # compute peaks for bar: reuse similarity computed earlier
+    peaks = []
+    for v in variants:
+        # run jtc to get similarity
+        img1 = img_base.flatten()
+        img2 = v.flatten()
+        joint = np.hstack((img_base, v))
+        joint_power = np.abs(np.fft.fft2(joint)) ** 2
+        corr = np.fft.fftshift(np.real(np.fft.ifft2(joint_power)))
+        pk, _ = _peak_and_shift(corr, shape)
+        sim = pk / (2 * np.linalg.norm(img_base) * np.linalg.norm(v))
+        peaks.append(sim)
 
-    # -----------------------------------------------------------------
-    # Compare each variant to the base image
-    # -----------------------------------------------------------------
-    labels, est_distances, real_distances, corr_peaks = [], [], [], []
+    fig, ax = plt.subplots(1, 2, figsize=(12, 5))
 
-    for name, img in images.items():
-        label = f"base vs {name}"
-        dist_est, (dy, dx), pc = phase_corr_similarity(
-            img_base.flatten(), img.flatten(), shape
-        )
-        real_dist = np.linalg.norm(img_base.flatten() - img.flatten())
+    ax[0].bar(labels[1:], peaks[1:], color="steelblue")
+    ax[0].set_ylabel("Correlation Peak")
+    ax[0].set_title("Correlation Peak Values")
+    ax[0].tick_params(axis="x", rotation=25)
 
-        labels.append(label)
-        est_distances.append(dist_est)
-        real_distances.append(real_dist)
-        corr_peaks.append(pc)
+    # scatter + fit
+    xfit = np.linspace(jtc_dists.min(), jtc_dists.max(), 100)
+    yfit = m * xfit + c
 
-        print(f"{label}:")
-        print(f"  Estimated distance: {dist_est:.2f}")
-        print(f"  Real distance:      {real_dist:.2f}")
-        print(f"  Correlation peak:   {pc:.2f}")
-        print(f"  Shift detected:     ({dy}, {dx})\n")
-
-    # -----------------------------------------------------------------
-    # Linear fit for scatter plot
-    # -----------------------------------------------------------------
-    m, b = np.polyfit(real_distances, est_distances, 1)
-    print(f"Linear fit: estimated ≈ {m:.3f} × real + {b:.3f}")
-
-    # Points for fit line (two endpoints are enough)
-    x_fit = np.array([min(real_distances), max(real_distances)])
-    y_fit = m * x_fit + b
-
-    # -----------------------------------------------------------------
-    # Visualisation
-    # -----------------------------------------------------------------
-    fig = plt.figure(figsize=(12, 5))
-    gs = GridSpec(1, 2, figure=fig)          # 1 row × 2 columns
-
-    # ── Plot 1: Correlation-peak values ───────────────────────────────
-    ax1 = fig.add_subplot(gs[0, 0])
-    ax1.bar(labels, corr_peaks)
-    ax1.set_ylabel('Correlation Peak')
-    ax1.set_title('Correlation Peak Values')
-    ax1.set_ylim(0, 1)
-    ax1.set_xticklabels(labels, rotation=20, ha='right')
-
-    # ── Plot 2: Scatter – estimated vs real distance + fit line ──────
-    ax2 = fig.add_subplot(gs[0, 1])
-    ax2.scatter(real_distances, est_distances, label='Data points')
-    ax2.plot(x_fit, y_fit, linestyle='--', label=f'Fit: y={m:.2f}x+{b:.2f}')
-    ax2.set_xlabel('Real Distance')
-    ax2.set_ylabel('Estimated Distance')
-    ax2.set_title('Estimated vs Real Distance')
-    ax2.legend()
+    ax[1].scatter(jtc_dists, eucl_dists, color="blue", marker="x", label="Data points")
+    ax[1].plot(xfit, yfit, "b--", label=f"Fit: y={m:.2f}x+{c:.2f}\n$R^2$={r2:.3f}")
+    ax[1].set_xlabel("JTC Distance")
+    ax[1].set_ylabel("Euclidean Distance")
+    ax[1].set_title("Euclidean Distance vs. JTC Distance")
+    ax[1].legend()
+    ax[1].grid()
 
     plt.tight_layout()
     plt.show()
-    """

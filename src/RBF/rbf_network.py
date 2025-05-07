@@ -11,6 +11,7 @@ from sklearn.metrics import pairwise_distances
 
 from JTCorrelator import (
     phase_corr_similarity,
+    classical_jtc,
 )  # ↔ your C/Numba implementation
 
 # ----------------------------------------------------------------------------
@@ -51,29 +52,18 @@ def make_distance_fn(name: str = "phase", *, squared: bool = False):
     if name == "phase":
 
         def _d(X, Y):
-            d, _, _ = phase_corr_similarity(X, Y, shape=(28, 28))
+            d, _, _, _ = phase_corr_similarity(X, Y, shape=(28, 28))
             return d
 
-    elif name == "jtc_binary":
-        # higher peak ⇒ more similar ⇒ distance should be *smaller*
-        def _d(X, Y):
-            return 
-            peak = jtc_binary(
-                X.reshape(28, 28),
-                Y.reshape(28, 28),
-                binarize_inputs=True,
-            )
-            return max(0.0, 1.0 - peak)  # invert similarity
-
-    elif name == "jtc_classical":
+    elif name == "classical_jtc":
 
         def _d(X, Y):
-            return
-            peak = jtc_classical(
+            d, _, _, _ = classical_jtc(
                 X.reshape(28, 28),
                 Y.reshape(28, 28),
+                shape=(28, 28),
             )
-            return max(0.0, 1.0 - peak)
+            return d
 
     elif name == "euclidean":
         # Let sklearn handle it natively
@@ -262,80 +252,96 @@ if __name__ == "__main__":
         lambda_ridge=1e-3,
         distance_squared=False,
         k_sigma=0.5,
-        distance_name="euclidean",  # 'jtc_binary' | 'jtc_classical' | 'euclidean' | 'phase'
+        distance_name="classical_jtc",  # 'classical_jtc' | 'euclidean' | 'phase'
     ).fit(X_train, y_train)
 
     dump(net, ROOT / "rbf_mnist.joblib")
     print("Model saved to rbf_mnist.joblib")
 
     preds = net.predict(X_test)
-    
+
     # Calculate standard accuracy
     acc = (preds == y_test).mean()
     print(f"\nStandard accuracy: {acc * 100:.2f} %")
-    
+
     # Calculate balanced accuracy and other metrics
     from sklearn.metrics import balanced_accuracy_score, recall_score, confusion_matrix
     import matplotlib.pyplot as plt
     import seaborn as sns
     import pandas as pd
-    
+
     # Balanced accuracy
     bal_acc = balanced_accuracy_score(y_test, preds)
     print(f"Balanced accuracy: {bal_acc * 100:.2f} %")
-    
+
     # Create per-class metrics table with sensitivity and specificity
     print("\nPer-class metrics:")
-    
+
     # Initialize metrics dataframe
-    metrics_df = pd.DataFrame(index=range(n_classes), 
-                             columns=['Class', 'Samples', 'Correct', 'Accuracy', 'Sensitivity', 'Specificity'])
-    
+    metrics_df = pd.DataFrame(
+        index=range(n_classes),
+        columns=[
+            "Class",
+            "Samples",
+            "Correct",
+            "Accuracy",
+            "Sensitivity",
+            "Specificity",
+        ],
+    )
+
     # Calculate confusion matrix for specificity calculation
     cm = confusion_matrix(y_test, preds)
-    
+
     for cls in range(n_classes):
         # Get indices for this class
         cls_indices = np.where(y_test == cls)[0]
         cls_correct = (preds[cls_indices] == y_test[cls_indices]).sum()
         cls_total = len(cls_indices)
-        
+
         # Calculate sensitivity (recall) for this class
         sensitivity = cls_correct / cls_total if cls_total > 0 else 0
-        
+
         # Calculate specificity for this class
         # True negatives: sum of all correctly predicted samples that aren't this class
         # False positives: samples incorrectly predicted as this class
         tn = np.sum(cm) - np.sum(cm[cls, :]) - np.sum(cm[:, cls]) + cm[cls, cls]
         fp = np.sum(cm[:, cls]) - cm[cls, cls]
         specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
-        
+
         metrics_df.loc[cls] = [
-            cls, cls_total, cls_correct, 
-            cls_correct/cls_total*100 if cls_total > 0 else 0, 
-            sensitivity*100, 
-            specificity*100
+            cls,
+            cls_total,
+            cls_correct,
+            cls_correct / cls_total * 100 if cls_total > 0 else 0,
+            sensitivity * 100,
+            specificity * 100,
         ]
-        
+
     # Print metrics table
-    pd.set_option('display.float_format', '{:.2f}'.format)
+    pd.set_option("display.float_format", "{:.2f}".format)
     print(metrics_df.to_string(index=False))
-    
+
     # Average sensitivity and specificity
-    avg_sensitivity = recall_score(y_test, preds, average='macro') * 100
-    avg_specificity = metrics_df['Specificity'].mean()
-    
+    avg_sensitivity = recall_score(y_test, preds, average="macro") * 100
+    avg_specificity = metrics_df["Specificity"].mean()
+
     print(f"\nAverage sensitivity (macro): {avg_sensitivity:.2f} %")
     print(f"Average specificity (macro): {avg_specificity:.2f} %")
-    
+
     # Create and display confusion matrix
     plt.figure(figsize=(10, 8))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
-                xticklabels=range(n_classes), 
-                yticklabels=range(n_classes))
-    plt.xlabel('Predicted')
-    plt.ylabel('True')
-    plt.title('Confusion Matrix')
+    sns.heatmap(
+        cm,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
+        xticklabels=range(n_classes),
+        yticklabels=range(n_classes),
+    )
+    plt.xlabel("Predicted")
+    plt.ylabel("True")
+    plt.title("Confusion Matrix")
     plt.savefig(ROOT / "confusion_matrix.png")
     print(f"\nConfusion matrix saved to {ROOT / 'confusion_matrix.png'}")
     plt.show()
