@@ -6,38 +6,7 @@ import numpy as np
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.metrics import pairwise_distances
 from sklearn.base import BaseEstimator, ClassifierMixin
-
-
-from ...distance.JTCorrelator import (
-    phase_corr_similarity,
-    classical_jtc,
-)
-
-
-def make_distance_fn(name: str = "phase", *, squared: bool = False):
-    """Return a callable f(X, Y) compatible with sklearn.pairwise_distances."""
-    if name == "phase":
-
-        def _d(X, Y):
-            d, _, _, _ = phase_corr_similarity(X, Y, shape=(28, 28))
-            return d
-
-    elif name == "classical_jtc":
-
-        def _d(X, Y):
-            d, _, _, _ = classical_jtc(
-                X.reshape(28, 28),
-                Y.reshape(28, 28),
-                shape=(28, 28),
-            )
-            return d
-
-    elif name == "euclidean":
-        return "euclidean" if not squared else "sqeuclidean"
-    else:
-        raise ValueError(f"Unknown distance name '{name}'")
-
-    return (lambda X, Y, *, _f=_d: _f(X, Y) ** 2) if squared else _d
+from ..utils import make_distance_fn
 
 
 # -----------------------------------------------------------------------------
