@@ -20,7 +20,7 @@ X_train_total, y_train_total = get_train_data()
 X_test_total, y_test_total = get_test_data()
 
 # Define the percentage of the dataset to use (e.g., 0.1 for 10%)
-sample_percentage = 0.1
+sample_percentage = 0.025
 
 # Create smaller, stratified training subset
 _, X_train, _, y_train = train_test_split(
@@ -45,10 +45,14 @@ _, X_test, _, y_test = train_test_split(
 # ---------------------------------------------------------------------
 # pca = PCA(n_components=0.90, svd_solver="full", random_state=0)
 
+# Print the shapes of the training and testing sets
+print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
+
 rbf = RBFNet(
     n_centers=100,
     k_sigma=0.5,
-    distance_name="classical_jtc",
+    distance_name="euclidean",
     distance_squared=False,
     lambda_ridge=1e-3,
     random_state=0,

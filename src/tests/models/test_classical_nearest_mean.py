@@ -22,7 +22,7 @@ X_train_total, y_train_total = get_train_data()
 X_test_total, y_test_total = get_test_data()
 
 # Define the percentage of the dataset to use (e.g., 0.1 for 10%)
-sample_percentage = 0.02
+sample_percentage = 0.025
 
 # Create smaller, stratified training subset
 _, X_train, _, y_train = train_test_split(
@@ -48,7 +48,7 @@ print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 
 
 cnm = ClassicalNearestMeanClassifier(
-    distance_metric_name="classical_jtc",
+    distance_metric_name="euclidean",
     distance_squared=False 
 )
 

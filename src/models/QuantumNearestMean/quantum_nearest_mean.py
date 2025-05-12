@@ -32,7 +32,7 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
 
     def __init__(
         self,
-        encoding: Literal["diag_prob", "stereographic", "informative"] = "diag_prob",
+        encoding: Literal["diag_prob", "stereographic", "informative"] = "stereographic",
         distance: str = "trace",
         distance_squared: bool = False,
         random_state: Optional[int] = None,

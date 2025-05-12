@@ -52,8 +52,8 @@ print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 pca = PCA(n_components=0.95, svd_solver="full", random_state=0) # Example: retain 95% variance
 
 qnmc = QuantumNearestMeanClassifier(
-    encoding="stereographic", # Example encoding
-    distance="trace",       # Example distance
+    encoding="stereographic", 
+    distance="trace",       
     random_state=0
 )
 
