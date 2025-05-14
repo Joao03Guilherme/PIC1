@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
+
 # ──────────────────────────────────────────────────────────────
 # I/O helpers
 # ──────────────────────────────────────────────────────────────
@@ -10,13 +11,15 @@ def get_image(filename):
     """Return (vector, label) from a single-row CSV file."""
     with open(filename, "r") as f:
         data = np.asarray(list(csv.reader(f)), dtype=np.int32)[0]
-    return data[1:], data[0]                          # pixels, label
+    return data[1:], data[0]  # pixels, label
+
 
 def join_images(img1_vec, img2_vec, shape=(28, 28)):
     """Horizontal concatenation of two flat images (H×W → H×2W)."""
     img1 = img1_vec.reshape(shape)
     img2 = img2_vec.reshape(shape)
     return np.hstack((img1, img2))
+
 
 # ──────────────────────────────────────────────────────────────
 # Visualisation helpers
@@ -28,7 +31,8 @@ def plot_image(image, shape, cmap=cm.gray, title=None):
         plt.title(title)
     plt.show()
 
-from mpl_toolkits.mplot3d import Axes3D   # noqa: F401 (side-effect import)
+
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 (side-effect import)
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
@@ -53,17 +57,20 @@ def plot_3d(image, shape, *, elev=35, azim=-45):
     x = np.arange(shape[1])
     Y, X = np.meshgrid(y, x, indexing="ij")
 
-    fig = plt.figure(figsize=(7.5, 6))                       
+    fig = plt.figure(figsize=(7.5, 6))
     ax = fig.add_subplot(111, projection="3d")
 
     # — surface —
     surf = ax.plot_surface(
-        X, Y, Z,
+        X,
+        Y,
+        Z,
         cmap=cm.viridis,
-        rstride=1, cstride=1,
+        rstride=1,
+        cstride=1,
         linewidth=0,
         antialiased=False,
-        shade=True
+        shade=True,
     )
 
     # — nicest viewpoint & axes —
@@ -89,11 +96,12 @@ def plot_3d(image, shape, *, elev=35, azim=-45):
     plt.tight_layout()
     plt.show()
 
+
 img1_vec, lbl1 = get_image("img1.csv")
 img2_vec, lbl2 = get_image("img2.csv")
 img12_vec, lbl12 = get_image("img1(2).csv")
 
-ref_image = img1_vec 
+ref_image = img1_vec
 input_image = img2_vec
 
 # Build joint input plane (H×2W)
@@ -104,28 +112,33 @@ plot_image(joint, shape=(28, 56), title="Joint input plane")
 # Joint power spectrum  |FFT(joint)|²
 joint_fft = np.fft.fft2(joint)
 power_spectrum = np.abs(joint_fft) ** 2
-plot_image(np.log1p(power_spectrum), shape=(28, 56),
-           cmap=cm.viridis, title="Log power spectrum")
+plot_image(
+    np.log1p(power_spectrum),
+    shape=(28, 56),
+    cmap=cm.viridis,
+    title="Log power spectrum",
+)
 
 # Correlation plane  ℱ⁻¹{|FFT|²}  → then FFT-shift to centre peaks
 corr = np.fft.ifft2(power_spectrum)
-corr = np.fft.fftshift(np.real(corr))         # signed plane, centre is (0,0)
-plot_image(corr, shape=(28, 56),
-           cmap=cm.viridis, title="Correlation plane (raw)")
+corr = np.fft.fftshift(np.real(corr))  # signed plane, centre is (0,0)
+plot_image(corr, shape=(28, 56), cmap=cm.viridis, title="Correlation plane (raw)")
 
 
 H, W = corr.shape
-dc_half = 3                                   # half-width of square mask
+dc_half = 3  # half-width of square mask
 corr_masked = corr.copy()
-corr_masked[H//2-dc_half:H//2+dc_half+1,
-            W//2-dc_half:W//2+dc_half+1] = 0.0
-plot_image(corr_masked, shape=(28, 56),
-           cmap=cm.viridis, title="Correlation plane (DC masked)")
+corr_masked[
+    H // 2 - dc_half : H // 2 + dc_half + 1, W // 2 - dc_half : W // 2 + dc_half + 1
+] = 0.0
+plot_image(
+    corr_masked, shape=(28, 56), cmap=cm.viridis, title="Correlation plane (DC masked)"
+)
 
 # 6. Locate peak and compute similarity / distance exactly as in classical_jtc
 peak_idx = np.unravel_index(np.argmax(corr_masked), corr_masked.shape)
 peak_val = corr_masked[peak_idx]
-dy = peak_idx[0] - H // 2                      # shift from centre
+dy = peak_idx[0] - H // 2  # shift from centre
 dx = peak_idx[1] - W // 2
 
 norm = np.linalg.norm(img1_vec) * np.linalg.norm(img2_vec)

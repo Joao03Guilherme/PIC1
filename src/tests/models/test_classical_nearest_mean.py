@@ -1,5 +1,7 @@
 # filepath: /Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/src/tests/models/test_classical_nearest_mean.py
-from ...models.ClassicalNearestMean.c_nearestmean_network import ClassicalNearestMeanClassifier
+from ...models.ClassicalNearestMean.c_nearestmean_network import (
+    ClassicalNearestMeanClassifier,
+)
 from ...data.data import get_test_data, get_train_data
 
 import matplotlib.pyplot as plt
@@ -12,7 +14,7 @@ from sklearn.metrics import (
     make_scorer,
     confusion_matrix,
 )
-from sklearn.decomposition import PCA # Add PCA import
+from sklearn.decomposition import PCA  # Add PCA import
 from pathlib import Path
 
 # Define ROOT as the directory containing the current test script
@@ -26,20 +28,20 @@ sample_percentage = 0.025
 
 # Create smaller, stratified training subset
 _, X_train, _, y_train = train_test_split(
-    X_train_total, 
-    y_train_total, 
-    test_size=sample_percentage, 
-    stratify=y_train_total, 
-    random_state=0
+    X_train_total,
+    y_train_total,
+    test_size=sample_percentage,
+    stratify=y_train_total,
+    random_state=0,
 )
 
 # Create smaller, stratified testing subset
 _, X_test, _, y_test = train_test_split(
-    X_test_total, 
-    y_test_total, 
-    test_size=sample_percentage, 
-    stratify=y_test_total, 
-    random_state=0
+    X_test_total,
+    y_test_total,
+    test_size=sample_percentage,
+    stratify=y_test_total,
+    random_state=0,
 )
 
 # Print the shapes of the training and testing sets
@@ -48,8 +50,7 @@ print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 
 
 cnm = ClassicalNearestMeanClassifier(
-    distance_metric_name="euclidean",
-    distance_squared=False 
+    distance_metric_name="classical_jtc", distance_squared=False
 )
 
 model = Pipeline(
@@ -106,8 +107,8 @@ sns.heatmap(
     annot=True,
     fmt="d",
     cmap="Blues",
-    xticklabels=range(10), # Assuming 10 classes, adjust if necessary
-    yticklabels=range(10), # Assuming 10 classes, adjust if necessary
+    xticklabels=range(10),  # Assuming 10 classes, adjust if necessary
+    yticklabels=range(10),  # Assuming 10 classes, adjust if necessary
 )
 plt.xlabel("Predicted Labels")
 plt.ylabel("True Labels")

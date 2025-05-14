@@ -1,32 +1,4 @@
-import csv
 import numpy as np
-import matplotlib.pyplot as plt
-
-from qiskit.quantum_info import DensityMatrix
-from qiskit.visualization import array_to_latex
-
-
-def get_dataset():
-    with open("src/data_encoding/dataset/MNIST_CSV/mnist_test.csv", "r") as file:
-        reader = csv.reader(file)
-        data = np.array([list(map(int, row)) for row in reader])
-
-    dataset = []
-    for row in data:
-        label = row[0]
-        vector = np.array(row[1:]).reshape(-1, 1)
-        dataset.append((label, vector))
-    return dataset
-
-
-def vector_to_image(vector, filename="image.png"):
-    """
-    Receive a vector f and generate a 2d image and save it to a file
-    """
-
-    vector = vector.reshape(28, 28)  # Reshape to 28x28 for MNIST
-    vector = np.flipud(vector)  # Flip the image vertically
-    plt.imsave(filename, vector, cmap="gray")  # Save as grayscale image
 
 
 def normalize_vector(vec):
@@ -50,6 +22,11 @@ def is_density_matrix(rho):
 
     return True
 
+def calculate_purity_from_density_matrix(rho):
+    return np.trace(rho @ rho)
+
+def calculate_purity_from_vector(vector):
+    return (1 + np.linalg.norm(vector) ** 2) / 2
 
 def gram_matrix_encoding(data_vector):
     data_vector = normalize_vector(data_vector)
@@ -69,3 +46,44 @@ def gram_matrix_decoding(rho):
         decoded_vector = np.real(decoded_vector)
     # Return as column vector
     return decoded_vector.reshape(-1, 1)
+
+def compute_density_matrix_from_vector(vector):
+    """Compute the density matrix from a vector."""
+    rho = np.outer(vector, vector)
+    return rho 
+
+def encode_diag_prob(x: np.ndarray) -> np.ndarray:
+    """Diagonal-probability encoding: returns the *vector* of diagonal entries."""
+    x = x.astype(np.float32, copy=False)
+    s = x.sum()
+    if s == 0.0:  # blank image -> uniform distribution
+        return np.full_like(x, 1.0 / x.size, dtype=np.float32)
+    return x / s
+
+
+def encode_stereographic(x: np.ndarray) -> np.ndarray:
+    """Return ψ ∈ ℝ^{d+1} (unit vector) – Eq.(2)–(3) in the paper."""
+    norm2 = np.dot(x, x)
+    psi = np.concatenate([2 * x, [norm2 - 1]], dtype=np.float32)
+    psi /= norm2 + 1  # normalisation factor
+    # Ensure psi is a unit vector, handling potential norm of 0
+    psi_norm = np.linalg.norm(psi)
+    if psi_norm == 0:
+        return psi
+    return psi / psi_norm
+
+
+def encode_informative(x: np.ndarray) -> np.ndarray:
+    """Return ψ ∈ ℝ^{d+1} – Eq.(7)–(10) in the paper."""
+    x = x.astype(np.float32, copy=False)
+    norm = np.linalg.norm(x)
+    if norm == 0.0:
+        psi = np.zeros(x.size + 1, dtype=np.float32)
+        psi[-1] = 1.0
+        return psi
+    vec = np.concatenate([x / norm, [norm]], dtype=np.float32)
+    # Ensure vec is a unit vector
+    vec_norm = np.linalg.norm(vec)
+    if vec_norm == 0:  # Should not happen if norm > 0 or norm == 0 handled above
+        return vec
+    return vec / vec_norm

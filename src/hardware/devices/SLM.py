@@ -64,6 +64,7 @@ except ModuleNotFoundError:
 # ctypes fallback --------------------------------------------------------------
 # -----------------------------------------------------------------------------
 
+
 def _build_ctypes_exulus() -> "_ExulusCAPI":
     """Create a *minimal* ctypes wrapper around the EXULUS SDK."""
     if platform.system() == "Windows":
@@ -81,7 +82,8 @@ def _build_ctypes_exulus() -> "_ExulusCAPI":
             continue
     else:
         raise ImportError(
-            "EXULUS SDK library not found. Install the official Python wheel or add the DLL/SO to PATH.")
+            "EXULUS SDK library not found. Install the official Python wheel or add the DLL/SO to PATH."
+        )
 
     class _ExulusCAPI:  # minimal C‑API shim
         def __init__(self, dll):
@@ -96,11 +98,17 @@ def _build_ctypes_exulus() -> "_ExulusCAPI":
             self._dll.exu_close.argtypes = [ctypes.c_void_p]
             # int exu_get_resolution(void* handle, int* w, int* h)
             self._dll.exu_get_resolution.restype = ctypes.c_int
-            self._dll.exu_get_resolution.argtypes = [ctypes.c_void_p,
-                                                     ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int)]
+            self._dll.exu_get_resolution.argtypes = [
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_int),
+                ctypes.POINTER(ctypes.c_int),
+            ]
             # int exu_write_image(void* handle, const uint16_t* data)
             self._dll.exu_write_image.restype = ctypes.c_int
-            self._dll.exu_write_image.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_uint16)]
+            self._dll.exu_write_image.argtypes = [
+                ctypes.c_void_p,
+                ctypes.POINTER(ctypes.c_uint16),
+            ]
 
         # ---------- helpers ----------
         def list_devices(self) -> List[str]:
@@ -119,7 +127,10 @@ def _build_ctypes_exulus() -> "_ExulusCAPI":
         def get_resolution(self, handle) -> Tuple[int, int]:
             w = ctypes.c_int()
             h = ctypes.c_int()
-            if self._dll.exu_get_resolution(handle, ctypes.byref(w), ctypes.byref(h)) != 0:
+            if (
+                self._dll.exu_get_resolution(handle, ctypes.byref(w), ctypes.byref(h))
+                != 0
+            ):
                 raise RuntimeError("exu_get_resolution failed")
             return h.value, w.value  # return (H, W)
 
@@ -130,6 +141,7 @@ def _build_ctypes_exulus() -> "_ExulusCAPI":
 
     return _ExulusCAPI(_dll)
 
+
 # Choose backend --------------------------------------------------------------
 if _exulus_api is None:  # wheel missing -> use ctypes shim
     _exulus_api = _build_ctypes_exulus()  # type: ignore
@@ -137,6 +149,7 @@ if _exulus_api is None:  # wheel missing -> use ctypes shim
 # -----------------------------------------------------------------------------
 # Main class ------------------------------------------------------------------
 # -----------------------------------------------------------------------------
+
 
 class ExulusSLM:
     """High‑level wrapper for a single Thorlabs **EXULUS** SLM."""
@@ -236,6 +249,7 @@ class ExulusSLM:
         H, W = self.resolution
         print(f"[ExulusSLM] Serial: {self.serial}")
         print(f"  Resolution:      {H}×{W}")
+
 
 # -----------------------------------------------------------------------------
 # Demo (run `python exulus_driver.py` to test) ---------------------------------

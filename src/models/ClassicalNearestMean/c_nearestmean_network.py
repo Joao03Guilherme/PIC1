@@ -39,47 +39,17 @@ class ClassicalNearestMeanClassifier(BaseEstimator, ClassifierMixin):
 
     def fit(self, X: np.ndarray, y: np.ndarray):
         """
-        Fit the classifier by computing class centroids (medoids) using the specified distance metric.
-        Args:
-            X (np.ndarray): Training data, shape (n_samples, n_features).
-            y (np.ndarray): Target labels, shape (n_samples,).
+        Fit the classifier by computing class centroids (means) using simple averaging.
         """
         self.classes_ = np.unique(y)
-        X_processed = X.astype(np.float32, copy=False)
+        Xp = X.astype(np.float32, copy=False)
 
-        # Pre-initialize the distance function
-        self.dist_fn_ = make_distance_fn(
-            name=self.distance_metric_name, squared=self.distance_squared
-        )
+        # Euclidean-based centroids (simple arithmetic mean)
+        centroids = [Xp[y == c].mean(axis=0) for c in self.classes_]
+        self.centroids_ = np.array(centroids, dtype=np.float32)
 
-        centroids_list = []
-        for c_label in self.classes_:
-            class_samples = X_processed[y == c_label]
-
-            if len(class_samples) == 0:
-                # Should not happen if c_label comes from np.unique(y) and X,y are aligned
-                continue
-            elif len(class_samples) == 1:
-                centroids_list.append(class_samples[0])
-            else:
-                # Calculate pairwise distances within the class samples
-                # self.dist_fn_ is called for each pair of samples in class_samples
-                intra_class_distances_matrix = pairwise_distances(
-                    class_samples, metric=self.dist_fn_, n_jobs=-1
-                )
-
-                # Sum of distances for each sample to all other samples in its class
-                sum_of_distances = intra_class_distances_matrix.sum(axis=1)
-
-                # The medoid is the sample with the minimum sum of distances
-                medoid_index = np.argmin(sum_of_distances)
-                centroids_list.append(class_samples[medoid_index])
-
-        if not centroids_list:
-            self.centroids_ = np.array([], dtype=np.float32)
-        else:
-            self.centroids_ = np.array(centroids_list).astype(np.float32)
-
+        # Initialize custom distance for prediction
+        self.dist_fn_ = make_distance_fn(name=self.distance_metric_name, squared=self.distance_squared)
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:

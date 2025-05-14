@@ -15,7 +15,7 @@ X_train, _ = get_train_data()
 original_features = X_train.shape[1]
 
 # Apply PCA to retain 95% of variance
-pca = PCA(n_components=0.90, svd_solver='full', random_state=0)
+pca = PCA(n_components=0.90, svd_solver="full", random_state=0)
 pca.fit(X_train)
 reduced_features = pca.n_components_
 
@@ -29,14 +29,15 @@ print(f"Features reduced: {original_features - reduced_features}")
 side = int(np.sqrt(original_features))
 # pca.components_: shape (n_components, n_features)
 # explained_variance_ratio_: length n_components
-importance = np.sqrt(np.sum((pca.components_.T ** 2) * pca.explained_variance_ratio_, axis=1))
+importance = np.sqrt(
+    np.sum((pca.components_.T**2) * pca.explained_variance_ratio_, axis=1)
+)
 importance_matrix = importance.reshape(side, side)
 
 # Plot heatmap of feature importance
 plt.figure(figsize=(6, 6))
-sns.heatmap(importance_matrix, cmap='viridis')
-plt.title('PCA Feature Importance Heatmap (95% variance)')
-plt.xlabel('Pixel X')
-plt.ylabel('Pixel Y')
+sns.heatmap(importance_matrix, cmap="viridis")
+plt.title("PCA Feature Importance Heatmap (95% variance)")
+plt.xlabel("Pixel X")
+plt.ylabel("Pixel Y")
 plt.show()
-

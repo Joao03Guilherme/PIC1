@@ -7,6 +7,15 @@ from sklearn.metrics import pairwise_distances
 # reuse the utility that already builds custom metrics for you
 from ..utils import make_distance_fn
 
+from ...distance.JTCorrelator import classical_jtc
+
+# Import encoding functions
+from ...encodings.encodings import (
+    encode_diag_prob,
+    encode_stereographic,
+    encode_informative,
+)
+
 
 class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
     """
@@ -15,25 +24,27 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
     Parameters
     ----------
     encoding : {'diag_prob', 'stereographic', 'informative'}, default='diag_prob'
-        How to map an input vector x ∈ ℝ^d to a density operator ρ_x.
-        * diag_prob      : ρ_x = diag(x / sum(x))               (rank-≥1, diagonal)
-        * stereographic  : ρ_x = |ψ⟩⟨ψ| with ψ given by Eq.(2)–(3) of Sergioli et al.
-        * informative    : ρ_x = |ψ⟩⟨ψ| with ψ given by Eq.(7)–(10) of Sergioli et al.
+        How to map an input vector x ∈ R^d to a density operator p_x.
+        * diag_prob      : p_x = diag(x / sum(x))               (rank-≥1, diagonal)
+        * stereographic  : p_x = |ψ⟩⟨ψ| with ψ given by Eq.(2)-(3) of Sergioli et al.
+        * informative    : p_x = |ψ⟩⟨ψ| with ψ given by Eq.(7)-(10) of Sergioli et al.
 
-    distance : {'trace', <any string accepted by make_distance_fn>}, default='trace'
+    distance : {'trace', 'fidelity}, default='trace'
         Distance between density operators.  If not 'trace', the string is passed
-        to ``make_distance_fn`` and will be applied to *vectors* that represent
+        to `make_distance_fn and will be applied to *vectors* that represent
         density matrices (diagonals for 'diag_prob'; flattened matrices otherwise).
 
     distance_squared : bool, default=False
-        Forwarded to ``make_distance_fn`` for your JTC-based metrics.
+        Forwarded to `make_distance_fn for your JTC-based metrics.
 
     """
 
     def __init__(
         self,
-        encoding: Literal["diag_prob", "stereographic", "informative"] = "stereographic",
-        distance: str = "trace",
+        encoding: Literal[
+            "diag_prob", "stereographic", "informative"
+        ] = "stereographic",
+        distance: str = "fidelity",
         distance_squared: bool = False,
         random_state: Optional[int] = None,
     ):
@@ -45,41 +56,16 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
     # ------------------------------------------------------------------
     #                      ENCODING HELPERS
     # ------------------------------------------------------------------
-    def _encode_diag_prob(self, x: np.ndarray) -> np.ndarray:
-        """Diagonal-probability encoding: returns the *vector* of diagonal entries."""
-        x = x.astype(np.float32, copy=False)
-        s = x.sum()
-        if s == 0.0:           # blank image -> uniform distribution
-            return np.full_like(x, 1.0 / x.size, dtype=np.float32)
-        return x / s
-
-    def _encode_stereographic(self, x: np.ndarray) -> np.ndarray:
-        """Return ψ ∈ ℝ^{d+1} (unit vector) – Eq.(2)–(3) in the paper."""
-        norm2 = np.dot(x, x)
-        psi = np.concatenate([2 * x, [norm2 - 1]], dtype=np.float32)
-        psi /= (norm2 + 1)          # normalisation factor
-        return psi / np.linalg.norm(psi)
-
-    def _encode_informative(self, x: np.ndarray) -> np.ndarray:
-        """Return ψ ∈ ℝ^{d+1} – Eq.(7)–(10) in the paper."""
-        x = x.astype(np.float32, copy=False)
-        norm = np.linalg.norm(x)
-        if norm == 0.0:
-            psi = np.zeros(x.size + 1, dtype=np.float32)
-            psi[-1] = 1.0
-            return psi
-        vec = np.concatenate([x / norm, [norm]], dtype=np.float32)
-        vec /= np.sqrt(norm**2 + 1.0)
-        return vec
+    # Encoding methods are now imported from src.encodings.encodings
 
     # choose encoder at runtime
     def _encode(self, x: np.ndarray) -> np.ndarray:
         if self.encoding == "diag_prob":
-            return self._encode_diag_prob(x)
+            return encode_diag_prob(x)
         elif self.encoding == "stereographic":
-            return self._encode_stereographic(x)
+            return encode_stereographic(x)
         elif self.encoding == "informative":
-            return self._encode_informative(x)
+            return encode_informative(x)
         else:
             raise ValueError(f"Unknown encoding '{self.encoding}'")
 
@@ -92,12 +78,18 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         return 0.5 * np.abs(p - q).sum()
 
     @staticmethod
+    def _fidelity_distance_matrix(A: np.ndarray, B: np.ndarray) -> float:
+        """Fidelity distance for full matrices via d = sqrt(1 - F²)."""
+        F = classical_jtc(A, B, shape=(A.shape[0], A.shape[1]))[2]
+        return np.sqrt(1 - F**2)
+
+    @staticmethod
     def _trace_distance_matrix(A: np.ndarray, B: np.ndarray) -> float:
         """Trace distance for full matrices via singular values - 0.5||A-B||₁."""
         diff = A - B
         # NB: for Hermitian diff, singular values == |eigenvalues|
         s = np.linalg.svd(diff, compute_uv=False)
-        return 0.5 * s.sum()
+        return 0.5 * s.sum()  # (For this sum we might use the jtc distance)
 
     # user-supplied or JTC distance (vector form)
     def _make_vector_metric(self) -> Callable[[np.ndarray, np.ndarray], float]:
@@ -115,10 +107,14 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
 
         # containers for accumulating sums
         if self.encoding == "diag_prob":
-            sums = {label: np.zeros(X.shape[1], dtype=np.float32) for label in self.classes_}
+            sums = {
+                label: np.zeros(X.shape[1], dtype=np.float32) for label in self.classes_
+            }
         else:
             dim = X.shape[1] + 1 if self.encoding != "diag_prob" else X.shape[1]
-            sums = {label: np.zeros((dim, dim), dtype=np.float32) for label in self.classes_}
+            sums = {
+                label: np.zeros((dim, dim), dtype=np.float32) for label in self.classes_
+            }
 
         counts = {label: 0 for label in self.classes_}
 
@@ -126,7 +122,7 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         for xi, label in zip(X, y):
             enc = self._encode(xi)
             if self.encoding == "diag_prob":
-                sums[label] += enc                 # vector
+                sums[label] += enc  # vector
             else:
                 sums[label] += np.outer(enc, enc)  # full density matrix
             counts[label] += 1
@@ -147,6 +143,13 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
                 self._metric_ = self._trace_distance_diag
             else:
                 self._metric_ = self._trace_distance_matrix
+
+        elif self.distance == "fidelity":
+            if self.encoding == "diag_prob":
+                self._metric_ = lambda p, q: 1.0 - np.dot(p, q)
+            else:
+                self._metric_ = self._fidelity_distance_matrix
+
         else:
             # any custom metric works on *vectors*; choose representation:
             vecmetric = self._make_vector_metric()
@@ -157,6 +160,7 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
                 # flatten the symmetric matrix ; store upper-triangular part for speed
                 def _mat_to_vec(M: np.ndarray):
                     return M[np.triu_indices_from(M)]
+
                 self._metric_ = lambda A, B: vecmetric(_mat_to_vec(A), _mat_to_vec(B))
 
         return self

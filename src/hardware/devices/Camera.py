@@ -43,6 +43,7 @@ from pylablib.devices.Thorlabs import tlcam as _tl
 # Helper functions
 # -----------------------------------------------------------------------------
 
+
 def list_cameras() -> List[str]:
     """Return a list of serial numbers of all TL‑compatible cameras present."""
     return _tl.list_cameras()
@@ -60,6 +61,7 @@ def _auto_pick_serial(serial: Optional[str]) -> str:
 # -----------------------------------------------------------------------------
 # Main camera class
 # -----------------------------------------------------------------------------
+
 
 class DCC1645CCamera:
     """High-level driver for the **DCC1645C** CMOS camera.
@@ -132,7 +134,13 @@ class DCC1645CCamera:
         return self._cam.get_gain()
 
     # --- Region of Interest ------------------------------------------------
-    def set_roi(self, origin_x: int = 0, origin_y: int = 0, width: Optional[int] = None, height: Optional[int] = None) -> None:
+    def set_roi(
+        self,
+        origin_x: int = 0,
+        origin_y: int = 0,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+    ) -> None:
         """Set region of interest (values in **sensor** pixels).
 
         If *width* or *height* are *None*, the maximum size at the requested
@@ -162,7 +170,9 @@ class DCC1645CCamera:
         return self._cam.get_binning()
 
     # --- Triggering --------------------------------------------------------
-    def set_external_trigger(self, enable: bool = True, *, edge: str = "rising") -> None:
+    def set_external_trigger(
+        self, enable: bool = True, *, edge: str = "rising"
+    ) -> None:
         """Enable/disable external trigger on the given edge ('rising'/'falling')."""
         self._require_open()
         mode = "external" if enable else "internal"
@@ -180,7 +190,9 @@ class DCC1645CCamera:
         return frame.copy()
 
     # Continuous streaming --------------------------------------------------
-    def start_streaming(self, *, buffer_size: int = 100, drop_frames: bool = True) -> None:
+    def start_streaming(
+        self, *, buffer_size: int = 100, drop_frames: bool = True
+    ) -> None:
         """Start free‑running acquisition.
 
         Parameters
@@ -192,14 +204,18 @@ class DCC1645CCamera:
             overflows. If *False*, acquisition stalls until frames are read.
         """
         self._require_open()
-        self._cam.setup_continuous_acquisition(frames_per_buffer=buffer_size, drop_frames=drop_frames)
+        self._cam.setup_continuous_acquisition(
+            frames_per_buffer=buffer_size, drop_frames=drop_frames
+        )
         self._cam.start_acquisition()
 
     def stop_streaming(self) -> None:
         self._require_open()
         self._cam.stop_acquisition()
 
-    def stream_frames(self, *, limit: Optional[int] = None, timeout: float = 10.0) -> Iterable[np.ndarray]:
+    def stream_frames(
+        self, *, limit: Optional[int] = None, timeout: float = 10.0
+    ) -> Iterable[np.ndarray]:
         """Yield frames in a *for* loop while streaming is running.
 
         Parameters
@@ -248,7 +264,10 @@ class DCC1645CCamera:
         print("  Exposure:    %.6f s" % self.get_exposure())
         print("  Gain:        %.2f" % self.get_gain())
         print("  Binning:     %s×%s" % self.get_binning())
-        print("  Trigger:     ", "external" if self._cam.get_trigger_mode() == "external" else "internal")
+        print(
+            "  Trigger:     ",
+            "external" if self._cam.get_trigger_mode() == "external" else "internal",
+        )
 
 
 # -----------------------------------------------------------------------------

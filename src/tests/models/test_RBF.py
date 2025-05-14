@@ -4,7 +4,11 @@ from ...data.data import get_test_data, get_train_data
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-from sklearn.model_selection import StratifiedKFold, cross_validate, train_test_split  # Added train_test_split
+from sklearn.model_selection import (
+    StratifiedKFold,
+    cross_validate,
+    train_test_split,
+)  # Added train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import (
     balanced_accuracy_score,
@@ -24,20 +28,20 @@ sample_percentage = 0.025
 
 # Create smaller, stratified training subset
 _, X_train, _, y_train = train_test_split(
-    X_train_total, 
-    y_train_total, 
-    test_size=sample_percentage, 
-    stratify=y_train_total, 
-    random_state=0
+    X_train_total,
+    y_train_total,
+    test_size=sample_percentage,
+    stratify=y_train_total,
+    random_state=0,
 )
 
 # Create smaller, stratified testing subset
 _, X_test, _, y_test = train_test_split(
-    X_test_total, 
-    y_test_total, 
-    test_size=sample_percentage, 
-    stratify=y_test_total, 
-    random_state=0
+    X_test_total,
+    y_test_total,
+    test_size=sample_percentage,
+    stratify=y_test_total,
+    random_state=0,
 )
 
 # ---------------------------------------------------------------------
