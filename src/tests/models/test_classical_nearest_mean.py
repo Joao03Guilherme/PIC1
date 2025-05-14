@@ -1,4 +1,3 @@
-# filepath: /Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/src/tests/models/test_classical_nearest_mean.py
 from ...models.ClassicalNearestMean.c_nearestmean_network import (
     ClassicalNearestMeanClassifier,
 )
@@ -50,11 +49,12 @@ print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 
 
 cnm = ClassicalNearestMeanClassifier(
-    distance_metric_name="classical_jtc", distance_squared=False
+    distance_metric_name="euclidean", distance_squared=False, random_state=0
 )
 
 model = Pipeline(
     [
+        ("pca", PCA(n_components=0.95, svd_solver="full", random_state=0)),  # PCA step
         ("cnm", cnm),
     ]
 )

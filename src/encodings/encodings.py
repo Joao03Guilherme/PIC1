@@ -22,11 +22,14 @@ def is_density_matrix(rho):
 
     return True
 
+
 def calculate_purity_from_density_matrix(rho):
     return np.trace(rho @ rho)
 
+
 def calculate_purity_from_vector(vector):
     return (1 + np.linalg.norm(vector) ** 2) / 2
+
 
 def gram_matrix_encoding(data_vector):
     data_vector = normalize_vector(data_vector)
@@ -47,10 +50,12 @@ def gram_matrix_decoding(rho):
     # Return as column vector
     return decoded_vector.reshape(-1, 1)
 
+
 def compute_density_matrix_from_vector(vector):
     """Compute the density matrix from a vector."""
     rho = np.outer(vector, vector)
-    return rho 
+    return rho
+
 
 def encode_diag_prob(x: np.ndarray) -> np.ndarray:
     """Diagonal-probability encoding: returns the *vector* of diagonal entries."""

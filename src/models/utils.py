@@ -4,21 +4,23 @@ from ..distance.JTCorrelator import (
 )
 
 
-def make_distance_fn(name: str = "phase", *, squared: bool = False):
+def make_distance_fn(
+    name: str = "classical_jtc", *, squared: bool = False, shape=(28, 28)
+):
     """Return a callable f(X, Y) compatible with sklearn.pairwise_distances."""
     if name == "phase":
 
         def _d(X, Y):
-            d, _, _, _ = phase_corr_similarity(X, Y, shape=(28, 28))
+            d, _, _, _ = phase_corr_similarity(X, Y, shape=shape)
             return d
 
     elif name == "classical_jtc":
 
         def _d(X, Y):
             d, _, _, _ = classical_jtc(
-                X.reshape(28, 28),
-                Y.reshape(28, 28),
-                shape=(28, 28),
+                X,
+                Y,
+                shape=shape,
             )
             return d
 

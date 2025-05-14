@@ -1,9 +1,6 @@
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import pairwise_distances
-
-# Assuming c_nearestmean_network.py is in src/models/ClassicalNearestMean/
-# and rbf_network.py is in src/models/RBF/
 from ..utils import make_distance_fn
 
 
@@ -36,20 +33,46 @@ class ClassicalNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         self.distance_metric_name = distance_metric_name
         self.distance_squared = distance_squared
         self.random_state = random_state
+        self.dist_fn_ = None
+        self.centroids_ = None
 
     def fit(self, X: np.ndarray, y: np.ndarray):
         """
-        Fit the classifier by computing class centroids (means) using simple averaging.
+        Fit the classifier by computing class centroids (means).
+        The input vectors are reshaped to be as close to a square as possible
+        internally by the distance function. No padding is applied.
         """
         self.classes_ = np.unique(y)
         Xp = X.astype(np.float32, copy=False)
 
-        # Euclidean-based centroids (simple arithmetic mean)
-        centroids = [Xp[y == c].mean(axis=0) for c in self.classes_]
-        self.centroids_ = np.array(centroids, dtype=np.float32)
+        n_features = Xp.shape[1]
 
-        # Initialize custom distance for prediction
-        self.dist_fn_ = make_distance_fn(name=self.distance_metric_name, squared=self.distance_squared)
+        # Determine H, W such that H * W = n_features and H, W are as close as possible
+        h_candidate = int(np.sqrt(n_features))
+        while n_features % h_candidate != 0:
+            h_candidate -= 1
+            if h_candidate == 0: # Should not happen if n_features > 0, but as a safeguard
+                h_candidate = 1 # Fallback for prime or small n_features
+                break
+        H = h_candidate
+        W = n_features // H
+        self.image_shape_ = (H, W)
+
+        # Compute centroids (1D vectors of length n_features)
+        # No padding is applied to centroids.
+        self.centroids_ = np.array(
+            [Xp[y == c_label].mean(axis=0) for c_label in self.classes_],
+            dtype=np.float32
+        )
+
+        # Create distance function that expects 1D inputs of length n_features
+        # and will reshape them internally to self.image_shape_
+        self.dist_fn_ = make_distance_fn(
+            name=self.distance_metric_name,
+            squared=self.distance_squared,
+            shape=self.image_shape_,  # (H,W)
+        )
+
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:
@@ -63,12 +86,16 @@ class ClassicalNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         if (
             not hasattr(self, "centroids_")
             or not hasattr(self, "classes_")
+            or self.centroids_ is None # Explicitly check for None
             or self.centroids_.shape[0] == 0
         ):
             raise RuntimeError(
-                "The classifier has not been fitted yet or no centroids were learned (e.g., empty training data)."
+                "The classifier has not been fitted yet or no centroids were learned."
             )
 
+        # X_processed contains 1D vectors of original n_features length.
+        # self.centroids_ also contains 1D vectors of n_features length.
+        # No padding is applied here. The dist_fn_ handles reshaping.
         X_processed = X.astype(np.float32, copy=False)
 
         distances = pairwise_distances(
