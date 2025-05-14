@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Union
+from typing import Union, Optional, Tuple
 
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans
@@ -27,6 +27,7 @@ class RBFNet(BaseEstimator, ClassifierMixin):
         min_sigma: float = 1e-2,
         distance_name: str = "phase",
         distance_squared: bool = True,
+        shape: Optional[Tuple[int, int]] = None,
         random_state: int | None = None,
     ) -> None:
         # Parameters must be assigned to attributes with *the same names*
@@ -41,6 +42,7 @@ class RBFNet(BaseEstimator, ClassifierMixin):
         self.min_sigma = min_sigma
         self.distance_name = distance_name
         self.distance_squared = distance_squared
+        self.shape = shape
         self.random_state = random_state
 
         # Internal aliases (shorter names):
@@ -50,6 +52,19 @@ class RBFNet(BaseEstimator, ClassifierMixin):
     # --------------------------- training -----------------------------------
     def fit(self, X: np.ndarray, y: np.ndarray):
         X_raw = X.astype(np.float32, copy=False)
+        
+        # Determine image shape for distance functions if needed
+        n_features = X_raw.shape[1]
+        if self.shape is None:
+            # Calculate optimal H, W such that H * W = n_features and H, W are as close as possible
+            h_candidate = int(np.sqrt(n_features))
+            while n_features % h_candidate != 0 and h_candidate > 1:
+                h_candidate -= 1
+            H = h_candidate
+            W = n_features // H
+            self.image_shape_ = (H, W)
+        else:
+            self.image_shape_ = self.shape
 
         # 1. choose centres -------------------------------------------------
         if self.n_centers is None:
@@ -66,8 +81,13 @@ class RBFNet(BaseEstimator, ClassifierMixin):
                 .fit(X_raw)
                 .cluster_centers_.astype(np.float32)
             )
-
-        dist_fn = make_distance_fn(self.distance_name, squared=self.distance_squared)
+            
+        # Create distance function with shape information for proper reshaping
+        dist_fn = make_distance_fn(
+            name=self.distance_name, 
+            squared=self.distance_squared,
+            shape=self.image_shape_
+        )
 
         # 2. compute distances -------------------------------------------
         d2 = pairwise_distances(self.centers_, metric=dist_fn, n_jobs=-1)
@@ -91,7 +111,11 @@ class RBFNet(BaseEstimator, ClassifierMixin):
 
     # --------------------------- predictors ------------------------------
     def _rbf_layer(self, X: np.ndarray) -> np.ndarray:
-        dist_fn = make_distance_fn(self.distance_name, squared=self.distance_squared)
+        dist_fn = make_distance_fn(
+            name=self.distance_name, 
+            squared=self.distance_squared,
+            shape=self.image_shape_
+        )
         return np.exp(
             -pairwise_distances(
                 X.astype(np.float32, copy=False),

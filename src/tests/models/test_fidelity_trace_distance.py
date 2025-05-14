@@ -9,25 +9,10 @@ from ...encodings.encodings import (
     compute_density_matrix_from_vector,
 )
 from ...distance.JTCorrelator import classical_jtc
-
-
-def calculate_trace_distance_dms(dm1: np.ndarray, dm2: np.ndarray) -> float:
-    """Computes 0.5 * ||dm1 - dm2||_1 (trace norm)."""
-    diff = dm1 - dm2
-    s = np.linalg.svd(diff, compute_uv=False)
-    return 0.5 * np.sum(s)
-
-
-def calculate_fidelity_distance_dms(dm1: np.ndarray, dm2: np.ndarray) -> float:
-    """Computes sqrt(1 - F^2) where F is JTC similarity."""
-    if dm1.shape != dm2.shape:
-        raise ValueError("Density matrices must have the same shape for JTC.")
-
-    similarity_F = classical_jtc(dm1.flatten(), dm2.flatten(), shape=dm1.shape)[2]
-    value_inside_sqrt = 1 - similarity_F**2
-    if value_inside_sqrt < 0:
-        value_inside_sqrt = 0  # Clamp to zero due to potential floating point issues
-    return np.sqrt(value_inside_sqrt)
+from ...distance.quantum_distances import (
+    calculate_trace_distance_matrix as calculate_trace_distance_dms,
+    calculate_fidelity_distance_matrix as calculate_fidelity_distance_dms
+)
 
 # Add these functions after your existing functions but before main():
 

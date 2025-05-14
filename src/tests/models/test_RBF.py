@@ -15,6 +15,7 @@ from sklearn.metrics import (
     make_scorer,
     confusion_matrix,
 )
+from sklearn.decomposition import PCA  # Add PCA import
 from pathlib import Path  # Add this import
 
 # Define ROOT as the directory containing the current test script
@@ -47,26 +48,38 @@ _, X_test, _, y_test = train_test_split(
 # ---------------------------------------------------------------------
 # Build PCA → RBF pipeline
 # ---------------------------------------------------------------------
-# pca = PCA(n_components=0.90, svd_solver="full", random_state=0)
-
 # Print the shapes of the training and testing sets
 print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
 print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 
+# Create PCA component
+pca = PCA(n_components=0.95, svd_solver="full", random_state=0)
+
+# Create RBF component
 rbf = RBFNet(
     n_centers=100,
     k_sigma=0.5,
-    distance_name="euclidean",
+    distance_name="classical_jtc",
     distance_squared=False,
     lambda_ridge=1e-3,
+    # We let shape be determined automatically from the PCA-transformed data
+    # This will create a shape as square as possible
+    shape=None,
     random_state=0,
 )
 
 model = Pipeline(
     [
+        ("pca", pca),  # PCA preprocessing step
         ("rbf", rbf),
     ]
 )
+
+# Let's see how many features PCA would retain with our dataset
+pca_check = PCA(n_components=0.95, svd_solver="full", random_state=0)
+X_train_pca = pca_check.fit_transform(X_train)
+print(f"Original number of features: {X_train.shape[1]}")
+print(f"Number of features after PCA: {X_train_pca.shape[1]} (retaining 95% variance)")
 
 # ---------------------------------------------------------------------
 # k-fold cross-validation (stratified)

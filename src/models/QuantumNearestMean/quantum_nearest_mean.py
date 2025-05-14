@@ -2,12 +2,16 @@
 import numpy as np
 from typing import Literal, Callable, Optional
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.metrics import pairwise_distances
 
 # reuse the utility that already builds custom metrics for you
 from ..utils import make_distance_fn
 
 from ...distance.JTCorrelator import classical_jtc
+from ...distance.quantum_distances import (
+    calculate_trace_distance_diag,
+    calculate_fidelity_distance_matrix,
+    calculate_trace_distance_matrix,
+)
 
 # Import encoding functions
 from ...encodings.encodings import (
@@ -72,24 +76,7 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
     # ------------------------------------------------------------------
     #                      DISTANCE HELPERS
     # ------------------------------------------------------------------
-    @staticmethod
-    def _trace_distance_diag(p: np.ndarray, q: np.ndarray) -> float:
-        """Trace distance between *diagonal* density operators."""
-        return 0.5 * np.abs(p - q).sum()
-
-    @staticmethod
-    def _fidelity_distance_matrix(A: np.ndarray, B: np.ndarray) -> float:
-        """Fidelity distance for full matrices via d = sqrt(1 - F²)."""
-        F = classical_jtc(A, B, shape=(A.shape[0], A.shape[1]))[2]
-        return np.sqrt(1 - F**2)
-
-    @staticmethod
-    def _trace_distance_matrix(A: np.ndarray, B: np.ndarray) -> float:
-        """Trace distance for full matrices via singular values - 0.5||A-B||₁."""
-        diff = A - B
-        # NB: for Hermitian diff, singular values == |eigenvalues|
-        s = np.linalg.svd(diff, compute_uv=False)
-        return 0.5 * s.sum()  # (For this sum we might use the jtc distance)
+    # Distance helper methods are now imported from src.distance.quantum_distances
 
     # user-supplied or JTC distance (vector form)
     def _make_vector_metric(self) -> Callable[[np.ndarray, np.ndarray], float]:
@@ -140,15 +127,15 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         # pick appropriate distance function
         if self.distance == "trace":
             if self.encoding == "diag_prob":
-                self._metric_ = self._trace_distance_diag
+                self._metric_ = calculate_trace_distance_diag
             else:
-                self._metric_ = self._trace_distance_matrix
+                self._metric_ = calculate_trace_distance_matrix
 
         elif self.distance == "fidelity":
             if self.encoding == "diag_prob":
                 self._metric_ = lambda p, q: 1.0 - np.dot(p, q)
             else:
-                self._metric_ = self._fidelity_distance_matrix
+                self._metric_ = calculate_fidelity_distance_matrix
 
         else:
             # any custom metric works on *vectors*; choose representation:
