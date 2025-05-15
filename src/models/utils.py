@@ -1,6 +1,7 @@
 from ..distance.JTCorrelator import (
     phase_corr_similarity,
     classical_jtc,
+    binary_jtc,
 )
 
 
@@ -18,6 +19,16 @@ def make_distance_fn(
 
         def _d(X, Y):
             d, _, _, _ = classical_jtc(
+                X,
+                Y,
+                shape=shape,
+            )
+            return d
+
+    elif name == "binary_jtc":
+
+        def _d(X, Y):
+            d, _, _, _ = binary_jtc(
                 X,
                 Y,
                 shape=shape,

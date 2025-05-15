@@ -8,6 +8,7 @@ __pycache__/
 
 # Ignore large dataset
 src/data/mnist_csv/mnist_train.csv
+src/data/fashion_mnist_csv/fashion-mnist_train.csv
 
 # C extensions
 *.so

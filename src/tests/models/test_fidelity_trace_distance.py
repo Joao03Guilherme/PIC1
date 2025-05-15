@@ -11,25 +11,27 @@ from ...encodings.encodings import (
 from ...distance.JTCorrelator import classical_jtc
 from ...distance.quantum_distances import (
     calculate_trace_distance_matrix as calculate_trace_distance_dms,
-    calculate_fidelity_distance_matrix as calculate_fidelity_distance_dms
+    calculate_fidelity_distance_matrix as calculate_fidelity_distance_dms,
 )
 
 # Add these functions after your existing functions but before main():
+
 
 def generate_random_pure_state_dm(dim=2):
     """Generate a random pure state density matrix of dimension dim x dim."""
     # Generate a random complex vector of dimension dim
     vec = np.random.normal(size=(dim, 2)).view(complex).flatten()
     # Normalize the vector
-    vec = vec / np.sqrt(np.sum(np.abs(vec)**2))
+    vec = vec / np.sqrt(np.sum(np.abs(vec) ** 2))
     # Create density matrix |ψ⟩⟨ψ|
     rho = np.outer(vec, vec.conj())
     return rho
 
+
 def generate_random_mixed_state_dm(dim=2, mixing_param=None):
     """
     Generate a random mixed state as a convex combination of random pure states.
-    
+
     Args:
         dim: Dimension of the Hilbert space
         mixing_param: If provided, uses this as the mixing parameter.
@@ -38,124 +40,126 @@ def generate_random_mixed_state_dm(dim=2, mixing_param=None):
     # Generate two random pure states
     pure_state1 = generate_random_pure_state_dm(dim)
     pure_state2 = generate_random_pure_state_dm(dim)
-    
+
     # Ensure the second state is different from the first
     retry_count = 0
     while np.allclose(pure_state1, pure_state2) and retry_count < 10:
         pure_state2 = generate_random_pure_state_dm(dim)
         retry_count += 1
-    
+
     # Generate a random mixing parameter if not provided
     if mixing_param is None:
         # Use a random parameter that ensures the state is truly mixed
         # (avoid values too close to 0 or 1)
         mixing_param = 0.3 + 0.4 * np.random.random()  # Between 0.3 and 0.7
-    
+
     # Create the mixed state as a convex combination
     mixed_state = mixing_param * pure_state1 + (1 - mixing_param) * pure_state2
-    
+
     return mixed_state
+
 
 def plot_random_states_distance_comparison():
     """
     Generate density matrices using stereographic encoding, create pure and mixed centroids,
     and compare how the fidelity distance and trace distance behave.
     """
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("Analyzing real-valued density matrices with pure and mixed centroids")
-    print("="*80)
-    
+    print("=" * 80)
+
     # Parameters
     feature_dim = 150  # Dimension of random feature vectors before encoding
     num_pure_centroids = 5  # Number of pure state centroids to generate
     num_mixed_centroids = 5  # Number of mixed state centroids to generate
     samples_per_centroid = 10  # Number of samples per centroid
-    
+
     # Function to generate a random feature vector
     def generate_random_features(dim):
         return np.random.normal(size=dim)
-    
+
     # First, generate pure and mixed centroids using stereographic encoding
     centroids = []  # Each item is (centroid_dm, centroid_type, original_vector)
-    
-    print(f"Generating {num_pure_centroids} pure centroids and {num_mixed_centroids} mixed centroids...")
-    
+
+    print(
+        f"Generating {num_pure_centroids} pure centroids and {num_mixed_centroids} mixed centroids..."
+    )
+
     # Generate pure centroids
     for i in range(num_pure_centroids):
         # For pure centroids, just encode a random feature vector
         feature_vec = generate_random_features(feature_dim)
         encoded_vec = encode_stereographic(feature_vec)
         centroid_dm = compute_density_matrix_from_vector(encoded_vec)
-        centroids.append((centroid_dm, 'pure', feature_vec))
-    
+        centroids.append((centroid_dm, "pure", feature_vec))
+
     # Generate mixed centroids
     for i in range(num_mixed_centroids):
         # For mixed centroids, average two encoded vectors
         feature_vec1 = generate_random_features(feature_dim)
         feature_vec2 = generate_random_features(feature_dim)
-        
+
         encoded_vec1 = encode_stereographic(feature_vec1)
         encoded_vec2 = encode_stereographic(feature_vec2)
-        
+
         dm1 = compute_density_matrix_from_vector(encoded_vec1)
         dm2 = compute_density_matrix_from_vector(encoded_vec2)
-        
+
         # Mix with a random parameter between 0.3 and 0.7 to ensure it's truly mixed
         mix_param = 0.3 + 0.4 * np.random.random()
         mixed_dm = mix_param * dm1 + (1 - mix_param) * dm2
-        
+
         # For reference we store the average feature vector as the "original"
         avg_feature = mix_param * feature_vec1 + (1 - mix_param) * feature_vec2
-        centroids.append((mixed_dm, 'mixed', avg_feature))
-    
+        centroids.append((mixed_dm, "mixed", avg_feature))
+
     # Generate samples around each centroid
     all_samples = []  # Each item is (sample_dm, centroid_idx, centroid_type)
-    
+
     print(f"Generating {samples_per_centroid} samples around each centroid...")
-    
+
     for idx, (_, centroid_type, centroid_feature) in enumerate(centroids):
         for _ in range(samples_per_centroid):
             # Add noise to the original feature vector
             noise_level = 0.1 + 0.1 * np.random.random()  # Between 0.1 and 0.2
-            noisy_feature = centroid_feature + noise_level * generate_random_features(feature_dim)
-            
+            noisy_feature = centroid_feature + noise_level * generate_random_features(
+                feature_dim
+            )
+
             # Encode the noisy feature vector
             encoded_noisy = encode_stereographic(noisy_feature)
             noisy_dm = compute_density_matrix_from_vector(encoded_noisy)
-            
+
             all_samples.append((noisy_dm, idx, centroid_type))
-    
+
     # Calculate distances between samples and centroids
     print("Calculating distances between samples and centroids...")
-    
+
     fidelity_distances = []
     trace_distances = []
     relationship_types = []  # 'Sample-Pure' or 'Sample-Mixed'
-    
+
     for sample_dm, centroid_idx, centroid_type in all_samples:
         centroid_dm = centroids[centroid_idx][0]
-        
+
         # Calculate distances using the same functions as in main()
         td = calculate_trace_distance_dms(sample_dm, centroid_dm)
         fd = calculate_fidelity_distance_dms(sample_dm, centroid_dm)
-        
+
         fidelity_distances.append(fd)
         trace_distances.append(td)
-        relationship_types.append(f'Sample-{centroid_type.capitalize()}')
-    
+        relationship_types.append(f"Sample-{centroid_type.capitalize()}")
+
     # Convert to numpy arrays
     fidelity_distances = np.array(fidelity_distances)
     trace_distances = np.array(trace_distances)
-    
+
     # Create scatter plot
     plt.figure(figsize=(12, 9))
-    
+
     # Define colors for each relationship type
-    color_map = {
-        'Sample-Pure': 'blue',
-        'Sample-Mixed': 'red'
-    }
-    
+    color_map = {"Sample-Pure": "blue", "Sample-Mixed": "red"}
+
     # Plot points colored by relationship type
     for rel_type in np.unique(relationship_types):
         mask = np.array(relationship_types) == rel_type
@@ -166,9 +170,9 @@ def plot_random_states_distance_comparison():
             label=rel_type,
             cmap="viridis",
             alpha=0.7,
-            s=50
+            s=50,
         )
-    
+
     # Linear regression for all points
     x = fidelity_distances
     y = trace_distances
@@ -180,7 +184,7 @@ def plot_random_states_distance_comparison():
     x_line = np.linspace(x.min(), x.max(), 100)
     y_line = m * x_line + b
     plt.plot(x_line, y_line, color="black", linewidth=2)
-    
+
     plt.text(
         0.05,
         0.95,
@@ -190,7 +194,7 @@ def plot_random_states_distance_comparison():
         verticalalignment="top",
         color="black",
     )
-    
+
     plt.xlabel("Fidelity Distance (sample to centroid)", fontsize=12)
     plt.ylabel("Trace Distance (sample to centroid)", fontsize=12)
     plt.title(
@@ -201,20 +205,21 @@ def plot_random_states_distance_comparison():
     plt.grid(True, linestyle="--", alpha=0.5)
     plt.tight_layout()
     plt.show()
-    
+
     # Calculate statistics for each relationship type
     print("\nStatistics by relationship type:")
     for rel_type in np.unique(relationship_types):
         mask = np.array(relationship_types) == rel_type
         fd_subset = fidelity_distances[mask]
         td_subset = trace_distances[mask]
-        
+
         # Calculate correlation
         if len(fd_subset) > 1:
             corr = np.corrcoef(fd_subset, td_subset)[0, 1]
             print(f"{rel_type}: {len(fd_subset)} samples, correlation = {corr:.4f}")
             print(f"  Mean Fidelity Distance: {fd_subset.mean():.4f}")
             print(f"  Mean Trace Distance: {td_subset.mean():.4f}")
+
 
 def main():
     # 1. Load Data
@@ -389,7 +394,7 @@ def main():
     plt.tight_layout()
     plt.show()
     print(f"Plotted {len(fidelity_distances_to_true_centroid)} points.")
-    
+
     # Add this new call:
     plot_random_states_distance_comparison()
 

@@ -49,7 +49,7 @@ print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 
 
 cnm = ClassicalNearestMeanClassifier(
-    distance_metric_name="euclidean", distance_squared=False, random_state=0
+    distance_metric_name="binary_jtc", distance_squared=False, random_state=0
 )
 
 model = Pipeline(

@@ -1,7 +1,10 @@
 from __future__ import annotations
 import numpy as np
-from .utils import binarize, _peak_and_shift
+from .utils import _peak_and_shift
+from typing import Tuple
 
+
+EPS = 1e-8  # small value to avoid division by zero
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Classical JTC  (grey-scale, un-thresholded)
@@ -33,43 +36,65 @@ def classical_jtc(img1_vec, img2_vec, shape):
     return distance, (dy, dx), similarity, corr
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Binary JTC  (images and spectrum binarised, per Javidi & Horner)
-# ──────────────────────────────────────────────────────────────────────────────
-def binary_jtc(img1_vec, img2_vec, shape, *, threshold="median"):
-    from typing import Tuple  # keeps original imports intact
+def binary_jtc(img1_vec: np.ndarray,
+               img2_vec: np.ndarray,
+               shape: Tuple[int, int],
+               spectrum_threshold: str | float = "median"):
+    """
+    Binary Joint-Transform Correlator (grey-scale inputs, binary spectrum)
 
-    # --- reshape + binarise input images (±1) ---
-    img1 = np.reshape(img1_vec, shape)
-    img2 = np.reshape(img2_vec, shape)
-    bin1 = binarize(img1, threshold)
-    bin2 = binarize(img2, threshold)
+    Parameters
+    ----------
+    img1_vec, img2_vec : 1-D uint8/float32
+        Flattened images, same length.
+    shape : (H, W)
+        Original 2-D shape.
+    spectrum_threshold :
+        "median"  – threshold = median(|F|²)   (default)
+        "mean"    – threshold = mean(|F|²)
+        <float>   – threshold = float × mean(|F|²)
 
-    # joint plane (binary inputs) and FFT
-    joint_bin = np.hstack((bin1, bin2))
-    F = np.fft.fft2(joint_bin)
-    power = np.abs(F) ** 2
+    Returns
+    -------
+    distance   : float        (≥ 1, 1 = identical)
+    shift      : (dy, dx)     cross-correlation peak position
+    similarity : float        (≈ 1 for identical, 0 for unrelated)
+    corr       : 2-D ndarray  centred correlation plane
+    """
+    if img1_vec.size != img2_vec.size:
+        raise ValueError("img1 and img2 must contain the same number of pixels")
 
-    # binarise Fourier-plane intensity to ±1 (median threshold):contentReference[oaicite:3]{index=3}:contentReference[oaicite:4]{index=4}
-    power_bin = np.where(power >= np.median(power), 1.0, -1.0)
+    # 1) reshape
+    img1 = img1_vec.astype(np.float32).reshape(shape)
+    img2 = img2_vec.astype(np.float32).reshape(shape)
 
-    # inverse FFT → correlation plane (binary JTC output)
-    corr = np.fft.ifft2(power_bin)
+    # 2) joint input plane
+    joint = np.hstack((img1, img2))                 # (H, 2W)
+
+    # 3) joint power spectrum
+    jps = np.abs(np.fft.fft2(joint)) ** 2
+
+    if spectrum_threshold == "median":
+        thresh = np.median(jps)
+    elif spectrum_threshold == "mean":
+        thresh = jps.mean()
+    else:
+        thresh = float(spectrum_threshold) * jps.mean()
+
+    jps_bin = (jps >= thresh).astype(np.float32)    # 0/1 binary spectrum
+
+    # 4) correlation plane
+    corr = np.fft.ifft2(jps_bin)
     corr = np.fft.fftshift(np.real(corr))
 
-    # peak & shift
+    # 5) peak & similarity
     peak, (dy, dx) = _peak_and_shift(corr, shape)
+    norm = np.linalg.norm(img1) * np.linalg.norm(img2) + EPS
 
-    # —— normalise using binary images’ energy (each pixel ±1) ——
-    # norms are √N where N = H·W
-    norm = np.linalg.norm(bin1) * np.linalg.norm(bin2)
-    peak_norm = peak / norm if norm else 0.0
+    similarity = peak / (2.0 * norm)               # ∈ [0, 1]
+    distance   = 1.0 / (similarity + EPS)          # ∈ [1, ∞)
 
-    # distance on *binary* images (as in Javidi’s digital simulations)
-    img2_aligned = np.roll(np.roll(bin2, -dy, axis=0), -dx, axis=1)
-    distance = np.mean((bin1 - img2_aligned) ** 2)
-
-    return distance, (dy, dx), peak_norm, corr
+    return distance, (dy, dx), similarity, corr
 
 
 def phase_corr_similarity(img1_vec, img2_vec, shape):
@@ -161,7 +186,7 @@ if __name__ == "__main__":
 
     for v in variants:
         eucl_dists.append(np.linalg.norm(img_base.flatten() - v.flatten()))
-        jtc_dist, _, _, _ = classical_jtc(img_base.flatten(), v.flatten(), shape)
+        jtc_dist, _, _, _ = binary_jtc(img_base.flatten(), v.flatten(), shape)
         jtc_dists.append(jtc_dist)
 
     # Convert to numpy arrays
@@ -193,11 +218,7 @@ if __name__ == "__main__":
         # run jtc to get similarity
         img1 = img_base.flatten()
         img2 = v.flatten()
-        joint = np.hstack((img_base, v))
-        joint_power = np.abs(np.fft.fft2(joint)) ** 2
-        corr = np.fft.fftshift(np.real(np.fft.ifft2(joint_power)))
-        pk, _ = _peak_and_shift(corr, shape)
-        sim = pk / (2 * np.linalg.norm(img_base) * np.linalg.norm(v))
+        _, _, sim, _ = binary_jtc(img1, img2, shape)
         peaks.append(sim)
 
     fig, ax = plt.subplots(1, 2, figsize=(12, 5))

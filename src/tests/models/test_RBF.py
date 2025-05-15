@@ -62,8 +62,6 @@ rbf = RBFNet(
     distance_name="classical_jtc",
     distance_squared=False,
     lambda_ridge=1e-3,
-    # We let shape be determined automatically from the PCA-transformed data
-    # This will create a shape as square as possible
     shape=None,
     random_state=0,
 )

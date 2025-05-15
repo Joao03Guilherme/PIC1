@@ -1,22 +1,24 @@
 import numpy as np
 
 
-def binarize(img, treshold="median"):
+def binarize(img, threshold="median"):
     """
     Calculates the median pixel value of the image and binarizes it.
     - img: 2D numpy array representing the image.
-    - treshold: Method to calculate the treshold. Currently only "median" is supported.
+    -  Method to calculate the threshold. Currently only "median" and numeric values are supported.
     Returns: 2D numpy array with binary values (-1 or 1).
     """
 
-    if treshold == "median":
+    if threshold == "median":
         treshold_value = np.median(img)
 
     else:
-        if isinstance(treshold, (int, float)):
-            treshold_value = treshold
+        if isinstance(threshold, (int, float)):
+            treshold_value = threshold
         else:
-            raise ValueError("Invalid treshold value. Use 'median' or a numeric value.")
+            raise ValueError(
+                "Invalid threshold value. Use 'median' or a numeric value."
+            )
 
     # Binarize the image: -1 for pixels below median, 1 for pixels above
     binary_img = np.where(img < treshold_value, -1, 1)

@@ -52,7 +52,7 @@ class RBFNet(BaseEstimator, ClassifierMixin):
     # --------------------------- training -----------------------------------
     def fit(self, X: np.ndarray, y: np.ndarray):
         X_raw = X.astype(np.float32, copy=False)
-        
+
         # Determine image shape for distance functions if needed
         n_features = X_raw.shape[1]
         if self.shape is None:
@@ -81,12 +81,12 @@ class RBFNet(BaseEstimator, ClassifierMixin):
                 .fit(X_raw)
                 .cluster_centers_.astype(np.float32)
             )
-            
+
         # Create distance function with shape information for proper reshaping
         dist_fn = make_distance_fn(
-            name=self.distance_name, 
+            name=self.distance_name,
             squared=self.distance_squared,
-            shape=self.image_shape_
+            shape=self.image_shape_,
         )
 
         # 2. compute distances -------------------------------------------
@@ -112,9 +112,9 @@ class RBFNet(BaseEstimator, ClassifierMixin):
     # --------------------------- predictors ------------------------------
     def _rbf_layer(self, X: np.ndarray) -> np.ndarray:
         dist_fn = make_distance_fn(
-            name=self.distance_name, 
+            name=self.distance_name,
             squared=self.distance_squared,
-            shape=self.image_shape_
+            shape=self.image_shape_,
         )
         return np.exp(
             -pairwise_distances(

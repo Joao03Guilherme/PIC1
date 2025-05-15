@@ -23,6 +23,10 @@ ROOT = Path(__file__).resolve().parent
 X_train_total, y_train_total = get_train_data()
 X_test_total, y_test_total = get_test_data()
 
+# Normalize the data
+X_train_total = X_train_total
+X_test_total = X_test_total
+
 # Define the percentage of the dataset to use
 sample_percentage = 0.02  # Using 2% as in the classical test script example
 
@@ -56,7 +60,7 @@ pca = PCA(
 )  # Example: retain 95% variance
 
 qnmc = QuantumNearestMeanClassifier(
-    encoding="stereographic", distance="trace", random_state=0
+    encoding="stereographic", distance="fidelity", random_state=0
 )
 
 model = Pipeline(

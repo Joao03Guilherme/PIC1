@@ -51,8 +51,10 @@ class ClassicalNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         h_candidate = int(np.sqrt(n_features))
         while n_features % h_candidate != 0:
             h_candidate -= 1
-            if h_candidate == 0: # Should not happen if n_features > 0, but as a safeguard
-                h_candidate = 1 # Fallback for prime or small n_features
+            if (
+                h_candidate == 0
+            ):  # Should not happen if n_features > 0, but as a safeguard
+                h_candidate = 1  # Fallback for prime or small n_features
                 break
         H = h_candidate
         W = n_features // H
@@ -62,7 +64,7 @@ class ClassicalNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         # No padding is applied to centroids.
         self.centroids_ = np.array(
             [Xp[y == c_label].mean(axis=0) for c_label in self.classes_],
-            dtype=np.float32
+            dtype=np.float32,
         )
 
         # Create distance function that expects 1D inputs of length n_features
@@ -86,7 +88,7 @@ class ClassicalNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         if (
             not hasattr(self, "centroids_")
             or not hasattr(self, "classes_")
-            or self.centroids_ is None # Explicitly check for None
+            or self.centroids_ is None  # Explicitly check for None
             or self.centroids_.shape[0] == 0
         ):
             raise RuntimeError(
