@@ -95,9 +95,6 @@ class ClassicalNearestMeanClassifier(BaseEstimator, ClassifierMixin):
                 "The classifier has not been fitted yet or no centroids were learned."
             )
 
-        # X_processed contains 1D vectors of original n_features length.
-        # self.centroids_ also contains 1D vectors of n_features length.
-        # No padding is applied here. The dist_fn_ handles reshaping.
         X_processed = X.astype(np.float32, copy=False)
 
         distances = pairwise_distances(

@@ -18,6 +18,7 @@ from ...encodings.encodings import (
     encode_diag_prob,
     encode_stereographic,
     encode_informative,
+    normalize_vector
 )
 
 
@@ -46,7 +47,7 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
     def __init__(
         self,
         encoding: Literal[
-            "diag_prob", "stereographic", "informative"
+            "diag_prob", "stereographic", "informative", "standard"
         ] = "stereographic",
         distance: str = "fidelity",
         distance_squared: bool = False,
@@ -70,6 +71,8 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
             return encode_stereographic(x)
         elif self.encoding == "informative":
             return encode_informative(x)
+        elif self.encoding == "standard":
+            return normalize_vector(x)
         else:
             raise ValueError(f"Unknown encoding '{self.encoding}'")
 
@@ -92,17 +95,19 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         X = X.astype(np.float32, copy=False)
         self.classes_ = np.unique(y)
 
-        # containers for accumulating sums
         if self.encoding == "diag_prob":
-            sums = {
-                label: np.zeros(X.shape[1], dtype=np.float32) for label in self.classes_
-            }
-        else:
-            dim = X.shape[1] + 1 if self.encoding != "diag_prob" else X.shape[1]
-            sums = {
-                label: np.zeros((dim, dim), dtype=np.float32) for label in self.classes_
-            }
+            sums = {label: np.zeros(X.shape[1], dtype=np.float32) for label in self.classes_}
 
+        elif self.encoding in ("stereographic", "informative"):   # d  ->  d+1
+            dim = X.shape[1] + 1
+            sums = {label: np.zeros((dim, dim), dtype=np.float32) for label in self.classes_}
+
+        elif self.encoding == "standard":                         # stays at d
+            dim = X.shape[1]
+            sums = {label: np.zeros((dim, dim), dtype=np.float32) for label in self.classes_}
+        else:
+            raise ValueError("No valid encoding defined")
+                     
         counts = {label: 0 for label in self.classes_}
 
         # accumulate outer products (or diagonals)
@@ -166,8 +171,12 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
             enc = self._encode(xi)
 
             # choose representation to feed to distance metric
-            if self.distance == "trace" or self.encoding != "diag_prob":
-                rep_x = enc if self.encoding == "diag_prob" else np.outer(enc, enc)
+            if self.encoding == "diag_prob":
+                # no rep_x needed
+                pass
+            else:
+                rep_x = np.outer(enc, enc)
+
 
             best_dist = np.inf
             best_lbl = None

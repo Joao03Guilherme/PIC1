@@ -56,7 +56,6 @@ def compute_density_matrix_from_vector(vector):
     rho = np.outer(vector, vector)
     return rho
 
-
 def encode_diag_prob(x: np.ndarray) -> np.ndarray:
     """Diagonal-probability encoding: returns the *vector* of diagonal entries."""
     x = x.astype(np.float32, copy=False)
@@ -86,9 +85,6 @@ def encode_informative(x: np.ndarray) -> np.ndarray:
         psi = np.zeros(x.size + 1, dtype=np.float32)
         psi[-1] = 1.0
         return psi
-    vec = np.concatenate([x / norm, [norm]], dtype=np.float32)
-    # Ensure vec is a unit vector
-    vec_norm = np.linalg.norm(vec)
-    if vec_norm == 0:  # Should not happen if norm > 0 or norm == 0 handled above
-        return vec
-    return vec / vec_norm
+    
+    vec = np.concatenate([x / norm, [1]], dtype=np.float32)
+    return 1/np.sqrt(2) * vec
