@@ -20,15 +20,15 @@ from pathlib import Path
 # Define ROOT as the directory containing the current test script
 ROOT = Path(__file__).resolve().parent
 
-X_train_total, y_train_total = get_train_data()
-X_test_total, y_test_total = get_test_data()
+X_train_total, y_train_total = get_train_data(dataset="mnist")
+X_test_total, y_test_total = get_test_data(dataset="mnist")
 
 # Normalize the data
 X_train_total = X_train_total
 X_test_total = X_test_total
 
 # Define the percentage of the dataset to use
-sample_percentage = 0.02  # Using 2% as in the classical test script example
+sample_percentage = 0.025  # Using 2% as in the classical test script example
 
 # Create smaller, stratified training subset
 _, X_train, _, y_train = train_test_split(

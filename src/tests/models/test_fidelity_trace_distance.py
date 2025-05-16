@@ -7,6 +7,9 @@ from ...data.data import get_train_data, get_test_data
 from ...encodings.encodings import (
     encode_stereographic,
     compute_density_matrix_from_vector,
+    density_amplitude,
+    density_basis_prob,
+    density_informative,
 )
 from ...distance.JTCorrelator import classical_jtc
 from ...distance.quantum_distances import (
@@ -85,25 +88,21 @@ def plot_random_states_distance_comparison():
         f"Generating {num_pure_centroids} pure centroids and {num_mixed_centroids} mixed centroids..."
     )
 
-    # Generate pure centroids
+    # Generate pure state centroids via stereographic amplitude encoding
     for i in range(num_pure_centroids):
-        # For pure centroids, just encode a random feature vector
         feature_vec = generate_random_features(feature_dim)
-        encoded_vec = encode_stereographic(feature_vec)
-        centroid_dm = compute_density_matrix_from_vector(encoded_vec)
+        psi = encode_stereographic(feature_vec)
+        centroid_dm = density_amplitude(psi)
         centroids.append((centroid_dm, "pure", feature_vec))
 
-    # Generate mixed centroids
+    # Generate mixed centroids via mixing two stereographic-encoded states
     for i in range(num_mixed_centroids):
-        # For mixed centroids, average two encoded vectors
         feature_vec1 = generate_random_features(feature_dim)
         feature_vec2 = generate_random_features(feature_dim)
-
-        encoded_vec1 = encode_stereographic(feature_vec1)
-        encoded_vec2 = encode_stereographic(feature_vec2)
-
-        dm1 = compute_density_matrix_from_vector(encoded_vec1)
-        dm2 = compute_density_matrix_from_vector(encoded_vec2)
+        psi1 = encode_stereographic(feature_vec1)
+        psi2 = encode_stereographic(feature_vec2)
+        dm1 = density_amplitude(psi1)
+        dm2 = density_amplitude(psi2)
 
         # Mix with a random parameter between 0.3 and 0.7 to ensure it's truly mixed
         mix_param = 0.3 + 0.4 * np.random.random()
