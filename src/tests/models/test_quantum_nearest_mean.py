@@ -23,10 +23,12 @@ ROOT = Path(__file__).resolve().parent
 X_train_total, y_train_total = get_train_data(dataset="mnist")
 X_test_total, y_test_total = get_test_data(dataset="mnist")
 
-# Normalize the data
-X_train_total = X_train_total
-X_test_total = X_test_total
+y_test = y_test_total
+X_test = X_test_total
+y_train = y_train_total
+X_train = X_train_total
 
+"""
 # Define the percentage of the dataset to use
 sample_percentage = 0.025  # Using 2% as in the classical test script example
 
@@ -47,6 +49,7 @@ _, X_test, _, y_test = train_test_split(
     stratify=y_test_total,
     random_state=0,
 )
+"""
 
 # Print the shapes of the training and testing sets
 print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
@@ -56,11 +59,11 @@ print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 # Build Quantum Nearest Mean pipeline with PCA
 # ---------------------------------------------------------------------
 pca = PCA(
-    n_components=0.95, svd_solver="full", random_state=0
+    n_components=50, svd_solver="full", random_state=0
 )  # Example: retain 95% variance
 
 qnmc = QuantumNearestMeanClassifier(
-    encoding="stereographic", distance="fidelity", random_state=0
+    encoding="informative", distance="fidelity", random_state=0
 )
 
 model = Pipeline(
@@ -106,6 +109,8 @@ print(
 print("\nEvaluating Quantum Nearest Mean on the test set …")
 model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
+
+print(f"Accuracy = {np.mean(y_pred == y_test)}")
 
 # Compute confusion matrix
 conf_matrix = confusion_matrix(y_test, y_pred)

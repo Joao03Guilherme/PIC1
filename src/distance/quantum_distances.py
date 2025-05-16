@@ -17,8 +17,8 @@ def calculate_fidelity_distance_matrix(A: np.ndarray, B: np.ndarray) -> float:
     Returns:
         Fidelity distance sqrt(1 - F²) where F is the JTC similarity
     """
-    F = classical_jtc(A.flatten(), B.flatten(), shape=A.shape)[2]
-    value_inside_sqrt = 1 - F**2
+    F = classical_jtc(A.flatten(), B.flatten(), shape=A.shape)[2] ** 2
+    value_inside_sqrt = 1 - F
     if value_inside_sqrt < 0:
         value_inside_sqrt = 0  # Clamp to zero due to potential floating point issues
     return np.sqrt(value_inside_sqrt)

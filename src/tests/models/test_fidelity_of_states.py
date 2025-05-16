@@ -1,5 +1,6 @@
 from ...encodings.encodings import (
-    encode_stereographic,
+    normalize_vector,
+    encode_informative,
     calculate_purity_from_vector,  # Keep if used elsewhere, or remove if only matrix purity is needed now
     compute_density_matrix_from_vector,
     calculate_purity_from_density_matrix,  # Ensure this is imported
@@ -13,9 +14,10 @@ import numpy as np
 train_vectors, train_labels = get_train_data()
 test_vectors, test_labels = get_test_data()
 
+
 # Apply PCA before encoding
 pca = PCA(
-    n_components=0.95, svd_solver="full", random_state=0
+    n_components=50, svd_solver="full", random_state=0
 )  # Retain 95% of variance
 X_train_pca = pca.fit_transform(train_vectors)
 X_test_pca = pca.transform(test_vectors)
@@ -24,8 +26,8 @@ print(f"Original number of features: {train_vectors.shape[1]}")
 print(f"Number of features after PCA: {X_train_pca.shape[1]}")
 
 # Encode each data point
-encoded_train_data = np.array([encode_stereographic(x) for x in X_train_pca])
-encoded_test_data = np.array([encode_stereographic(x) for x in X_test_pca])
+encoded_train_data = np.array([normalize_vector(x) for x in X_train_pca])
+encoded_test_data = np.array([normalize_vector(x) for x in X_test_pca])
 
 vector = encoded_test_data[0]
 purity_vector = calculate_purity_from_vector(vector)
@@ -55,7 +57,7 @@ for class_label in unique_classes:
     # 1. Convert each vector in the class to its density matrix
     class_density_matrices_list = []
     for sample_vector in class_samples:
-        encoded_vector = encode_stereographic(sample_vector)
+        encoded_vector = normalize_vector(sample_vector)
         density_matrix = compute_density_matrix_from_vector(encoded_vector)
         class_density_matrices_list.append(density_matrix)
 
