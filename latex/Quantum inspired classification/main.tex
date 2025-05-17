@@ -1,15 +1,61 @@
+\documentclass[twocolumn]{article} % Or your preferred document class and options
 % !TEX root = main.tex
 
-\input{preamble.sty}
+\usepackage{preamble} % Load your custom preamble
+
 
 \begin{document}
 
 \coverpage
 
-\section{Introduction}
-Radial Basis Function (RBF) networks are a class of machine learning models well-suited for interpolation and classification tasks. Their foundation lies in constructing a hypothesis as a weighted sum of radial basis functions---functions whose output depends solely on the distance from a central point. This property allows RBF networks to capture local structures in the data efficiently.
+\begin{abstract}
+    abc
+\end{abstract}
 
-This report details the construction and training of an RBF network applied to image classification, particularly using the MNIST dataset. We describe the mathematical formulation of the model, data encoding strategies including quantum-inspired Gram matrix encodings, and practical training methods including both full and reduced center approaches.
+
+\section{Introduction}
+
+Quantum-inspired algorithms are classical routines that use mathematical structures and physical intuitions from quantum mechanics — such as superposition-style probability amplitudes, interference or quantum state discrimination — yet run entirely on conventional hardware.  These algorithms have multiple applications, including machine learning, where they promise faster convergence or reduced dimensional dependence compared with traditional methods.
+
+Some machine-learning algorithms are based on dsitance.  Here, the decision rule depends on the similarity between a query sample and a set of prototypes, typically evaluated through dot products or full matrix-vector multiplications.  Although straightforward in software, these operations become a computational bottleneck for high-dimensional data streams or large reference libraries.  There have been optical implementation of classification algorithms (\cite{Psaltis1984}, \cite{Neifeld1993}). Optical information processing offers a compelling alternative: coherent light fields can perform correlations at the speed of propagation, exploiting spatial parallelism while consuming only milliwatts of power.
+
+
+
+Among the various optical architectures, the \emph{Joint Transform Correlator} (JTC) stands out for its simplicity and adaptability.  Unlike classical VanderLugt systems, the JTC does not require a pre-fabricated filter; instead, the reference and query patterns are placed side by side in the input plane.  A single Fourier transform—implemented with a lens—produces an output intensity whose off-axis terms encode the cross-correlation between the two patterns.  When feature vectors are encoded as two-dimensional phase distributions, the correlation peak height provides a direct measure of their similarity, which can be mapped to a distance-based decision rule.
+
+In this work we propose an optical implementation of the Quantum-Inspired Nearest Mean Classifier that uses a single SLM and a 1-f lens system.  We begin by reviewing the theoretical connection between optical correlation and amplitude-based similarity measures. We then describe our experimental set-up, which integrates a reflective, phase only, spatial light modulator and a CMOS camera to implement a proof-of-concept optical classifier (Section~\ref{sec:setup}).  Finally, we benchmark the model with the MNIST dataset and compare its performance with a purely electronic implementation, highlighting the trade-offs in speed, energy, and classification accuracy (Section~\ref{sec:results}).
+
+
+\section{Theory}
+
+\subsection{Machine learning and supervised classification}
+\subsection{Quantum-inspired classification}
+\subsection{Joint Transform Correlator}
+
+\section{Results}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Classification accuracy (mean $\pm$ std.)}
+  \label{tab:cls-results}
+  \begin{tabular}{@{}lll c@{}}
+    \toprule
+    Classifier & Distance metric & Encoding & Accuracy (\%)\\ 
+    \midrule
+    RBF-C & Euclidean & - & - \\
+    RBF-C & JTC & - & - \\[2pt]
+    CNM-C & Euclidean & — & $80.38 \pm 0.38$ \\ 
+    CNM-C & JTC & — & $72.42 \pm 0.55$ \\[2pt]
+    QNM-C & Trace     & Standard     & \textbf{$85.84 \pm 0.38$} \\ 
+    QNM-C & Fidelity  & Standard     & $78.77 \pm 0.34$ \\[2pt]
+    QNM-C & Trace     & Informative  & $81.26 \pm 0.37$ \\ 
+    QNM-C & Fidelity  & Informative  & \textbf{$82.39 \pm 0.40$} \\ 
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+
+
 
 \section{Data Encoding}
 \subsection{Gram Matrix Encoding}
@@ -105,6 +151,8 @@ The RBF network was implemented in Python using NumPy and scikit-learn. To avoid
     \item Use perceptron-based or regularized least squares learning.
     \item Avoid computing large $\Phi^T\Phi$ matrices when possible.
 \end{itemize}
+
+\section{Optical Im}
 
 \section{Conclusion}
 RBF networks provide an elegant and powerful framework for classification. Through Gaussian kernel construction and data-driven center selection, they can adapt to local structures in the data. When combined with efficient encodings such as Gram matrices and practical training algorithms, they scale to real-world tasks like digit recognition.

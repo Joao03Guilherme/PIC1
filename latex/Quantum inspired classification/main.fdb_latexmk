@@ -1,14 +1,14 @@
 # Fdb version 4
-["bibtex main"] 0 "main.aux" "main.bbl" "main" 1746009737 -1
-  "./references.bib" 1745404930 335 d9ca891b70bee5645b9baf83540d6587 ""
+["bibtex main"] 0 "main.aux" "main.bbl" "main" 1747481777 -1
+  "./references.bib" 1747431042 1273 30557f124a60da9f11854dd0b914e3f0 ""
   "/usr/local/texlive/2023/texmf-dist/bibtex/bst/base/plain.bst" 1292289607 20613 bd3fbfa9f64872b81ac57a0dd2ed855f ""
-  "main.aux" 1746009737 2590 48a33c2509a7f6b44a20eff69802602c "pdflatex"
+  "main.aux" 1747481777 3668 2b9685d3c4ec68387cc9509d72715b4b "pdflatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1746009736 "/Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/latex/Quantum inspired classification/main.tex" "main.pdf" "main" 1746009737 2
-  "/Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/latex/Quantum inspired classification/main.tex" 1746009730 4913 9725dabb3aa1c789b42d7a97dc8e5d6e ""
+["pdflatex"] 1747481775 "/Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/latex/Quantum inspired classification/main.tex" "main.pdf" "main" 1747481777 2
+  "/Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/latex/Quantum inspired classification/main.tex" 1747481773 7784 a373622fc963a8cd884b71ca22a56c1b ""
   "/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/base/8r.enc" 1165713224 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/usr/local/texlive/2023/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplb8r.tfm" 1136768653 2532 9ad73cf4dd2173a847f2a5f5608e0b9a ""
@@ -92,6 +92,7 @@
   "/usr/local/texlive/2023/texmf-dist/tex/latex/base/ifthen.sty" 1654720880 5319 48d7f3cfa322abd2788e3c09d624b922 ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/base/size10.clo" 1667332637 8448 c33a4e1cb35cee9b33c2b21033b73e39 ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/blindtext/blindtext.sty" 1325892463 47295 de48b7f8ebf4b54709a2f6b2c7106dd5 ""
+  "/usr/local/texlive/2023/texmf-dist/tex/latex/booktabs/booktabs.sty" 1579038678 6078 f1cb470c9199e7110a27851508ed7a5c ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/enumitem/enumitem.sty" 1561238569 51697 f8f08183cd2080d9d18a41432d651dfb ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty" 1579991033 13886 d1306dcf79a944f6988e688c1785f9ce ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/etoolbox/etoolbox.sty" 1601931149 46845 3b58f70c6e861a13d927bff09d35ecbc ""
@@ -153,16 +154,17 @@
   "/usr/local/texlive/2023/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1704197180 4623355 b8cad38412faebe1ce5b780a45db67bd ""
   "/usr/local/texlive/2023/texmf-var/web2c/pdftex/pdflatex.fmt" 1704197121 7883457 18112827da83dd3a9cc5626ec0c7c6d9 ""
   "/usr/local/texlive/2023/texmf.cnf" 1678822455 577 1b2b1af17af2508fb20dd85783af4050 ""
+  "figures/IST_A_RGB_POS.jpg" 1340289310 754867 9ce483a576d536ad92d1800e22baedf2 ""
   "figures/density_matrix_nmist_one.png" 1745404930 360957 b70d38559c323912a3937b8281a5978e ""
   "figures/nmist_1_data.png" 1745404930 156111 a93133d6c8482b8a94542521e0e3c402 ""
   "main-gnuplottex-fig1.pdf" 1745407398 84189 fa99e48c6956827510e6abaac6f311c1 ""
-  "main.aux" 1746009737 2590 48a33c2509a7f6b44a20eff69802602c "pdflatex"
-  "main.bbl" 1745409514 0 d41d8cd98f00b204e9800998ecf8427e "bibtex main"
+  "main.aux" 1747481777 3668 2b9685d3c4ec68387cc9509d72715b4b "pdflatex"
+  "main.bbl" 1747481670 418 c3deb7db95dc58d6c957e3d612200501 "bibtex main"
   "main.gnuploterrors" 1745407397 0 d41d8cd98f00b204e9800998ecf8427e ""
-  "main.out" 1746009737 1446 19766b1671cc4aad7ba35c5d5f560188 "pdflatex"
-  "main.tex" 1746009730 4913 9725dabb3aa1c789b42d7a97dc8e5d6e ""
+  "main.out" 1747481777 2406 1f91f3c1471690124181394cfc6e4e58 "pdflatex"
+  "main.tex" 1747481773 7784 a373622fc963a8cd884b71ca22a56c1b ""
   "plots/rbf_gaussian.tex" 1745407149 421 0ad468166de6c279d5798a1d001e6d4b ""
-  "preamble.sty" 1745407338 2307 b37dc4aae54c15a7b6f2402be4fedfbb ""
+  "preamble.sty" 1747481071 2920 ab6ad9e13776d20bff0729ea694404f9 ""
   (generated)
   "main-gnuplottex-fig1.gnuplot"
   "main.aux"
