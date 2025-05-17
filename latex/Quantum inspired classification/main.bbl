@@ -1,5 +1,25 @@
 \begin{thebibliography}{1}
 
+\bibitem{Cruzeiro2024}
+E.Z. Cruzeiro, C.~De~Mol, S.~Massar, et~al.
+\newblock Quantum-inspired classification based on quantum state discrimination.
+\newblock {\em Quantum Machine Intelligence}, 6:79, 2024.
+
+\bibitem{Dragulinescu2023}
+Andrei Dr{\u a}gulinescu.
+\newblock Optical correlators for cryptosystems and image recognition: A review.
+\newblock {\em Sensors}, 23(2):907, 2023.
+
+\bibitem{Foor1995}
+Wesley~E. Foor and Mark~A. Neifeld.
+\newblock Adaptive, optical, radial basis function neural network for handwritten digit recognition.
+\newblock {\em Applied Optics}, 34(32):7545--7555, 1995.
+
+\bibitem{Javidi1989}
+Bahram Javidi and Joseph~L. Horner.
+\newblock Single spatial light modulator joint transform correlator.
+\newblock {\em Applied Optics}, 28(5):1027--1032, 1989.
+
 \bibitem{Neifeld1993}
 M.~A. Neifeld and D.~Psaltis.
 \newblock Optical implementations of radial basis classifiers.
@@ -9,5 +29,15 @@ M.~A. Neifeld and D.~Psaltis.
 D.~Psaltis, E.~G. Paek, and S.~S. Venkatesh.
 \newblock Optical image correlation with a binary spatial light modulator.
 \newblock {\em Optical Engineering}, 23:698--704, 1984.
+
+\bibitem{Sergioli2025}
+G.~Sergioli, G.~Russo, E.~Santucci, A.~Stefano, S.E. Torrisi, S.~Palmucci, C.~Vancheri, and R.~Giuntini.
+\newblock Quantum-inspired minimum distance classification in biomedical context.
+\newblock {\em quant-ph}, 2018.
+
+\bibitem{VanderLugt1964}
+A.~Vander~Lugt.
+\newblock Signal detection by complex spatial filtering.
+\newblock {\em IEEE Transactions on Information Theory}, 10(2):139--145, Apr 1964.
 
 \end{thebibliography}

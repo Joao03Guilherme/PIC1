@@ -15,21 +15,254 @@
 
 \section{Introduction}
 
-Quantum-inspired algorithms are classical routines that use mathematical structures and physical intuitions from quantum mechanics — such as superposition-style probability amplitudes, interference or quantum state discrimination — yet run entirely on conventional hardware.  These algorithms have multiple applications, including machine learning, where they promise faster convergence or reduced dimensional dependence compared with traditional methods.
+Quantum-inspired algorithms are classical routines that use mathematical structures and physical intuitions from quantum mechanics — such as superposition-style probability amplitudes, interference or quantum state discrimination — yet run entirely on conventional hardware.  
+These algorithms have multiple applications, including machine learning, where they promise faster convergence or reduced dimensional dependence compared with traditional methods.
 
-Some machine-learning algorithms are based on dsitance.  Here, the decision rule depends on the similarity between a query sample and a set of prototypes, typically evaluated through dot products or full matrix-vector multiplications.  Although straightforward in software, these operations become a computational bottleneck for high-dimensional data streams or large reference libraries.  There have been optical implementation of classification algorithms (\cite{Psaltis1984}, \cite{Neifeld1993}). Optical information processing offers a compelling alternative: coherent light fields can perform correlations at the speed of propagation, exploiting spatial parallelism while consuming only milliwatts of power.
+Some machine-learning algorithms are based on distance. 
+Here, the decision rule depends on the similarity between a query sample and a set of prototypes, typically evaluated through dot products or euclidean distance calculation.  Although straightforward in software, these operations become a computational bottleneck for high-dimensional data streams or large datasets.  
+There have been optical implementations of classical classification algorithms (\cite{Neifeld1993}, \cite{Foor1995}). These implementations offer a compelling alternative: coherent light can perform calculations at the speed of propagation, exploiting spatial parallelism while consuming only milliwatts of power.
 
+Among the various optical architectures, the \emph{Joint Transform Correlator} (JTC) (\cite{Psaltis1984}, \cite{Dragulinescu2023}) stands out for its simplicity and adaptability.  Unlike classical VanderLugt systems (\cite{VanderLugt1964}), the JTC does not require a pre-fabricated filter; instead, the reference and query patterns are placed side by side in the input plane.  A single Fourier transform—implemented with a lens—produces an output intensity whose off-axis terms encode the cross-correlation between the two patterns.  
+When feature vectors are encoded as two-dimensional phase distributions, the correlation peak height provides a direct measure of their similarity, which can be mapped to a distance-based decision rule.
 
-
-Among the various optical architectures, the \emph{Joint Transform Correlator} (JTC) stands out for its simplicity and adaptability.  Unlike classical VanderLugt systems, the JTC does not require a pre-fabricated filter; instead, the reference and query patterns are placed side by side in the input plane.  A single Fourier transform—implemented with a lens—produces an output intensity whose off-axis terms encode the cross-correlation between the two patterns.  When feature vectors are encoded as two-dimensional phase distributions, the correlation peak height provides a direct measure of their similarity, which can be mapped to a distance-based decision rule.
-
-In this work we propose an optical implementation of the Quantum-Inspired Nearest Mean Classifier that uses a single SLM and a 1-f lens system.  We begin by reviewing the theoretical connection between optical correlation and amplitude-based similarity measures. We then describe our experimental set-up, which integrates a reflective, phase only, spatial light modulator and a CMOS camera to implement a proof-of-concept optical classifier (Section~\ref{sec:setup}).  Finally, we benchmark the model with the MNIST dataset and compare its performance with a purely electronic implementation, highlighting the trade-offs in speed, energy, and classification accuracy (Section~\ref{sec:results}).
+In this work we propose optical implementations of the Quantum-Inspired and Classical Nearest Mean Classifier (\cite{Cruzeiro2024}, \cite{Sergioli2025}), and Radial Basis Function Classifier (\cite{Neifeld1993}, \cite{Foor1995}), that use a single SLM and a 1-f lens system (\cite{Javidi1989}).  We begin by reviewing the theoretical connection between optical correlation and amplitude-based similarity measures. We then describe our experimental set-up, which integrates a single reflective, phase only, spatial light modulator and a CMOS camera to implement a proof-of-concept optical classifier (Section~\ref{sec:setup}).  Finally, we benchmark the models with the MNIST dataset and compare their performances with purely electronic implementations, highlighting the trade-offs in speed, energy, and classification accuracy (Section~\ref{sec:results}).
 
 
 \section{Theory}
 
-\subsection{Machine learning and supervised classification}
+\subsection{Machine learning and supervised learning}
+
+\label{subsec:ml}
+
+Machine learning (ML) provides algorithmic tools that \emph{learn}
+directly from data rather than relying on hand-crafted rules.
+In the \emph{supervised} setting, learning is guided by \emph{examples}
+whose correct answers are known in advance.  We review the key
+ingredients used throughout this work.
+
+\paragraph{Input data.}
+We start from $N$ \emph{raw samples}
+\(
+\mathbf u_i\in\mathbb R^{p},\; i=1,\dots,N,
+\)
+each accompanied by a \emph{label}
+\(
+y_i\in\{1,\dots,K\}.
+\)
+The labels partition the data into
+\[
+C_k=\{\mathbf u_i: y_i=k\},
+\qquad
+N_k=|C_k|,
+\qquad
+p_k=\frac{N_k}{N},
+\]
+where $N_k$ and $p_k$ are the size and empirical probability of class
+$k$, respectively.  It is convenient to organise the entire data set as
+a matrix
+$
+\mathbf M=[\mathbf u_1\;\mathbf u_2\;\cdots\;\mathbf u_N]\in\mathbb R^{p\times N}
+$
+and the labels as a vector
+$
+\mathbf y=[y_1,\dots,y_N]^{\!\top}\!.
+$
+
+\paragraph{Training and test sets.}
+A \emph{training set}
+$(\mathbf M_{\text{train}},\mathbf y_{\text{train}})$
+is used to tune the parameters of a classifier, while a disjoint
+\emph{test set}
+$(\mathbf M_{\text{test}},\mathbf y_{\text{test}})$
+gauges its ability to generalise to unseen data. 
+The algorithm is trained on the training set and evaluated on the test set. In this work we will be using the MNIST dataset (Fig.\ref{fig:mnist-examples}), with $60000$ training samples and $10000$ testing samples.
+
+\begin{figure}[htbp]
+  \centering
+  % Replace digits_0.png ... digits_9.png with your own 28x28 PNGs
+  \setlength{\tabcolsep}{2pt}
+  \renewcommand{\arraystretch}{0}
+  \begin{tabular}{ccccc} % Changed from 10 c's to 5 c's
+    \includegraphics[width=0.18\linewidth]{figures/digits/digits_0.png} & % Adjusted width
+    \includegraphics[width=0.18\linewidth]{figures/digits/digits_1.png} & % Adjusted width
+    \includegraphics[width=0.18\linewidth]{figures/digits/digits_2.png} & % Adjusted width
+    \includegraphics[width=0.18\linewidth]{figures/digits/digits_3.png} & % Adjusted width
+    \includegraphics[width=0.18\linewidth]{figures/digits/digits_4.png} \\ % Added newline for next row
+    \includegraphics[width=0.18\linewidth]{figures/digits/digits_5.png} & % Adjusted width
+    \includegraphics[width=0.18\linewidth]{figures/digits/digits_6.png} & % Adjusted width
+    \includegraphics[width=0.18\linewidth]{figures/digits/digits_7.png} & % Adjusted width
+    \includegraphics[width=0.18\linewidth]{figures/digits/digits_8.png} & % Adjusted width
+    \includegraphics[width=0.18\linewidth]{figures/digits/digits_9.png}   % Adjusted width
+  \end{tabular}
+  \caption{One representative example per class from the MNIST
+           dataset.  Each \(28\times28\) grayscale image is flattened to a
+           \(p=784\)-dimensional feature vector before the
+           pre-processing pipeline (centering, standardisation, PCA).}
+  \label{fig:mnist-examples}
+\end{figure}
+
+\paragraph{Pre-processing.}
+Real-world data rarely arrive in a form that is optimal for learning.
+We apply three light transformations that are standard in pattern
+recognition:
+
+\begin{enumerate}[leftmargin=*,label=(\alph*)]
+\item \textit{Centring} removes global offsets,
+      \(
+      \mathbf u_i\!\longmapsto\!
+      \mathbf u_i-\bar{\mathbf u},
+      \)
+      where
+      $\bar{\mathbf u}=N^{-1}\sum_{j=1}^{N}\mathbf u_j$.
+\item \textit{Standardisation} rescales each feature so that every
+      dimension has unit variance, preventing attributes with large
+      numerical ranges from dominating the learning process.
+\item \textit{Principal-component analysis} (PCA) projects the centred,
+      standardised vectors onto the $p'(<p)$ directions of greatest
+      variance,
+      \(
+      \mathbf x_i=\Pi_{\text{PCA}}\mathbf u_i\in\mathbb R^{p'},
+      \)
+      thereby discarding redundant noise and shrinking the effective
+      dimensionality.
+\end{enumerate}
+
+
+\paragraph{Balanced accuracy.}
+Performance is summarised through the
+\emph{confusion matrix}
+$V_{k'k}$, whose entry counts how many test samples belonging to class
+$k$ are classified as $k'$.  The
+\emph{balanced accuracy} (BA)
+\[
+\mathrm{BA}=
+\frac{1}{K}\sum_{k=1}^{K}\frac{V_{kk}}{N_k}
+\]
+computes the mean of the per-class accuracies and is robust to class
+imbalance. When classes are homogeneous in size, BA reduces to
+the usual accuracy.
+
+\paragraph{Classical Nearest-Mean Classifier (CNM-C).}
+The nearest-mean classifier (NMC) is a simple, interpretable
+classifier that assigns a label to a test sample based on the
+\emph{centroid} of the training samples in each class (Fig. \ref{fig:nearest_mean_classifier}).  The
+\emph{centroid} of class \(k\) is defined as the mean of the training
+samples in that class:
+
+\[
+  \boldsymbol\mu_k
+  =\frac{1}{N_k}\sum_{i=1}^{N_k}\mathbf u_i,
+  \qquad
+  \text{where } \mathbf u_i\in C_k.
+\]
+
+The CNM classifier assigns a test sample \(\mathbf x\) to the class $j$ if:
+\[
+    d(\mathbf x,\boldsymbol\mu_j) = \min_{k=1,\dots,K} d(\mathbf x,\boldsymbol\mu_k),
+\]
+
+where the distance \(d(\mathbf x, \mathbf y) = \|\mathbf x - \mathbf y\|\) is the Euclidean distance. 
+The CNM classifier is simple to implement, as it only requires the computation of the centroids and a single distance calculation for each test sample.
+
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\linewidth]{figures/nearest_mean_classifier.png}
+    \caption{Ilustration of the CNM-C decision rule. The training set is split into two classes and the centroids are computed. The nearest centroid to the test sample is selected as the predicted class.}
+    \label{fig:nearest_mean_classifier}
+\end{figure}
+
 \subsection{Quantum-inspired classification}
+\label{subsec:qic}
+%--------------------------------------------------------------
+
+Quantum-inspired learning borrows mathematical objects native to
+quantum theory—\emph{density operators}, \emph{trace distance},
+\emph{superposition}—but applies them on ordinary CPUs/GPUs.  By
+embedding classical feature vectors in a Hilbert space, one can exploit
+the geometry of quantum states to obtain alternative similarity
+measures that sometimes improve accuracy or robustness compared with
+purely Euclidean methods~\cite{Sergioli2025}.
+
+\paragraph{Density--pattern encoding.}
+Given a pre-processed feature vector
+\(\mathbf x=(x_{1},\dots,x_{d})\in\mathbb R^{d}\),
+map it to a \((d\!+\!1)\)-dimensional \emph{density pattern}
+\(\rho_{\mathbf x}\) (a positive, unit-trace matrix) via the
+\emph{stereographic projection}:
+
+\begin{align}
+\tilde{\mathbf x}
+     &=\frac{1}{1+\lVert\mathbf x\rVert^{2}}
+       \bigl(2x_{1},\dots,2x_{d},\lVert\mathbf x\rVert^{2}-1\bigr),\\
+\rho_{\mathbf x}&=\tilde{\mathbf x}\,\tilde{\mathbf x}^{\!\top},
+\qquad
+\rho_{\mathbf x}^{2}=\rho_{\mathbf x}.
+\label{eq:rho-stereo}
+\end{align}
+
+The outer product guarantees \(\rho_{\mathbf x}\) is a \emph{pure} quantum
+state.  Other encodings (e.g.\ the \emph{informative} map that appends
+the norm itself as an extra coordinate) are possible; the best choice
+is often dataset-dependent.
+
+\paragraph{Quantum centroid.}
+For each class \(k\) with training subset
+\(\mathcal S_{k}^{\mathrm{tr}}\), define its \emph{quantum centroid} as the
+uniform mixture
+
+\[
+\varrho_{k}=\frac{1}{\lvert\mathcal S_{k}^{\mathrm{tr}}\rvert}
+            \sum_{(\mathbf x_i,k)\in\mathcal S_{k}^{\mathrm{tr}}}
+            \rho_{\mathbf x_i}.
+\]
+
+Unlike the classical centroid, \(\varrho_{k}\) is usually a
+\emph{mixed} state and has no direct counterpart in the original
+feature space.
+
+\paragraph{Distance measure.}
+Similarity between two density patterns is
+quantified by the \emph{trace distance}
+
+\[
+d_{\operatorname{tr}}(\rho,\sigma)=\tfrac12\operatorname{Tr}\!
+\bigl|\rho-\sigma\bigr|,
+\]
+a bona-fide metric that reduces to the Euclidean norm in
+two-dimensional Bloch space.
+
+\paragraph{Quantum-inspired nearest-mean classifier (QNMC).}
+The prediction rule mirrors the classical CNM-C but replaces
+vectors, means and Euclidean distance by density patterns, quantum
+centroids and trace distance:
+
+\[
+\operatorname{QCl}(\mathbf x)=
+\arg\min_{k}
+\,d_{\operatorname{tr}}\!\bigl(\rho_{\mathbf x},\varrho_{k}\bigr).
+\]
+
+\paragraph{Properties and practical notes.}
+\begin{itemize}[leftmargin=*,nosep]
+  \item \textbf{No optimisation:} training is an $O(nd^{2})$ centroid
+        accumulation; prediction costs $O(nd^{3})$ if eigen-decomposition is
+        used to evaluate the trace distance.
+  \item \textbf{Rescaling sensitivity:} unlike the classical NMC, the
+        QNMC is \emph{not} scale-invariant.  Feature-wise weights
+        therefore act as tunable hyper-parameters that can boost
+        performance when chosen to reflect feature importance.
+  \item \textbf{Encoding choice:} encodings that preserve the original
+        vector norm (e.g.\ the informative map) often outperform purely
+        directional ones, because the norm carries class information in
+        many datasets.
+\end{itemize}
+
+The next section adapts this framework to an optical
+joint-transform-correlator implementation and benchmarks it on
+MNIST.
+
+
 \subsection{Joint Transform Correlator}
 
 \section{Results}
@@ -65,13 +298,6 @@ We consider a column vector $u$ representing an image sample. To embed this into
 \rho = \frac{uu^T}{\text{Tr}(uu^T)}
 \]
 This yields a density-like matrix $\rho$ with trace 1, encoding pairwise correlations between pixels. Such an encoding is inspired by quantum mechanical density operators and preserves structural information in the image.
-
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=0.6\linewidth]{figures/nmist_1_data.png}
-    \caption{Example MNIST image (digit 1)}
-    \label{fig:dataset_one}
-\end{figure}
 
 \begin{figure}[h!]
     \centering
