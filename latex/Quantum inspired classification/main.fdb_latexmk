@@ -1,16 +1,15 @@
 # Fdb version 4
-["bibtex main"] 1747504644 "main.aux" "main.bbl" "main" 1747504649 0
+["bibtex main"] 1747517910 "main.aux" "main.bbl" "main" 1747518001 0
   "./references.bib" 1747496275 2506 d210540e58d94428403d5b7494613964 ""
   "/usr/local/texlive/2023/texmf-dist/bibtex/bst/base/plain.bst" 1292289607 20613 bd3fbfa9f64872b81ac57a0dd2ed855f ""
-  "main.aux" 1747504649 5890 0797783a9d30802e8fed208bc12526db "pdflatex"
+  "main.aux" 1747518001 6438 30b4fd784b8f215683e86ce02a88272f "pdflatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1747504647 "/Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/latex/Quantum inspired classification/main.tex" "main.pdf" "main" 1747504649 2
-  "/Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/latex/Quantum inspired classification/main.tex" 1747504642 14879 cd1259b45e96b952fdcdf85b99ac2325 ""
+["pdflatex"] 1747517998 "/Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/latex/Quantum inspired classification/main.tex" "main.pdf" "main" 1747518001 2
+  "/Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/latex/Quantum inspired classification/main.tex" 1747517992 19612 7a4b52b90a11e0e10aeab951978b1a7a ""
   "/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/base/8r.enc" 1165713224 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
-  "/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1136849721 2971 def0b6c1f0b107b3b936def894055589 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplb8r.tfm" 1136768653 2532 9ad73cf4dd2173a847f2a5f5608e0b9a ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplb9e.tfm" 1136768653 5972 8da11a082fb7b0bb20bdef74c1f36ef8 ""
@@ -24,7 +23,6 @@
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplrc9e.tfm" 1136768653 11504 0aee68a3cffe19441de3ef8908532348 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplri8r.tfm" 1136768653 2720 70000d5e623e601132eab3cded5b819b ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplri9e.tfm" 1136768653 4636 04bb79b19bf5315ced00732a1dac5509 ""
-  "/usr/local/texlive/2023/texmf-dist/fonts/tfm/jknappen/ec/ectt1000.tfm" 1136768653 1536 06717a2b50de47d4087ac0e6cd759455 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm" 1246382020 916 f87d7c45f9c908e672703b83b72241a3 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm" 1246382020 908 2921f8a10601f252058503cc6570e581 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/public/cm/cmbx10.tfm" 1136768653 1328 c834bbb027764024c09d3d2bf908b5f0 ""
@@ -49,8 +47,6 @@
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb" 1248133631 36299 5f9df58c2139e7edcf37c8fca4bd384d ""
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb" 1248133631 35752 024fb6c41858982481f6968b5fc26508 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb" 1248133631 32569 5e5ddc8df908dea60932f3c484a54c0d ""
-  "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb" 1248133631 34694 ad62b13721ee8eda1dcc8993c8bd7041 ""
-  "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/cm-super/sftt1000.pfb" 1215737283 169201 9ebf99020dde51a5086e186761a34e8f ""
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/fpl/fplrc8a.pfb" 1546638885 62231 6fa2851364e6117779162ea79cb96ef4 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/mathpazo/fplmbb.pfb" 1136849748 12410 7504dd653d0e7cf266cb973aeafd597c ""
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/public/mathpazo/fplmbi.pfb" 1136849748 15823 5b14589a67c4cdce147ef79707a4d438 ""
@@ -106,7 +102,6 @@
   "/usr/local/texlive/2023/texmf-dist/tex/latex/base/fontenc.sty" 1654720880 5119 4ce42f43368f652f9c9522d943cce8e4 ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/base/ifthen.sty" 1654720880 5319 48d7f3cfa322abd2788e3c09d624b922 ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/base/size10.clo" 1667332637 8448 c33a4e1cb35cee9b33c2b21033b73e39 ""
-  "/usr/local/texlive/2023/texmf-dist/tex/latex/base/t1cmtt.fd" 1667332637 2443 f9c272838e65ac147422f32fe87b76a1 ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/blindtext/blindtext.sty" 1325892463 47295 de48b7f8ebf4b54709a2f6b2c7106dd5 ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/booktabs/booktabs.sty" 1579038678 6078 f1cb470c9199e7110a27851508ed7a5c ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/enumitem/enumitem.sty" 1561238569 51697 f8f08183cd2080d9d18a41432d651dfb ""
@@ -184,14 +179,13 @@
   "figures/digits/digits_8.png" 1747498689 2518 2434621a7b3d20844418db41ba37716f ""
   "figures/digits/digits_9.png" 1747498689 2424 6b0f77a9f1e81eabdcd0f7445946b239 ""
   "figures/nearest_mean_classifier.png" 1747504483 278108 266b5e914207124242041650a043d863 ""
-  "figures/nmist_1_data.png" 0 -1 0 ""
-  "main.aux" 1747504649 5890 0797783a9d30802e8fed208bc12526db "pdflatex"
-  "main.bbl" 1747504644 1624 86a4e7857cf279b7a46309f7b72bc290 "bibtex main"
+  "main.aux" 1747518001 6438 30b4fd784b8f215683e86ce02a88272f "pdflatex"
+  "main.bbl" 1747517910 1624 86a4e7857cf279b7a46309f7b72bc290 "bibtex main"
   "main.gnuploterrors" 1745407397 0 d41d8cd98f00b204e9800998ecf8427e ""
-  "main.out" 1747504649 2376 ae1a351272cf1ab9bc710dd0b8440b7e "pdflatex"
-  "main.tex" 1747504642 14879 cd1259b45e96b952fdcdf85b99ac2325 ""
+  "main.out" 1747518001 2376 ae1a351272cf1ab9bc710dd0b8440b7e "pdflatex"
+  "main.tex" 1747517992 19612 7a4b52b90a11e0e10aeab951978b1a7a ""
   "plots/rbf_gaussian.tex" 1747504500 421 0ad468166de6c279d5798a1d001e6d4b ""
-  "preamble.sty" 1747481071 2920 ab6ad9e13776d20bff0729ea694404f9 ""
+  "preamble.sty" 1747505612 2920 421eb91891d310735cea5ed6c3e95041 ""
   (generated)
   "main-gnuplottex-fig1.gnuplot"
   "main.aux"

@@ -162,7 +162,7 @@ The CNM classifier assigns a test sample \(\mathbf x\) to the class $j$ if:
 \]
 
 where the distance \(d(\mathbf x, \mathbf y) = \|\mathbf x - \mathbf y\|\) is the Euclidean distance. 
-The CNM classifier is simple to implement, as it only requires the computation of the centroids and a single distance calculation for each test sample.
+The CNM classifier is simple to implement, as it only requires the computation of the centroids and $K$ distance calculations, one for each centroid.
 
 
 \begin{figure}[h]
@@ -182,34 +182,81 @@ quantum theory—\emph{density operators}, \emph{trace distance},
 embedding classical feature vectors in a Hilbert space, one can exploit
 the geometry of quantum states to obtain alternative similarity
 measures that sometimes improve accuracy or robustness compared with
-purely Euclidean methods~\cite{Sergioli2025}.
+purely classical methods~\cite{Sergioli2025}. 
+Every quantum-inspired algorithm must start with a function that maps each classical data vector $x$ to a density operator $\rho_x$.  
+The choice of this encoding is very important, as it determines the properties of the resulting quantum-inspired algorithm.  
 
-\paragraph{Density--pattern encoding.}
-Given a pre-processed feature vector
-\(\mathbf x=(x_{1},\dots,x_{d})\in\mathbb R^{d}\),
-map it to a \((d\!+\!1)\)-dimensional \emph{density pattern}
-\(\rho_{\mathbf x}\) (a positive, unit-trace matrix) via the
-\emph{stereographic projection}:
+%--------------------------------------------------------------
+\paragraph{Density--pattern encodings.}\label{par:encodings}
+All quantum-inspired classifiers require a map that
+sends a real feature vector \(\mathbf x\in\mathbb R^{d}\) to a
+\emph{density operator}
+\(\rho_{\mathbf x}= \tilde{\mathbf x}\,
+                    \tilde{\mathbf x}^{\!\top}\). There are different ways of doing this mapping:
 
-\begin{align}
-\tilde{\mathbf x}
-     &=\frac{1}{1+\lVert\mathbf x\rVert^{2}}
-       \bigl(2x_{1},\dots,2x_{d},\lVert\mathbf x\rVert^{2}-1\bigr),\\
-\rho_{\mathbf x}&=\tilde{\mathbf x}\,\tilde{\mathbf x}^{\!\top},
-\qquad
-\rho_{\mathbf x}^{2}=\rho_{\mathbf x}.
-\label{eq:rho-stereo}
-\end{align}
+\begin{enumerate}[leftmargin=*,label=\textbf{(\alph*)}]
+%----------------------------------------------------------
+\item \textbf{Standard amplitude (SA) encoding.}\\[2pt]
+      Normalise the input vector to unit length:
+      \[
+        \tilde{\mathbf x}^{(\mathrm{SA})}
+          =\begin{cases}
+             \displaystyle\frac{\mathbf x}{\lVert\mathbf x\rVert},
+               &\mathbf x\neq\mathbf 0,\\[6pt]
+             (1,0,\dots,0)^{\!\top},&\mathbf x=\mathbf 0.
+           \end{cases}
+      \]
+      The encoded state remains in the original \(d\)-dimensional
+      Hilbert space.
 
-The outer product guarantees \(\rho_{\mathbf x}\) is a \emph{pure} quantum
-state.  Other encodings (e.g.\ the \emph{informative} map that appends
-the norm itself as an extra coordinate) are possible; the best choice
-is often dataset-dependent.
+%----------------------------------------------------------
+\item \textbf{Inverse stereographic (IS) encoding.}\\[2pt]
+      Embed \(\mathbf x\) into \(\mathbb R^{d+1}\) through the inverse
+      stereographic projection onto the unit sphere:
+      \[
+        \tilde{\mathbf x}^{(\mathrm{IS})}
+           =\frac{1}
+                  {1+\lVert\mathbf x\rVert^{2}}
+             \Bigl(2x_{1},\dots,2x_{d},
+                   \lVert\mathbf x\rVert^{2}-1\Bigr)^{\!\top}.
+      \]
+      This encoding adds an extra dimension to the input vector, which is
+      then projected onto the unit sphere.
+
+%----------------------------------------------------------
+\item \textbf{Informative (INF) encoding~\cite{Sergioli2025}.}\\[2pt]
+      Attach the norm as an extra amplitude so that both direction and
+      length of \(\mathbf x\) affect the representation:
+      \[
+        \tilde{\mathbf x}^{(\mathrm{INF})}
+          =\begin{cases}
+             \displaystyle
+             \frac{1}{\sqrt{2}}
+             \Bigl(\frac{\mathbf x}{\lVert\mathbf x\rVert},\,1\Bigr)^{\!\top},
+               &\mathbf x\neq\mathbf 0,\\[8pt]
+             (0,\dots,0,1)^{\!\top},
+               &\mathbf x=\mathbf 0.
+           \end{cases}
+      \]
+\end{enumerate}
+
+\medskip
+For any of the above encodings, the corresponding \emph{density
+operator} is obtained by taking the outer product of the encoded
+vector with itself:
+\[
+  \rho_{\mathbf x}= \tilde{\mathbf x}\,
+                    \tilde{\mathbf x}^{\!\top}.
+\]
+This guarantees \(\rho_{\mathbf x}\) is positive semidefinite,
+unit-trace, and idempotent (\(\rho_{\mathbf x}^{2}=\rho_{\mathbf x}\)),
+hence a valid pure quantum state.
+They differ in how much geometric information (direction, norm) is retained, a factor that can
+significantly affect classification performance.
 
 \paragraph{Quantum centroid.}
 For each class \(k\) with training subset
-\(\mathcal S_{k}^{\mathrm{tr}}\), define its \emph{quantum centroid} as the
-uniform mixture
+\(\mathcal S_{k}^{\mathrm{tr}}\), define its \emph{quantum centroid} as the sum of the density operators from the class, divided by the number of elements in the class:
 
 \[
 \varrho_{k}=\frac{1}{\lvert\mathcal S_{k}^{\mathrm{tr}}\rvert}
@@ -221,49 +268,86 @@ Unlike the classical centroid, \(\varrho_{k}\) is usually a
 \emph{mixed} state and has no direct counterpart in the original
 feature space.
 
-\paragraph{Distance measure.}
-Similarity between two density patterns is
-quantified by the \emph{trace distance}
-
+\paragraph{Quantum distance measure.}
+Similarity between two density patterns is quantified by the
+\emph{trace distance},
 \[
-d_{\operatorname{tr}}(\rho,\sigma)=\tfrac12\operatorname{Tr}\!
-\bigl|\rho-\sigma\bigr|,
+  d_{\operatorname{tr}}(\rho,\sigma)=
+  \tfrac12\operatorname{Tr}\!\bigl|\rho-\sigma\bigr|,
 \]
-a bona-fide metric that reduces to the Euclidean norm in
-two-dimensional Bloch space.
+where \(\lvert A\rvert=\sqrt{A^{\dagger}A}\). Note that the trace distance defines a metric; it satisfies the triangle inequality, $d_{tr}(\rho, \sigma) \geq 0$ and $d_{tr}(\rho, \sigma) = d_{tr}(\sigma, \rho)$, and is equal to zero if and only if $\rho = \sigma$.
 
-\paragraph{Quantum-inspired nearest-mean classifier (QNMC).}
-The prediction rule mirrors the classical CNM-C but replaces
-vectors, means and Euclidean distance by density patterns, quantum
-centroids and trace distance:
+Having defined the quantum centroid and quantum distance, we can now define the quantum-inspired version of the nearest-mean classifier.
 
-\[
-\operatorname{QCl}(\mathbf x)=
-\arg\min_{k}
-\,d_{\operatorname{tr}}\!\bigl(\rho_{\mathbf x},\varrho_{k}\bigr).
-\]
+\paragraph{Quantum-inspired nearest-mean classifier (QNM-C).}
+The quantum-inspired nearest-mean classifier (QNM-C) is the exact same as the CNM-C, but uses the quantum centroid and quantum distance instead of the classical centroid and Euclidean distance. The algorithm is as follows:
+\begin{enumerate}[leftmargin=*,label=(\alph*)]
+    \item Encode every training sample \(\mathbf x_i\) as a density operator
+      \(\rho_{\mathbf x_i}\) using one of the encodings described in \ref{par:encodings}.
 
-\paragraph{Properties and practical notes.}
-\begin{itemize}[leftmargin=*,nosep]
-  \item \textbf{No optimisation:} training is an $O(nd^{2})$ centroid
-        accumulation; prediction costs $O(nd^{3})$ if eigen-decomposition is
-        used to evaluate the trace distance.
-  \item \textbf{Rescaling sensitivity:} unlike the classical NMC, the
-        QNMC is \emph{not} scale-invariant.  Feature-wise weights
-        therefore act as tunable hyper-parameters that can boost
-        performance when chosen to reflect feature importance.
-  \item \textbf{Encoding choice:} encodings that preserve the original
-        vector norm (e.g.\ the informative map) often outperform purely
-        directional ones, because the norm carries class information in
-        many datasets.
-\end{itemize}
+    \item Compute the quantum centroid for each class \(k\):
+        \[
+            \varrho_{k}=\frac{1}{N_k}\sum_{i=1}^{N_k}\rho_{\mathbf x_i}.
+        \]
 
-The next section adapts this framework to an optical
-joint-transform-correlator implementation and benchmarks it on
-MNIST.
+    \item For each test density operator \(\rho_{\mathbf x}\), assign the class $k$ if 
+        \[
+            d_{\operatorname{tr}}(\rho_{\mathbf x},\varrho_{k}) = \min_{j=1,\dots,K} d_{\operatorname{tr}}(\rho_{\mathbf x},\varrho_{j}).
+        \]
+\end{enumerate}
 
+Having defined both the classical and quantum-inspired nearest-mean classifiers, we can now describe the joint transform correlator (JTC) and how it can be used to implement these classifiers optically.
 
 \subsection{Joint Transform Correlator}
+\label{subsec:jtc}
+A \emph{joint transform correlator} (JTC) is an optical architecture
+that performs the cross– and auto–correlation of two 2-D patterns by
+means of only \emph{free-space propagation} and \emph{Fourier
+transform} lenses, thereby exploiting the inherent parallelism and
+picosecond‐scale speed of coherent light.  Unlike classical
+Vander~Lugt correlators, the JTC dispenses with a pre-fabricated
+matched filter: both the \emph{reference} pattern \(s_{1}(x,y)\) and
+the \emph{query} pattern \(s_{2}(x,y)\) are displayed side-by-side in
+the same input plane~\cite{Javidi1989}.
+
+\paragraph{Operational principle.}
+Let the two patterns be centred at \(\pm x_{0}\) along the horizontal
+axis, i.e.\ \(s_{1}(x+x_{0},y)\) and \(s_{2}(x-x_{0},y)\).  A
+\(1f\)-configuration lens (focal length \(f\)) produces at its back
+focal plane the joint Fourier transform
+\[
+  G(\alpha,\beta)=
+    S_{1}\!\bigl(\tfrac{\alpha}{\lambda f},
+                 \tfrac{\beta}{\lambda f}\bigr)\,
+      e^{-i2\pi x_{0}\alpha/\lambda f}
+  + S_{2}\!\bigl(\tfrac{\alpha}{\lambda f},
+                 \tfrac{\beta}{\lambda f}\bigr)\,
+      e^{+i2\pi x_{0}\alpha/\lambda f},
+\]
+where \((\alpha,\beta)\) are spatial-frequency coordinates and
+\(S_{j}\) denotes the Fourier transform of \(s_{j}\).
+A photosensor records the \emph{joint power spectrum}
+\(|G|^{2}\); its intensity contains four beating terms:
+
+\[
+  |G|^{2}
+  =|S_{1}|^{2}+|S_{2}|^{2}
+   +S_{1}S_{2}^{\!*}e^{-i4\pi x_{0}\alpha/\lambda f}
+   +S_{2}S_{1}^{\!*}e^{+i4\pi x_{0}\alpha/\lambda f}.
+\]
+
+A second lens takes the inverse Fourier transform of this intensity
+pattern.  The constant terms yield \emph{autocorrelation}
+peaks near the optic axis, whereas the two cross-terms produce a pair
+of off-axis peaks located at \((\pm2x_{0},0)\) whose heights are
+proportional to the cross-correlation
+\(s_{1}\star s_{2}\).  Detecting the peak energy therefore reveals the
+similarity between the two input patterns.
+
+TODO: INCLUDE A DIAGRAM OF THE JTC, AND THE CORRELATION PLANE, AS WELL AS SOME EXAMPLES OF CORRELATION (SHIFTED IMAGE VS ORIGINAL, ROTATED VS ORIGINAL, AND CORRELATION VALUES)
+
+\subsection{Optical implementation of the QNM-C}
+
 
 \section{Results}
 
