@@ -346,7 +346,37 @@ similarity between the two input patterns.
 
 TODO: INCLUDE A DIAGRAM OF THE JTC, AND THE CORRELATION PLANE, AS WELL AS SOME EXAMPLES OF CORRELATION (SHIFTED IMAGE VS ORIGINAL, ROTATED VS ORIGINAL, AND CORRELATION VALUES)
 
-\subsection{Optical implementation of the QNM-C}
+%------------------------------------------------------
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[b]{\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]%
+      {figures/correlation/original_vs_shifted_corr_plane.png}
+    \caption{Original image vs.\ shifted copy}%
+    \label{fig:corr-shifted}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]%
+      {figures/correlation/original_vs_random_corr_plane.png}
+    \caption{Original image vs.\ random image}%
+    \label{fig:corr-random}
+  \end{subfigure}
+
+  \caption{Correlation-plane intensity produced by the joint transform
+           correlator: (a) shows two strong off-axis peaks because the
+           query is a shifted version of the reference, whereas (b)
+           shows no significant peaks for an unrelated image.}%
+  \label{fig:jtc-diagram}
+\end{figure}
+%------------------------------------------------------
+
+\subsection{Optical implementations of the classifiers}
+\label{subsec:optical-qnm}
+
+The
 
 
 \section{Results}

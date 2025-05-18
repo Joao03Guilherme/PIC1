@@ -33,7 +33,7 @@ def classical_jtc(img1_vec, img2_vec, shape):
     # Use inverse similarity as a distance
     distance = 1 / similarity
 
-    return distance, (dy, dx), similarity, corr
+    return distance, (dy, dx), similarity, corr / (2 * norm)
 
 
 def binary_jtc(img1_vec: np.ndarray,
