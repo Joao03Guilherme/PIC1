@@ -1,22 +1,16 @@
-from ...hardware.devices.Camera import ThorlabsCamera
+from pylablib.devices import uc480
+import matplotlib.pyplot as plt
 
-pll.par["devices/dlls/thorlabs_tlcam"] = r"C:\Program Files\Thorlabs\Scientific Imaging\ThorCam"
-print(pll.devices.Thorlabs.list_cameras_tlcam())
+serials = uc480.list_cameras()          # e.g. ['4101859088']
+if not serials:
+    raise RuntimeError("No UC480 cameras found")
 
+cam = uc480.UC480Camera(serials[0])     # open first camera
+cam.set_exposure(10)                    # 10 ms
 
-with ThorlabsCamera() as cam:
-    cam.set_exposure(24.65 * 1e-3)  # 24.65 ms
-    frame = cam.snap()  # numpy.ndarray, shape (H, W)
-    print(f"Captured frame of shape: {frame.shape}")
+img = cam.snap()
+cam.close()
 
-    """Plot the captured frame."""
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-
-    # Plot the captured frame
-    plt.figure(figsize=(6, 6))
-    sns.heatmap(frame, cmap="viridis")
-    plt.title("Captured Frame Heatmap")
-    plt.xlabel("Pixel X")
-    plt.ylabel("Pixel Y")
-    plt.show()
+plt.imshow(img, cmap="gray")
+plt.title("Single frame")
+plt.show()
