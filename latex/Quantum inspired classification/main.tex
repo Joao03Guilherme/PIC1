@@ -3,14 +3,26 @@
 
 \usepackage{preamble} % Load your custom preamble
 
+\renewcommand{\abstracttextfont}{\normalfont\small}  % Non-italic font
+
 
 \begin{document}
 
 \coverpage
 
-\begin{abstract}
-    abc
-\end{abstract}
+\twocolumn[
+  \begin{@twocolumnfalse}
+    \begin{abstract}
+      \noindent
+      We explore the implementation of quantum-inspired and classical distance-based classifiers using an optical architecture known as the Joint Transform Correlator (JTC). 
+      These classifiers, including the classical and quantum nearest-mean classifier (CNM-C, QNM-C) and radial basis function classifier (RBF-C), rely on distance computations between a query sample and class prototypes. 
+      While traditionally executed in software, such operations become computationally intensive in high dimensions or large datasets. 
+      We propose a new optical implementation using a reflective, phase-only, spatial light modulator (SLM) and a CMOS camera within a 1-f Fourier setup, leveraging the speed and parallelism of coherent light. 
+      We detail the theoretical framework linking optical correlation with similarity measures used in classification, and describe the data encoding strategies that map feature vectors to optical patterns.
+    \end{abstract}
+  \end{@twocolumnfalse}
+]
+
 
 
 \section{Introduction}
@@ -164,13 +176,81 @@ The CNM classifier assigns a test sample \(\mathbf x\) to the class $j$ if:
 where the distance \(d(\mathbf x, \mathbf y) = \|\mathbf x - \mathbf y\|\) is the Euclidean distance. 
 The CNM classifier is simple to implement, as it only requires the computation of the centroids and $K$ distance calculations, one for each centroid.
 
-
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.6\linewidth]{figures/nearest_mean_classifier.png}
+    \includegraphics[width=\linewidth]{figures/nearest_mean_classifier.png}
     \caption{Ilustration of the CNM-C decision rule. The training set is split into two classes and the centroids are computed. The nearest centroid to the test sample is selected as the predicted class.}
     \label{fig:nearest_mean_classifier}
 \end{figure}
+
+\paragraph{Radial-Basis-Function Classifier (RBF-C).}
+The RBF model represents a target function as a weighted sum of Gaussian basis functions, each centered at a specific location in the input space. These Gaussian functions produce localized responses that decrease with distance from their centers, allowing the model to approximate smooth and continuous mappings. By tuning the centers, widths, and weights of the basis functions, the RBF network can adapt to complex data distributions and interpolate between training samples with controlled generalization.
+
+
+We can build a simple RBF network, shown in Fig.\ref{fig:rbf-net}, that contains an input layer of
+raw features, a hidden layer of \(M\) Gaussian units, and a linear
+output layer that produces one score per class.  Every hidden unit
+returns a similarity value
+\(
+  \varphi_i(\mathbf x)=
+  \exp\!\bigl[-\|\mathbf x-\mathbf t_i\|^{2}/(2\sigma_i^{2})\bigr]
+\)
+to its centre \(\mathbf t_i\) with width \(\sigma_i\), so the class score
+is a weighted sum
+\(
+  f_c(\mathbf x)=\sum_{i=1}^{M}w_{c,i}\,\varphi_i(\mathbf x).
+\)
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{figures/rbf_net/rbf_net.png}
+  \caption{Architecture of the RBF network. The input layer feeds into a hidden layer of radial units, each centered at \(\mathbf{t}_i\) with width \(\sigma_i\). The output layer combines the gaussian responses through learned weights \(w_{ij}\), followed by a winner-takes-all decision stage to determine the predicted class.}
+  \label{fig:rbf-net}
+\end{figure}
+
+
+\smallskip
+\textbf{Training.}
+Learning splits naturally into two parts:
+\begin{enumerate}[leftmargin=1.5em,label=(\alph*)]
+  \item \emph{Centre and width selection.}  
+        Mini-batch \(k\)-means clusters the training set; the cluster
+        centroids become the RBF centres \(\mathbf t_i\).
+        Each width is set to
+        \(\sigma_i = k_\sigma\,\bar d_i\), where \(\bar d_i\) is the
+        average distance to the nearest neighbouring centre, with a floor
+        \(\sigma_{\min}\) to avoid underflow.
+  \item \emph{Output-weight estimation.}  
+        Defining the design matrix
+        \(
+          \Phi_{n,i}=\varphi_i(\mathbf x_n),
+        \)
+        we solve the ridge-regularised normal equations
+        \(
+          \mathbf W=(\Phi^{\!\top}\Phi+\lambda I)^{-1}\Phi^{\!\top}\mathbf T,
+        \)
+        where \(\mathbf T\) is the one-hot label matrix.
+        This closed-form step replaces slow gradient-descent procedures
+        and finishes in a single pass.
+\end{enumerate}
+
+\smallskip
+\textbf{Inference.}
+For a test vector \(\mathbf x\), RBF-C computes the hidden activation
+vector
+\(
+  \boldsymbol\varphi(\mathbf x)=
+  \bigl[\varphi_1(\mathbf x),\dots,\varphi_M(\mathbf x)\bigr]^{\!\top},
+\)
+then evaluates
+\(
+  \mathbf f(\mathbf x)=\mathbf W\boldsymbol\varphi(\mathbf x)
+\)
+and assigns the class with a winner-takes-all rule:
+\(c^\star=\arg\max_{c}f_c(\mathbf x)\).
+Because the heavy computation is the \(M\) distance evaluations, we
+replace the Euclidean metric with the optical calculated distance, allowing these distances to be calculated faster and more energy-efficiently.
+
 
 \subsection{Quantum-inspired classification}
 \label{subsec:qic}
@@ -310,8 +390,15 @@ matched filter: both the \emph{reference} pattern \(s_{1}(x,y)\) and
 the \emph{query} pattern \(s_{2}(x,y)\) are displayed side-by-side in
 the same input plane~\cite{Javidi1989}.
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/setup/setup.png}
+    \caption{Optical setup for the joint transform correlator. The SLM displays the reference and query patterns side by side.}
+    \label{fig:optical-classifier}
+\end{figure}
+
 \paragraph{Operational principle.}
-Let the two patterns be centred at \(\pm x_{0}\) along the horizontal
+Let the two patterns be centred on the SLM display at \(\pm x_{0}\) along the horizontal
 axis, i.e.\ \(s_{1}(x+x_{0},y)\) and \(s_{2}(x-x_{0},y)\).  A
 \(1f\)-configuration lens (focal length \(f\)) produces at its back
 focal plane the joint Fourier transform
@@ -326,7 +413,7 @@ focal plane the joint Fourier transform
 \]
 where \((\alpha,\beta)\) are spatial-frequency coordinates and
 \(S_{j}\) denotes the Fourier transform of \(s_{j}\).
-A photosensor records the \emph{joint power spectrum}
+A CMOS camera records and stores the \emph{joint power spectrum}
 \(|G|^{2}\); its intensity contains four beating terms:
 
 \[
@@ -336,15 +423,31 @@ A photosensor records the \emph{joint power spectrum}
    +S_{2}S_{1}^{\!*}e^{+i4\pi x_{0}\alpha/\lambda f}.
 \]
 
-A second lens takes the inverse Fourier transform of this intensity
-pattern.  The constant terms yield \emph{autocorrelation}
+The SLM displays the joint power spectrum and the same lens takes the inverse Fourier transform of this intensity
+pattern. This produces at the fourier plane the correlation signals of the two images, given by:
+$$
+g(x', y') = R_{11}(x',y') + R_{22}(x',y') + R_{12}(x' - 2x_{0},y') + R_{21}(x' + 2x_{0},y')
+$$
+
+where $(x', y')$ are the coordinates at the correlation plane and the correlation signals are defined as:
+\[
+R_{ij}(x',y') = \int \int s_i(x' - x, y' - y)s_j(x', y') \, dx \, dy
+\]
+
+The constant terms yield \emph{autocorrelation}
 peaks near the optic axis, whereas the two cross-terms produce a pair
 of off-axis peaks located at \((\pm2x_{0},0)\) whose heights are
 proportional to the cross-correlation
-\(s_{1}\star s_{2}\).  Detecting the peak energy therefore reveals the
-similarity between the two input patterns.
+\(s_{1}\star s_{2}\). As illustrated in Figure \ref{fig:corr-shifted},
+when the input is an image and its shifted version, the patterns are highly similar, resulting in strong and well-defined cross-correlation peaks ($R_{12}$ and $R_{21}$). In contrast, Figure \ref{fig:corr-random} shows the correlation between an image and an unrelated random pattern, yielding weak or undetectable peaks due to the lack of similarity.
 
-TODO: INCLUDE A DIAGRAM OF THE JTC, AND THE CORRELATION PLANE, AS WELL AS SOME EXAMPLES OF CORRELATION (SHIFTED IMAGE VS ORIGINAL, ROTATED VS ORIGINAL, AND CORRELATION VALUES)
+Therefore, we just need to measure the intensity of the cross-correlation peaks to determine the similarity between the two patterns. To obtain a normalized value between $0$ and $1$, we can divide the intensity of the cross-correlation peaks by $2 \times \|v_1 \| \times \|v_2 \|$, where $v_1$ and $v_2$ are the input images to perform the correlation. We will define this metric as the \emph{similarity} between the two images:
+\[
+  \text{similarity}(s_1, s_2) = \frac{R_{12}}{2 \times \|s_1 \| \times \|s_2 \|} = \frac{R_{21}}{2 \times \|s_1 \| \times \|s_2 \|}
+\]
+
+
+This gives us a value of $1$ when the two images are identical and $0$ when they are completely different.
 
 %------------------------------------------------------
 \begin{figure}[htbp]
@@ -373,10 +476,44 @@ TODO: INCLUDE A DIAGRAM OF THE JTC, AND THE CORRELATION PLANE, AS WELL AS SOME E
 \end{figure}
 %------------------------------------------------------
 
+\paragraph{JTC-based dissimilarity.}
+Let \(\operatorname{sim}(s_{1},s_{2})\in[0,1]\) denote the normalised
+height of the cross-correlation peak produced by the joint transform
+correlator when the input patterns are \(s_{1}\) and \(s_{2}\).
+We quantify dissimilarity through its reciprocal,
+\[
+  d_{\text{JTC}}(s_{1},s_{2})=\sqrt{1 - \operatorname{sim}(s_{1},s_{2})}.
+\]
+Because \(\operatorname{sim}=1\) for identical patterns and decreases
+towards 0 as the patterns diverge, \(d_{\text{JTC}}\) is
+non-negative and symmetric, but it is \emph{not} a metric in the strict
+mathematical sense: it does not satisfy the triangle inequality. Nonetheless it serves the same practical
+purpose as a distance—patterns that are more alike yield a smaller
+\(d_{\text{JTC}}\).
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figures/correlation/euclidean_vs_jtc_distance.png}
+  \caption{Scatter plot of the JTC dissimilarity versus the Euclidean
+           distance for $10^4$ random pairs of MNIST digits.
+           The coefficient of determination is
+           \(R^{2}=0.867\), indicating that although the two measures are
+           expressed on different scales, they are \emph{strongly
+           monotonically related}: pairs that are close in Euclidean
+           space are also close under the JTC criterion.  For
+           distance-based classifiers, this monotonicity is what matters,
+           because only the relative ordering of distances influences the
+           decision rule.}
+  \label{fig:euclidean_vs_jtc}
+\end{figure}
+
+The high \(R^{2}\) value in Fig.~\ref{fig:euclidean_vs_jtc} confirms that
+\(d_{\text{JTC}}\) preserves the rank ordering supplied by the Euclidean
+metric while being considerably cheaper to obtain optically, making it a
+suitable drop-in replacement for similarity-based classification.
+
 \subsection{Optical implementations of the classifiers}
 \label{subsec:optical-qnm}
-
-The
 
 
 \section{Results}

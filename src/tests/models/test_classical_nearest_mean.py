@@ -19,8 +19,8 @@ from pathlib import Path
 # Define ROOT as the directory containing the current test script
 ROOT = Path(__file__).resolve().parent
 
-X_train_total, y_train_total = get_train_data(dataset="fashion")
-X_test_total, y_test_total = get_test_data(dataset="fashion")
+X_train_total, y_train_total = get_train_data(dataset="mnist")
+X_test_total, y_test_total = get_test_data(dataset="mnist")
 
 y_test = y_test_total
 X_test = X_test_total
@@ -56,7 +56,7 @@ print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 
 
 cnm = ClassicalNearestMeanClassifier(
-    distance_metric_name="euclidean", distance_squared=False, random_state=0
+    distance_metric_name="classical_jtc", distance_squared=False, random_state=0
 )
 
 model = Pipeline(

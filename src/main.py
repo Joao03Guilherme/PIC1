@@ -19,9 +19,7 @@ from distance.OpticalJTCorrelator import OpticalJTCorrelator
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.metrics import accuracy_score, confusion_matrix
-import matplotlib.pyplot as plt
 import time
-import contextlib
 
 
 def test_classic_nearest_mean():
