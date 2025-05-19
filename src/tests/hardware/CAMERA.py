@@ -1,4 +1,9 @@
 from ...hardware.devices.Camera import ThorlabsCamera
+import pylablib as pll
+
+pll.par["devices/dlls/thorlabs_tlcam"] = r"C:\Program Files\Thorlabs\Scientific Imaging\ThorCam"
+print(pll.devices.Thorlabs.list_cameras_tlcam())
+
 
 with ThorlabsCamera() as cam:
     cam.set_exposure(24.65 * 1e-3)  # 24.65 ms
