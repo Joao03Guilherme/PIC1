@@ -7,6 +7,7 @@ from sklearn.cluster import MiniBatchKMeans
 from sklearn.metrics import pairwise_distances
 from sklearn.base import BaseEstimator, ClassifierMixin
 from ..utils import make_distance_fn
+from ...distance.OpticalJTCorrelator import OpticalJTCorrelator
 
 
 # -----------------------------------------------------------------------------
@@ -28,6 +29,7 @@ class RBFNet(BaseEstimator, ClassifierMixin):
         distance_name: str = "phase",
         distance_squared: bool = True,
         shape: Optional[Tuple[int, int]] = None,
+        optical_correlator: Optional[OpticalJTCorrelator] = None,
         random_state: int | None = None,
     ) -> None:
         # Parameters must be assigned to attributes with *the same names*
@@ -43,11 +45,16 @@ class RBFNet(BaseEstimator, ClassifierMixin):
         self.distance_name = distance_name
         self.distance_squared = distance_squared
         self.shape = shape
+        self.optical_correlator = optical_correlator
         self.random_state = random_state
 
         # Internal aliases (shorter names):
         self.max_iter_p = max_iter_perceptron
         self.l2 = lambda_ridge
+        
+        # Validate optical_correlator is provided if using optical distance
+        if distance_name == "optical_classical_jtc" and optical_correlator is None:
+            raise ValueError("optical_correlator must be provided for 'optical_classical_jtc' distance")
 
     # --------------------------- training -----------------------------------
     def fit(self, X: np.ndarray, y: np.ndarray):
@@ -87,10 +94,15 @@ class RBFNet(BaseEstimator, ClassifierMixin):
             name=self.distance_name,
             squared=self.distance_squared,
             shape=self.image_shape_,
+            optical_correlator=self.optical_correlator
         )
 
         # 2. compute distances -------------------------------------------
-        d2 = pairwise_distances(self.centers_, metric=dist_fn, n_jobs=-1)
+        # For hardware-based distance metrics, we should use n_jobs=1 to avoid 
+        # parallel processing which could interfere with hardware access
+        n_jobs = 1 if self.distance_name == "optical_classical_jtc" else -1
+        
+        d2 = pairwise_distances(self.centers_, metric=dist_fn, n_jobs=n_jobs)
         np.fill_diagonal(d2, np.inf)
         nn2 = d2.min(axis=1)
         sigma2 = np.maximum((self.k_sigma**2) * nn2, self.min_sigma**2)
@@ -98,7 +110,7 @@ class RBFNet(BaseEstimator, ClassifierMixin):
 
         # 3. design matrix -----------------------------------------------
         phi = np.exp(
-            -pairwise_distances(X_raw, self.centers_, metric=dist_fn, n_jobs=-1)
+            -pairwise_distances(X_raw, self.centers_, metric=dist_fn, n_jobs=n_jobs)
             * self.gammas_[None, :]
         )
 
@@ -115,13 +127,18 @@ class RBFNet(BaseEstimator, ClassifierMixin):
             name=self.distance_name,
             squared=self.distance_squared,
             shape=self.image_shape_,
+            optical_correlator=self.optical_correlator
         )
+        
+        # For hardware-based distance metrics, use n_jobs=1
+        n_jobs = 1 if self.distance_name == "optical_classical_jtc" else -1
+        
         return np.exp(
             -pairwise_distances(
                 X.astype(np.float32, copy=False),
                 self.centers_,
                 metric=dist_fn,
-                n_jobs=-1,
+                n_jobs=n_jobs,
             )
             * self.gammas_[None, :]
         )

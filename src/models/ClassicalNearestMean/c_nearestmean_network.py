@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import pairwise_distances
 from ..utils import make_distance_fn
+from ...distance.OpticalJTCorrelator import OpticalJTCorrelator
 
 
 class ClassicalNearestMeanClassifier(BaseEstimator, ClassifierMixin):
@@ -15,6 +16,7 @@ class ClassicalNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         distance_metric_name: str = "classical_jtc",
         distance_squared: bool = False,
         random_state: int = 0,
+        optical_correlator=None,
     ):
         """
         Initialize the classifier.
@@ -29,12 +31,18 @@ class ClassicalNearestMeanClassifier(BaseEstimator, ClassifierMixin):
                                      However, make_distance_fn for 'classical_jtc' returns 'd' which is
                                      already treated as a distance (e.g. smaller is better).
                                      The 'squared' parameter's effect depends on make_distance_fn's implementation.
+            optical_correlator: OpticalJTCorrelator instance, required if distance_metric_name is 'optical_classical_jtc'.
         """
         self.distance_metric_name = distance_metric_name
         self.distance_squared = distance_squared
         self.random_state = random_state
+        self.optical_correlator = optical_correlator
         self.dist_fn_ = None
         self.centroids_ = None
+        
+        # Validate optical_correlator is provided if using optical distance
+        if distance_metric_name == "optical_classical_jtc" and optical_correlator is None:
+            raise ValueError("optical_correlator must be provided for 'optical_classical_jtc' distance")
 
     def fit(self, X: np.ndarray, y: np.ndarray):
         """
@@ -73,6 +81,7 @@ class ClassicalNearestMeanClassifier(BaseEstimator, ClassifierMixin):
             name=self.distance_metric_name,
             squared=self.distance_squared,
             shape=self.image_shape_,  # (H,W)
+            optical_correlator=self.optical_correlator,
         )
 
         return self
@@ -96,8 +105,12 @@ class ClassicalNearestMeanClassifier(BaseEstimator, ClassifierMixin):
             )
 
         X_processed = X.astype(np.float32, copy=False)
-
+        
+        # For hardware-based distance metrics, we should use n_jobs=1 to avoid 
+        # parallel processing which could interfere with hardware access
+        n_jobs = 1 if self.distance_metric_name == "optical_classical_jtc" else -1
+        
         distances = pairwise_distances(
-            X_processed, self.centroids_, metric=self.dist_fn_, n_jobs=-1
+            X_processed, self.centroids_, metric=self.dist_fn_, n_jobs=n_jobs
         )
         return self.classes_[np.argmin(distances, axis=1)]
