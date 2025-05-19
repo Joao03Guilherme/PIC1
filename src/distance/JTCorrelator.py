@@ -6,6 +6,7 @@ from typing import Tuple
 
 EPS = 1e-8  # small value to avoid division by zero
 
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Classical JTC  (grey-scale, un-thresholded)
 # ──────────────────────────────────────────────────────────────────────────────
@@ -36,10 +37,12 @@ def classical_jtc(img1_vec, img2_vec, shape):
     return distance, (dy, dx), similarity, corr / (2 * norm)
 
 
-def binary_jtc(img1_vec: np.ndarray,
-               img2_vec: np.ndarray,
-               shape: Tuple[int, int],
-               spectrum_threshold: str | float = "median"):
+def binary_jtc(
+    img1_vec: np.ndarray,
+    img2_vec: np.ndarray,
+    shape: Tuple[int, int],
+    spectrum_threshold: str | float = "median",
+):
     """
     Binary Joint-Transform Correlator (grey-scale inputs, binary spectrum)
 
@@ -69,7 +72,7 @@ def binary_jtc(img1_vec: np.ndarray,
     img2 = img2_vec.astype(np.float32).reshape(shape)
 
     # 2) joint input plane
-    joint = np.hstack((img1, img2))                 # (H, 2W)
+    joint = np.hstack((img1, img2))  # (H, 2W)
 
     # 3) joint power spectrum
     jps = np.abs(np.fft.fft2(joint)) ** 2
@@ -81,7 +84,7 @@ def binary_jtc(img1_vec: np.ndarray,
     else:
         thresh = float(spectrum_threshold) * jps.mean()
 
-    jps_bin = (jps >= thresh).astype(np.float32)    # 0/1 binary spectrum
+    jps_bin = (jps >= thresh).astype(np.float32)  # 0/1 binary spectrum
 
     # 4) correlation plane
     corr = np.fft.ifft2(jps_bin)
@@ -91,8 +94,8 @@ def binary_jtc(img1_vec: np.ndarray,
     peak, (dy, dx) = _peak_and_shift(corr, shape)
     norm = np.linalg.norm(img1) * np.linalg.norm(img2) + EPS
 
-    similarity = peak / (2.0 * norm)               # ∈ [0, 1]
-    distance   = 1.0 / (similarity + EPS)          # ∈ [1, ∞)
+    similarity = peak / (2.0 * norm)  # ∈ [0, 1]
+    distance = 1.0 / (similarity + EPS)  # ∈ [1, ∞)
 
     return distance, (dy, dx), similarity, corr
 

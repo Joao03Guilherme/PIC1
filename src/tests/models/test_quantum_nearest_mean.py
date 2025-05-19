@@ -1,5 +1,5 @@
 # filepath: /Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/src/tests/models/test_quantum_nearest_mean.py
-from ...models.QuantumNearestMean.quantum_nearest_mean import (
+from ...models.QuantumNearestMean.quantum_nearestmean_network import (
     QuantumNearestMeanClassifier,
 )
 from ...data.data import get_test_data, get_train_data

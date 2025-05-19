@@ -5,6 +5,7 @@ from typing import Tuple
 # Encoding functions
 # ----------------------------------------------------------------
 
+
 def normalize_vector(vec: np.ndarray) -> np.ndarray:
     """Return vec / ||vec|| or vec if zero."""
     norm = np.linalg.norm(vec)
@@ -61,6 +62,7 @@ def compute_density_matrix_from_vector(vector):
     rho = np.outer(vector, vector)
     return rho
 
+
 def encode_diag_prob(x: np.ndarray) -> np.ndarray:
     """Diagonal probability encoding: p_x = x / sum(x)."""
     x = x.astype(np.float32, copy=False)
@@ -88,6 +90,6 @@ def encode_informative(x: np.ndarray) -> np.ndarray:
         psi = np.zeros(x.size + 1, dtype=np.float32)
         psi[-1] = 1.0
         return psi
-    
+
     vec = np.concatenate([x / norm, [1]], dtype=np.float32)
-    return 1/np.sqrt(2) * vec
+    return 1 / np.sqrt(2) * vec

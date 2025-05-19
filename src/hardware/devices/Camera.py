@@ -1,174 +1,208 @@
-"""
-Thorlabs CMOS Camera - Minimal Controller
-=========================================
-
-This driver is based on **pylablib**'s wrapper around the Thorlabs *TL Camera* SDK
-(`pylablib.devices.Thorlabs.tlcam`). It provides a simplified, high-level API
-for single-shot image acquisition.
-
-Prerequisites
--------------
-1. Install pylablib (≥ 1.4.2)::
-
-       pip install pylablib
-
-2. Install Thorlabs *TL Camera* SDK **and** make sure its DLL/SO can be found.
-   The path can be supplied at runtime with::
-
-       import pylablib as pll
-       pll.par["devices/dlls/thorlabs_tlcam"] = r"C:\\Program Files\\Thorlabs\\Scientific Imaging\\DCx TL Cameras\\tlcam.dll"
-
-   or (Linux)::
-
-       pll.par["devices/dlls/thorlabs_tlcam"] = "/usr/local/lib/libtlcam.so"
-
-3. Connect the camera and **disable** any other application that might already
-   be talking to the device (ThorCam, μManager, LabVIEW, etc.).
-
--------------------------------------------------------------------------------
-"""
-
 from __future__ import annotations
 
-import contextlib
+"""uc480_controller.py
+Controller for the DCC1645C-HQ camera (UC480 driver).
+THIS DRIVER ONLY WORKS WITH THIS CAMERA (or similar models).
+Besides this, you must install the thorlabs dlls
+"""
+
 from typing import List, Optional, Tuple
+import contextlib
 
 import numpy as np
-from pylablib.devices import uc480 as _tl 
+from pylablib.devices import uc480
 
-
-# -----------------------------------------------------------------------------
-# Helper functions
-# -----------------------------------------------------------------------------
+__all__ = [
+    "UC480Controller",
+    "list_cameras",
+]
 
 
 def list_cameras() -> List[str]:
-    """Return a list of serial numbers of all TL‑compatible cameras present."""
-    return _tl.list_cameras()
+    """Return serial numbers of all UC480/uEye cameras detected by the driver."""
+    return uc480.list_cameras()
 
 
-def _auto_pick_serial(serial: Optional[str]) -> str:
-    if serial is None:
-        cams = list_cameras()
-        if not cams:
-            raise RuntimeError("No Thorlabs TL cameras were detected on this system.")
-        serial = cams[0]
-    return serial
+class UC480Controller:
+    """High‑level wrapper around :class:`pylablib.devices.uc480.UC480Camera`.
 
-
-# -----------------------------------------------------------------------------
-# Main camera class
-# -----------------------------------------------------------------------------
-
-
-class ThorlabsCamera:
-    """Simplified driver for Thorlabs CMOS cameras, focused on snapshots.
-
-    Examples
-    --------
-    >>> with ThorlabsCamera() as cam:
-    ...     cam.set_exposure(0.01)      # 10 ms
-    ...     frame = cam.snap()           # numpy.ndarray, shape (H, W)
-    ...     print(f"Captured frame of shape: {frame.shape}")
+    Parameters
+    ----------
+    serial
+        Serial number of the camera to open. If *None*, the first camera found is used.
+    init
+        If *True* (default) the camera is opened immediately. Set to *False* if you
+        want to modify instance attributes before opening the hardware.
     """
 
-    # ---------------------------------------------------------------------
-    # Construction & context‑management
-    # ---------------------------------------------------------------------
+    # ------------------------------------------------------------------
+    # Construction / teardown helpers
+    # ------------------------------------------------------------------
 
     def __init__(self, serial: Optional[str] = None, *, init: bool = True):
-        self.serial: str = _auto_pick_serial(serial)
-        self._cam: Optional[_tl.UC480Camera] = None
+        self.serial: str = self._pick_serial(serial)
+        self._cam: Optional[uc480.UC480Camera] = None
         if init:
             self.open()
 
-    # Context‑manager helpers ------------------------------------------------
+    # ----------------------- context manager -------------------------
 
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc, tb):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    # Connection handling ----------------------------------------------------
+    # ----------------------- private helpers -------------------------
 
-    def open(self) -> None:
-        """Open the underlying SDK connection (if not open already)."""
+    @staticmethod
+    def _pick_serial(user_serial: Optional[str]) -> str:
+        cams = list_cameras()
+        if not cams:
+            raise RuntimeError("No UC480 cameras detected.")
+        if user_serial is None:
+            return cams[0]
+        if user_serial not in cams:
+            raise ValueError(
+                f"Requested serial {user_serial} not among detected cameras: {cams}"
+            )
+        return user_serial
+
+    def _require_open(self) -> None:
         if self._cam is None:
-            self._cam = _tl.UC480Camera(self.serial)
-            # Optional: self._cam.set_timeout(2000)  # ms, for operations
+            raise RuntimeError("Camera is not open. Call `open()` first.")
 
-    def close(self) -> None:
-        """Close the connection and free resources."""
+    # ------------------------------------------------------------------
+    # Connection handling
+    # ------------------------------------------------------------------
+
+    def open(self):
+        """Open the connection to the hardware if not already open."""
+        if self._cam is None:
+            self._cam = uc480.UC480Camera(self.serial)
+            # Disable the automatic allocation of multiple image buffers to
+            # save RAM in single‑shot scenarios.
+            self._cam.set_acquisition_mode("single_frame")
+
+    def close(self):
+        """Gracefully stop acquisition (if running) and close the connection."""
         if self._cam is not None:
-            with contextlib.suppress(Exception): # Try to close gracefully
+            with contextlib.suppress(Exception):
                 if self._cam.is_acquiring():
                     self._cam.stop_acquisition()
             with contextlib.suppress(Exception):
                 self._cam.close()
             self._cam = None
 
-    # ---------------------------------------------------------------------
-    # Property helpers
-    # ---------------------------------------------------------------------
+    # ------------------------------------------------------------------
+    #  Camera‑wide information
+    # ------------------------------------------------------------------
 
-    def _require_open(self) -> None:
-        if self._cam is None:
-            raise RuntimeError("Camera is not opened. Call `open()` first.")
-
-    # --- Exposure ----------------------------------------------------------
-    def set_exposure(self, seconds: float) -> None:
-        """Set camera exposure time in seconds."""
+    @property
+    def detector_size(self) -> Tuple[int, int]:
+        """Return full sensor size as *(width, height)* in pixels."""
         self._require_open()
-        self._cam.set_exposure(seconds)
+        return self._cam.get_detector_size()
+
+    # ------------------------------------------------------------------
+    #  Exposure & gain
+    # ------------------------------------------------------------------
+
+    def set_exposure(self, ms: float):
+        """Set exposure time in **milliseconds**."""
+        self._require_open()
+        self._cam.set_exposure(ms)
 
     def get_exposure(self) -> float:
-        """Get current camera exposure time in seconds."""
+        """Current exposure time in milliseconds."""
         self._require_open()
         return self._cam.get_exposure()
 
-    # --- Sensor Size -------------------------------------------------------
-    @property
-    def sensor_size(self) -> Tuple[int, int]:
-        """Get the full sensor size (width, height) in pixels."""
+    def set_gain(self, gain: float):
+        """Set analogue gain (percentage, 0–100)."""
         self._require_open()
-        return self._cam.get_sensor_size()
+        self._cam.set_gain(gain)
 
-    # ---------------------------------------------------------------------
-    # Acquisition helpers
-    # ---------------------------------------------------------------------
+    def get_gain(self) -> float:
+        self._require_open()
+        return self._cam.get_gain()
 
-    def snap(self) -> np.ndarray:
-        """Acquire a *single* frame and return it as a NumPy array.
-        The image data type is typically uint8 or uint16 depending on the camera model and settings.
+    # ------------------------------------------------------------------
+    #  Region of Interest (ROI) and binning / subsampling
+    # ------------------------------------------------------------------
+
+    def reset_roi(self):
+        """Set ROI to full sensor, binning 1×1."""
+        w, h = self.detector_size
+        self.set_roi(0, 0, w, h, hbin=1, vbin=1)
+
+    def set_roi(
+        self,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        *,
+        hbin: int = 1,
+        vbin: int = 1,
+    ) -> None:
+        """Define a rectangular *read‑out* window and optional binning factors.
+
+        The hardware ROI is set such that the top‑left corner of the rectangle
+        is at ``(x, y)`` and its size is ``width × height`` **before** binning.
+        All values must be multiples of the camera’s increment (usually 1 or 2 px).
         """
         self._require_open()
-        # Ensure not in continuous acquisition mode from a previous state if an error occurred
+        hstart = x
+        hend = x + width
+        vstart = y
+        vend = y + height
+        self._cam.set_roi(hstart, hend, vstart, vend, hbin, vbin)
+
+    def get_roi(self) -> Tuple[int, int, int, int, int, int]:
+        """Return *(hstart, hend, vstart, vend, hbin, vbin)* currently active."""
+        self._require_open()
+        return self._cam.get_roi()
+
+    def set_subsampling(self, hsub: int = 1, vsub: int = 1):
+        """Enable hardware subsampling (decimation) instead of binning."""
+        self._require_open()
+        self._cam.set_subsampling(hsub, vsub)
+
+    # ------------------------------------------------------------------
+    #  Acquisition helpers
+    # ------------------------------------------------------------------
+
+    def snap(self) -> np.ndarray:
+        """Acquire *one* frame and return it as a **contiguous copy** (NumPy array)."""
+        self._require_open()
         if self._cam.is_acquiring():
             self._cam.stop_acquisition()
-        
-        with self._cam.single_frame(): # Sets up for single frame, acquires, and stops
+        with self._cam.single_frame():
             frame = self._cam.get_last_frame()
         if frame is None:
-            # This case should ideally be handled by pylablib raising an error,
-            # but as a fallback:
-            raise RuntimeError("Failed to acquire frame from camera.")
-        return frame.copy() # Return a copy to avoid issues with buffer reuse
+            raise RuntimeError("Failed to retrieve frame – camera timeout?")
+        return frame.copy()
 
 
-# -----------------------------------------------------------------------------
-# Self‑test / demo
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+#  Demo / self‑test
+# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
-    with ThorlabsCamera() as cam:
-        cam.set_exposure(0.02)  # 20 ms
-        print("Sensor size:", cam.sensor_size)
+    with UC480Controller() as cam:
+        print("Connected camera serial:", cam.serial)
+        print("Sensor size:", cam.detector_size)
 
-        # Single‑shot --------------------------------------------------------
-        img = cam.snap()
-        plt.title("Single frame")
-        plt.imshow(img, cmap="gray")
-        plt.show()
+        cam.set_exposure(11)  # ms
+        cam.reset_roi()  # full sensor, no binning
+
+        frame = cam.snap()
+        print("Captured frame shape:", frame.shape)
+
+    plt.imshow(frame, cmap="gray")
+    plt.title("UC480 single frame")
+    plt.axis("off")
+    plt.show()

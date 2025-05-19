@@ -4,10 +4,10 @@ This script displays two MNIST digits (a '1' and a '2') side-by-side on the SLM.
 """
 
 from ...hardware.devices.SLM import SLMdisplay
-from ...data.data import get_test_data # Added for MNIST
+from ...data.data import get_test_data  # Added for MNIST
 import time
 import numpy as np
-from scipy.ndimage import zoom # Added for resizing
+from scipy.ndimage import zoom  # Added for resizing
 
 slm = SLMdisplay(isImageLock=True)
 resX, resY = slm.getSize()
@@ -16,17 +16,25 @@ print(f"SLM resolution: {resX}x{resY}")
 # Target dimensions for the overall smaller display area on SLM (e.g., half SLM size)
 overall_display_height = resY // 2
 overall_display_width = resX // 2
-print(f"Target overall display area for combined digits: {overall_display_width}x{overall_display_height}")
+print(
+    f"Target overall display area for combined digits: {overall_display_width}x{overall_display_height}"
+)
 
 # Target dimensions for each individual MNIST image to fit side-by-side in this new smaller overall display area
-mnist_target_height = overall_display_height # Each digit takes full height of the smaller display area
-mnist_target_width = overall_display_width // 2 # Each digit takes half width of the smaller display area
+mnist_target_height = (
+    overall_display_height  # Each digit takes full height of the smaller display area
+)
+mnist_target_width = (
+    overall_display_width // 2
+)  # Each digit takes half width of the smaller display area
 
-print(f"Target dimensions for each MNIST image: {mnist_target_width}x{mnist_target_height}")
+print(
+    f"Target dimensions for each MNIST image: {mnist_target_width}x{mnist_target_height}"
+)
 
 # 1. Load MNIST data
 try:
-    X_mnist, y_mnist = get_test_data(dataset='mnist')
+    X_mnist, y_mnist = get_test_data(dataset="mnist")
     print("MNIST training data loaded.")
 except Exception as e:
     print(f"Error loading MNIST data: {e}")
@@ -71,8 +79,12 @@ resized_img1 = np.round(np.clip(resized_img1, 0, 255)).astype(np.uint8)
 resized_img2 = zoom(img2_28x28, (zoom_y, zoom_x), order=1)
 resized_img2 = np.round(np.clip(resized_img2, 0, 255)).astype(np.uint8)
 
-print(f"Resized image 1 shape: {resized_img1.shape}") # Should be (mnist_target_height, mnist_target_width)
-print(f"Resized image 2 shape: {resized_img2.shape}") # Should be (mnist_target_height, mnist_target_width)
+print(
+    f"Resized image 1 shape: {resized_img1.shape}"
+)  # Should be (mnist_target_height, mnist_target_width)
+print(
+    f"Resized image 2 shape: {resized_img2.shape}"
+)  # Should be (mnist_target_height, mnist_target_width)
 
 
 # 5. Combine images side-by-side to form the smaller composite image
@@ -80,13 +92,23 @@ print(f"Resized image 2 shape: {resized_img2.shape}") # Should be (mnist_target_
 actual_mnist_h1, actual_mnist_w1 = resized_img1.shape
 actual_mnist_h2, actual_mnist_w2 = resized_img2.shape
 
-if actual_mnist_h1 != mnist_target_height or actual_mnist_w1 != mnist_target_width or \
-   actual_mnist_h2 != mnist_target_height or actual_mnist_w2 != mnist_target_width:
-    print("Warning: Resized MNIST image dimensions slightly differ from target after zoom.")
-    print(f"Img1: {actual_mnist_w1}x{actual_mnist_h1}, Img2: {actual_mnist_w2}x{actual_mnist_h2}")
+if (
+    actual_mnist_h1 != mnist_target_height
+    or actual_mnist_w1 != mnist_target_width
+    or actual_mnist_h2 != mnist_target_height
+    or actual_mnist_w2 != mnist_target_width
+):
+    print(
+        "Warning: Resized MNIST image dimensions slightly differ from target after zoom."
+    )
+    print(
+        f"Img1: {actual_mnist_w1}x{actual_mnist_h1}, Img2: {actual_mnist_w2}x{actual_mnist_h2}"
+    )
     # Update target dimensions to actual for combining, assuming heights are close enough
     # This uses the actual height of the first image and sum of actual widths
-    mnist_target_height = actual_mnist_h1 # Or average, or min, depending on desired alignment
+    mnist_target_height = (
+        actual_mnist_h1  # Or average, or min, depending on desired alignment
+    )
     # overall_display_width will be actual_mnist_w1 + actual_mnist_w2
 
 small_combined_image = np.hstack((resized_img1, resized_img2))
@@ -110,16 +132,20 @@ if start_row >= 0 and start_col >= 0 and end_row <= resY and end_col <= resX:
     final_slm_image[start_row:end_row, start_col:end_col] = small_combined_image
 else:
     # This case should ideally not be hit if overall_display_width/height are <= SLM res
-    print("Error: Centered image placement is out of bounds. Placing at top-left instead.")
+    print(
+        "Error: Centered image placement is out of bounds. Placing at top-left instead."
+    )
     # Fallback: place at top-left, cropping if necessary
     h_to_copy = min(combined_h, resY)
     w_to_copy = min(combined_w, resX)
-    final_slm_image[0:h_to_copy, 0:w_to_copy] = small_combined_image[0:h_to_copy, 0:w_to_copy]
+    final_slm_image[0:h_to_copy, 0:w_to_copy] = small_combined_image[
+        0:h_to_copy, 0:w_to_copy
+    ]
 
 # 7. Display on SLM (this was step 6 in previous context, renumbered to 7)
 print("Updating SLM with the centered, smaller combined MNIST digits...")
 slm.updateArray(final_slm_image)
-time.sleep(10) # Display for 5 seconds
+time.sleep(10)  # Display for 5 seconds
 
 print("Closing SLM.")
 slm.close()

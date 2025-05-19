@@ -65,7 +65,7 @@ def plot_3d(image, shape, *, elev=35, azim=-45):
         X,
         Y,
         Z,
-        cmap=cm.viridis,
+        cmap=cm.gray,
         rstride=1,
         cstride=1,
         linewidth=0,
@@ -113,16 +113,16 @@ plot_image(joint, shape=(28, 56), title="Joint input plane")
 joint_fft = np.fft.fft2(joint)
 power_spectrum = np.abs(joint_fft) ** 2
 plot_image(
-    np.log1p(power_spectrum),
+    power_spectrum,
     shape=(28, 56),
-    cmap=cm.viridis,
+    cmap=cm.gray,
     title="Log power spectrum",
 )
 
 # Correlation plane  ℱ⁻¹{|FFT|²}  → then FFT-shift to centre peaks
 corr = np.fft.ifft2(power_spectrum)
 corr = np.fft.fftshift(np.real(corr))  # signed plane, centre is (0,0)
-plot_image(corr, shape=(28, 56), cmap=cm.viridis, title="Correlation plane (raw)")
+plot_image(corr, shape=(28, 56), cmap=cm.gray, title="Correlation plane (raw)")
 
 
 H, W = corr.shape

@@ -16,9 +16,7 @@ test_vectors, test_labels = get_test_data()
 
 
 # Apply PCA before encoding
-pca = PCA(
-    n_components=50, svd_solver="full", random_state=0
-)  # Retain 95% of variance
+pca = PCA(n_components=50, svd_solver="full", random_state=0)  # Retain 95% of variance
 X_train_pca = pca.fit_transform(train_vectors)
 X_test_pca = pca.transform(test_vectors)
 
