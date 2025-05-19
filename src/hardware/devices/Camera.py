@@ -34,7 +34,7 @@ import contextlib
 from typing import List, Optional, Tuple
 
 import numpy as np
-from pylablib.devices.Thorlabs import tlcam as _tl
+from pylablib.devices import Thorlabs as _tl 
 
 
 # -----------------------------------------------------------------------------
@@ -44,7 +44,7 @@ from pylablib.devices.Thorlabs import tlcam as _tl
 
 def list_cameras() -> List[str]:
     """Return a list of serial numbers of all TL‑compatible cameras present."""
-    return _tl.list_cameras()
+    return _tl.list_cameras_tlcam()
 
 
 def _auto_pick_serial(serial: Optional[str]) -> str:
@@ -78,7 +78,7 @@ class ThorlabsCamera:
 
     def __init__(self, serial: Optional[str] = None, *, init: bool = True):
         self.serial: str = _auto_pick_serial(serial)
-        self._cam: Optional[_tl.TLCamera] = None
+        self._cam: Optional[_tl.ThorlabsTLCamera] = None
         if init:
             self.open()
 
@@ -95,7 +95,7 @@ class ThorlabsCamera:
     def open(self) -> None:
         """Open the underlying SDK connection (if not open already)."""
         if self._cam is None:
-            self._cam = _tl.TLCamera(self.serial)
+            self._cam = _tl.ThorlabsTLCamera(self.serial)
             # Optional: self._cam.set_timeout(2000)  # ms, for operations
 
     def close(self) -> None:
