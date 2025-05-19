@@ -3,8 +3,8 @@ Python implementation of the Optical Joint Transform Correlator (JTC) algorithm.
 This script displays two MNIST digits (a '1' and a '2') side-by-side on the SLM.
 """
 
-from ..hardware.devices.SLM import SLMdisplay
-from ..data.data import get_test_data # Added for MNIST
+from ...hardware.devices.SLM import SLMdisplay
+from ...data.data import get_test_data # Added for MNIST
 import time
 import numpy as np
 from scipy.ndimage import zoom # Added for resizing
