@@ -42,7 +42,7 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
 
     distance_squared : bool, default=False
         Forwarded to `make_distance_fn for your JTC-based metrics.
-        
+
     optical_correlator : OpticalJTCorrelator, optional
         An instance of OpticalJTCorrelator, required if distance is 'optical_classical_jtc'.
 
@@ -63,10 +63,12 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         self.distance_squared = distance_squared
         self.optical_correlator = optical_correlator
         self.random_state = random_state
-        
+
         # Validate optical_correlator is provided if using optical distance
         if distance == "optical_classical_jtc" and optical_correlator is None:
-            raise ValueError("optical_correlator must be provided for 'optical_classical_jtc' distance")
+            raise ValueError(
+                "optical_correlator must be provided for 'optical_classical_jtc' distance"
+            )
 
     # ------------------------------------------------------------------
     #                      ENCODING HELPERS
@@ -106,12 +108,12 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         else:
             # Default shape if n_features is not yet set
             shape = (28, 28)
-        
+
         return make_distance_fn(
-            name=self.distance, 
-            squared=self.distance_squared, 
+            name=self.distance,
+            squared=self.distance_squared,
             shape=shape,
-            optical_correlator=self.optical_correlator
+            optical_correlator=self.optical_correlator,
         )
 
     # ------------------------------------------------------------------
@@ -177,7 +179,7 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
                 self._metric_ = lambda p, q: 1.0 - np.dot(p, q)
             else:
                 self._metric_ = calculate_fidelity_distance_matrix
-                
+
         elif self.distance == "optical_classical_jtc":
             # For optical JTC, we need to handle density matrices differently
             # Prepare the shape for image reshaping
@@ -187,18 +189,21 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
             H = h_candidate
             W = self.n_features_ // H
             self.image_shape_ = (H, W)
-            
+
             if self.encoding == "diag_prob":
                 # For diagonal matrices, we can use the diagonal elements directly
-                self._metric_ = lambda p, q: self.optical_correlator.correlate(p, q, shape=self.image_shape_)[0]
+                self._metric_ = lambda p, q: self.optical_correlator.correlate(
+                    p, q, shape=self.image_shape_
+                )[0]
             else:
                 # For general density matrices, we need to decide how to convert to vectors
                 # Here we'll use the flattened upper triangular part
                 def _mat_to_vec(M: np.ndarray):
                     return M[np.triu_indices_from(M)]
-                
+
                 self._metric_ = lambda A, B: self.optical_correlator.correlate(
-                    _mat_to_vec(A), _mat_to_vec(B), shape=self.image_shape_)[0]
+                    _mat_to_vec(A), _mat_to_vec(B), shape=self.image_shape_
+                )[0]
 
         else:
             # any custom metric works on *vectors*; choose representation:

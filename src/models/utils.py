@@ -7,10 +7,14 @@ from ..distance.OpticalJTCorrelator import OpticalJTCorrelator
 
 
 def make_distance_fn(
-    name: str = "classical_jtc", *, squared: bool = False, shape=(28, 28), optical_correlator=None
+    name: str = "classical_jtc",
+    *,
+    squared: bool = False,
+    shape=(28, 28),
+    optical_correlator=None,
 ):
     """Return a callable f(X, Y) compatible with sklearn.pairwise_distances.
-    
+
     Parameters
     ----------
     name : str
@@ -52,14 +56,16 @@ def make_distance_fn(
                 shape=shape,
             )
             return d
-            
+
     elif name == "optical_classical_jtc":
         if optical_correlator is None:
-            raise ValueError("optical_correlator must be provided for 'optical_classical_jtc' distance")
-        
+            raise ValueError(
+                "optical_correlator must be provided for 'optical_classical_jtc' distance"
+            )
+
         def _d(X, Y):
             d, _, _, _ = optical_correlator.correlate(
-                X, 
+                X,
                 Y,
                 shape=shape,
             )

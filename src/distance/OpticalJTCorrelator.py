@@ -92,9 +92,7 @@ class OpticalJTCorrelator:
         half_w = self.resX // 2
         scale = min(half_w // W, self.resY // H)
         if scale < 1:
-            raise ValueError(
-                f"SLM {self.resX}×{self.resY} too small for image {W}×{H}"
-            )
+            raise ValueError(f"SLM {self.resX}×{self.resY} too small for image {W}×{H}")
 
         # Nearest-neighbor upsample and cast directly to uint8 (input already in 0–255 range)
         kron = lambda img: np.kron(img, np.ones((scale, scale), dtype=img.dtype))

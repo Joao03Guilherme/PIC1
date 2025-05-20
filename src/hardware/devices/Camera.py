@@ -20,7 +20,7 @@ __all__ = [
 
 def list_cameras() -> List[str]:
     """Return serial numbers of all UC480/uEye cameras detected by the driver."""
-    return uc480.list_cameras()
+    return uc480.list_cameras(backend="uc480")
 
 
 class UC480Controller:
@@ -79,16 +79,13 @@ class UC480Controller:
     def open(self):
         """Open the connection to the hardware if not already open."""
         if self._cam is None:
-            self._cam = uc480.UC480Camera(self.serial)
-            # Disable the automatic allocation of multiple image buffers to
-            # save RAM in single‑shot scenarios.
-            self._cam.set_acquisition_mode("single_frame")
+            self._cam = uc480.UC480Camera(backend="uc480")
 
     def close(self):
         """Gracefully stop acquisition (if running) and close the connection."""
         if self._cam is not None:
             with contextlib.suppress(Exception):
-                if self._cam.is_acquiring():
+                if self._cam.acquisition_in_progress():
                     self._cam.stop_acquisition()
             with contextlib.suppress(Exception):
                 self._cam.close()
@@ -174,15 +171,18 @@ class UC480Controller:
     # ------------------------------------------------------------------
 
     def snap(self) -> np.ndarray:
-        """Acquire *one* frame and return it as a **contiguous copy** (NumPy array)."""
+        """Acquire one frame and return it as a NumPy array."""
         self._require_open()
-        if self._cam.is_acquiring():
+
+        # stop any running continuous acquisition
+        if self._cam.acquisition_in_progress():
             self._cam.stop_acquisition()
-        with self._cam.single_frame():
-            frame = self._cam.get_last_frame()
+
+        # grab a single frame (pylablib built-in helper)
+        frame = self._cam.snap()  # <-- use snap(), not single_frame()
         if frame is None:
             raise RuntimeError("Failed to retrieve frame – camera timeout?")
-        return frame.copy()
+        return frame.copy()  # copy to detach from driver buffer
 
 
 # ---------------------------------------------------------------------------

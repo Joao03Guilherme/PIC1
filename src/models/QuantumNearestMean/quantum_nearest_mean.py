@@ -18,7 +18,7 @@ from ...encodings.encodings import (
     encode_diag_prob,
     encode_stereographic,
     encode_informative,
-    normalize_vector
+    normalize_vector,
 )
 
 
@@ -96,18 +96,24 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         self.classes_ = np.unique(y)
 
         if self.encoding == "diag_prob":
-            sums = {label: np.zeros(X.shape[1], dtype=np.float32) for label in self.classes_}
+            sums = {
+                label: np.zeros(X.shape[1], dtype=np.float32) for label in self.classes_
+            }
 
-        elif self.encoding in ("stereographic", "informative"):   # d  ->  d+1
+        elif self.encoding in ("stereographic", "informative"):  # d  ->  d+1
             dim = X.shape[1] + 1
-            sums = {label: np.zeros((dim, dim), dtype=np.float32) for label in self.classes_}
+            sums = {
+                label: np.zeros((dim, dim), dtype=np.float32) for label in self.classes_
+            }
 
-        elif self.encoding == "standard":                         # stays at d
+        elif self.encoding == "standard":  # stays at d
             dim = X.shape[1]
-            sums = {label: np.zeros((dim, dim), dtype=np.float32) for label in self.classes_}
+            sums = {
+                label: np.zeros((dim, dim), dtype=np.float32) for label in self.classes_
+            }
         else:
             raise ValueError("No valid encoding defined")
-                     
+
         counts = {label: 0 for label in self.classes_}
 
         # accumulate outer products (or diagonals)
@@ -176,7 +182,6 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
                 pass
             else:
                 rep_x = np.outer(enc, enc)
-
 
             best_dist = np.inf
             best_lbl = None

@@ -51,10 +51,12 @@ class RBFNet(BaseEstimator, ClassifierMixin):
         # Internal aliases (shorter names):
         self.max_iter_p = max_iter_perceptron
         self.l2 = lambda_ridge
-        
+
         # Validate optical_correlator is provided if using optical distance
         if distance_name == "optical_classical_jtc" and optical_correlator is None:
-            raise ValueError("optical_correlator must be provided for 'optical_classical_jtc' distance")
+            raise ValueError(
+                "optical_correlator must be provided for 'optical_classical_jtc' distance"
+            )
 
     # --------------------------- training -----------------------------------
     def fit(self, X: np.ndarray, y: np.ndarray):
@@ -94,14 +96,14 @@ class RBFNet(BaseEstimator, ClassifierMixin):
             name=self.distance_name,
             squared=self.distance_squared,
             shape=self.image_shape_,
-            optical_correlator=self.optical_correlator
+            optical_correlator=self.optical_correlator,
         )
 
         # 2. compute distances -------------------------------------------
-        # For hardware-based distance metrics, we should use n_jobs=1 to avoid 
+        # For hardware-based distance metrics, we should use n_jobs=1 to avoid
         # parallel processing which could interfere with hardware access
         n_jobs = 1 if self.distance_name == "optical_classical_jtc" else -1
-        
+
         d2 = pairwise_distances(self.centers_, metric=dist_fn, n_jobs=n_jobs)
         np.fill_diagonal(d2, np.inf)
         nn2 = d2.min(axis=1)
@@ -127,12 +129,12 @@ class RBFNet(BaseEstimator, ClassifierMixin):
             name=self.distance_name,
             squared=self.distance_squared,
             shape=self.image_shape_,
-            optical_correlator=self.optical_correlator
+            optical_correlator=self.optical_correlator,
         )
-        
+
         # For hardware-based distance metrics, use n_jobs=1
         n_jobs = 1 if self.distance_name == "optical_classical_jtc" else -1
-        
+
         return np.exp(
             -pairwise_distances(
                 X.astype(np.float32, copy=False),
