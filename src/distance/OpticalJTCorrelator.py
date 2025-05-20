@@ -144,28 +144,38 @@ class OpticalJTCorrelator:
         img1 = img1_vec.reshape(shape)
         img2 = img2_vec.reshape(shape)
 
-        # Compute scaling to fit each half of the SLM
+        # Compute scaling to fit HALF of the available space in each SLM half
         half_w = self.resX // 2
-        scale = min(half_w // W, self.resY // H)
-        if scale < 1:
-            raise ValueError(f"SLM {self.resX}×{self.resY} too small for image {W}×{H}")
-
+        max_scale = min(half_w // W, self.resY // H)
+        
+        # Use only half of the maximum scale to make images smaller
+        scale = max(max_scale // 2, 1)  # Ensure scale is at least 1
+        
         # Nearest-neighbor upsample and cast directly to uint8 (input already in 0–255 range)
         kron = lambda img: np.kron(img, np.ones((scale, scale), dtype=img.dtype))
         
+        # Scale images to 0-255 range if needed
+        img1_scaled = ((img1 - img1.min()) / (img1.ptp() + 1e-12) * 255).astype(np.uint8)
+        img2_scaled = ((img2 - img2.min()) / (img2.ptp() + 1e-12) * 255).astype(np.uint8)
+        
         # Upsample the images (no binarization)
-        img1_up = kron(img1).astype(np.uint8)
-        img2_up = kron(img2).astype(np.uint8)
+        img1_up = kron(img1_scaled).astype(np.uint8)
+        img2_up = kron(img2_scaled).astype(np.uint8)
 
         # Create blank full frame buffer
         frame = np.zeros((self.resY, self.resX), dtype=np.uint8)
         dh, dw = img1_up.shape
+        
+        # Center the images vertically on the SLM
         y0 = (self.resY - dh) // 2
-        x_off = (half_w - dw) // 2
-
-        # Place images side by side without additional normalization
-        frame[y0 : y0 + dh, x_off : x_off + dw] = img1_up
-        frame[y0 : y0 + dh, half_w + x_off : half_w + x_off + dw] = img2_up
+        
+        # Center each image horizontally in its half of the SLM
+        x_off1 = (half_w - dw) // 2
+        x_off2 = half_w + (half_w - dw) // 2
+        
+        # Place images centered in each half of the SLM
+        frame[y0 : y0 + dh, x_off1 : x_off1 + dw] = img1_up
+        frame[y0 : y0 + dh, x_off2 : x_off2 + dw] = img2_up
 
         # First optical pass: display input and capture spectrum
         self.slm.updateArray(frame)
