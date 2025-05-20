@@ -96,14 +96,31 @@ class OpticalJTCorrelator:
 
         # Nearest-neighbor upsample and cast directly to uint8 (input already in 0–255 range)
         kron = lambda img: np.kron(img, np.ones((scale, scale), dtype=img.dtype))
-        img1_up = kron(img1).astype(np.uint8)
-        img2_up = kron(img2).astype(np.uint8)
+        
+        # Binarize the input images (threshold at median value)
+        img1_bin = np.zeros_like(img1, dtype=np.uint8)
+        img1_bin[img1 >= np.median(img1)] = 255
+        
+        img2_bin = np.zeros_like(img2, dtype=np.uint8)
+        img2_bin[img2 >= np.median(img2)] = 255
+        
+        # Upsample the binary images
+        img1_up = kron(img1_bin).astype(np.uint8)
+        img2_up = kron(img2_bin).astype(np.uint8)
 
-        # Helper to normalize spectrum for display
-        def to_uint8(arr: np.ndarray) -> np.ndarray:
-            a = arr.astype(np.float32)
-            a = (a - a.min()) / (a.ptp() + 1e-12)
-            return (255 * a).astype(np.uint8)
+        # Helper to normalize and binarize spectrum for display
+        def to_binary(arr: np.ndarray, threshold: str = "median") -> np.ndarray:
+            """Convert array to binary (0 or 255) using threshold."""
+            if threshold == "median":
+                thresh = np.median(arr)
+            elif threshold == "mean":
+                thresh = np.mean(arr)
+            else:
+                thresh = float(threshold) * np.mean(arr)
+                
+            binary = np.zeros_like(arr, dtype=np.uint8)
+            binary[arr >= thresh] = 255
+            return binary
 
         # Create blank full frame buffer
         frame = np.zeros((self.resY, self.resX), dtype=np.uint8)
@@ -120,8 +137,8 @@ class OpticalJTCorrelator:
         time.sleep(self.sleep)
         spectrum = self.cam.snap()
 
-        # Second optical pass: display spectrum and capture correlation
-        spec_disp = to_uint8(spectrum)
+        # Second optical pass: display binarized spectrum and capture correlation
+        spec_disp = to_binary(spectrum)
         self.slm.updateArray(spec_disp)
         time.sleep(self.sleep)
         corr = self.cam.snap()

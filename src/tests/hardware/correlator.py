@@ -5,6 +5,8 @@ This script loads MNIST digit images from the test set, initializes the OpticalJ
 and performs optical correlation between digit pairs. It demonstrates the use of optical
 hardware for image correlation and compares different digits.
 """
+# TODO: THIS IS TAKING A LOT OF TIME TO RUN, CONSIDER LOADING THE TEST SET ONLY ONCE, INSTEAD OF LOAFING EVERY TIME WE DO A CORRELATION
+# TODO: THE CAPTURED IMAGE IS BEING PLOTTED, I DONT WANT THAT
 
 import sys
 import os
