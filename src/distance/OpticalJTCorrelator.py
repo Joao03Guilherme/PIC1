@@ -128,7 +128,7 @@ class OpticalJTCorrelator:
 
         # Analyze correlation using existing routine
         peak, (dy, dx) = _peak_and_shift(corr, shape)
-        norm_val = np.linalg.norm(img1) * np.linalg.norm(img2)
+        norm_val = np.linalg.norm(img1) * np.linalg.norm(img2) / 1000
         similarity = peak / (2 * norm_val) if norm_val else 0.0
         distance = 1.0 / similarity if similarity else np.inf
         corr_plane_norm = corr.astype(np.float32) / (2 * norm_val + 1e-12)
