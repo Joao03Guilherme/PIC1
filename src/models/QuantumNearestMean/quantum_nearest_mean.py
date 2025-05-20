@@ -7,6 +7,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from ..utils import make_distance_fn
 
 from ...distance.JTCorrelator import classical_jtc
+from ...distance.OpticalJTCorrelator import OpticalJTCorrelator
 from ...distance.quantum_distances import (
     calculate_trace_distance_diag,
     calculate_fidelity_distance_matrix,
@@ -34,13 +35,18 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         * stereographic  : p_x = |ψ⟩⟨ψ| with ψ given by Eq.(2)-(3) of Sergioli et al.
         * informative    : p_x = |ψ⟩⟨ψ| with ψ given by Eq.(7)-(10) of Sergioli et al.
 
-    distance : {'trace', 'fidelity}, default='trace'
-        Distance between density operators.  If not 'trace', the string is passed
-        to `make_distance_fn and will be applied to *vectors* that represent
-        density matrices (diagonals for 'diag_prob'; flattened matrices otherwise).
+    distance : {'trace', 'fidelity', 'optical_classical_jtc'}, default='trace'
+        Distance between density operators.  If not 'trace' or 'fidelity',
+        the string is passed to `make_distance_fn` and will be applied to
+        *vectors* that represent density matrices (diagonals for 'diag_prob';
+        flattened matrices otherwise).
+        'optical_classical_jtc' uses the OpticalJTCorrelator.
 
     distance_squared : bool, default=False
-        Forwarded to `make_distance_fn for your JTC-based metrics.
+        Forwarded to `make_distance_fn` for your JTC-based metrics.
+
+    optical_correlator : OpticalJTCorrelator, optional
+        An instance of OpticalJTCorrelator, required if distance is 'optical_classical_jtc'.
 
     """
 
@@ -51,12 +57,20 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         ] = "stereographic",
         distance: str = "fidelity",
         distance_squared: bool = False,
+        optical_correlator: Optional[OpticalJTCorrelator] = None,
         random_state: Optional[int] = None,
     ):
         self.encoding = encoding
         self.distance = distance
         self.distance_squared = distance_squared
+        self.optical_correlator = optical_correlator
         self.random_state = random_state
+
+        # Validate optical_correlator is provided if using optical distance
+        if distance == "optical_classical_jtc" and optical_correlator is None:
+            raise ValueError(
+                "optical_correlator must be provided for 'optical_classical_jtc' distance"
+            )
 
     # ------------------------------------------------------------------
     #                      ENCODING HELPERS
@@ -83,7 +97,45 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
 
     # user-supplied or JTC distance (vector form)
     def _make_vector_metric(self) -> Callable[[np.ndarray, np.ndarray], float]:
-        return make_distance_fn(name=self.distance, squared=self.distance_squared)
+        # Include image shape and optical correlator for optical_classical_jtc distance
+        n_features = getattr(self, "n_features_", None)
+        shape = None  # Default shape
+        if n_features is not None:
+            # Determine H, W for reshaping vectors to images
+            h_candidate = int(np.sqrt(n_features))
+            if n_features > 0:  # Ensure n_features is positive
+                while h_candidate > 0 and n_features % h_candidate != 0:
+                    h_candidate -= 1
+
+            if (
+                h_candidate > 0 and n_features % h_candidate == 0
+            ):  # Found a valid factor
+                H = h_candidate
+                W = n_features // H
+            elif (
+                n_features > 0
+            ):  # if n_features is prime or no integer factor found, use 1 x n_features
+                H = 1
+                W = n_features
+            else:  # Fallback for n_features = 0 or other unexpected cases
+                H, W = 0, 0
+                print(
+                    f"Warning: Could not determine H, W for n_features={n_features}. Using ({H},{W})."
+                )
+            shape = (H, W)
+        else:
+            # Default shape if n_features is not yet set (e.g. MNIST default)
+            shape = (28, 28)
+            print(
+                f"Warning: n_features_ not set in _make_vector_metric. Defaulting shape to {shape}."
+            )
+
+        return make_distance_fn(
+            name=self.distance,
+            squared=self.distance_squared,
+            shape=shape,
+            optical_correlator=self.optical_correlator,
+        )
 
     # ------------------------------------------------------------------
     #                       FIT
@@ -94,6 +146,7 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         """
         X = X.astype(np.float32, copy=False)
         self.classes_ = np.unique(y)
+        self.n_features_ = X.shape[1]  # Store for reshaping in distance calculation
 
         if self.encoding == "diag_prob":
             sums = {
@@ -144,19 +197,37 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
 
         elif self.distance == "fidelity":
             if self.encoding == "diag_prob":
-                self._metric_ = lambda p, q: 1.0 - np.dot(p, q)
+                self._metric_ = lambda p, q: 1.0 - np.sum(
+                    np.sqrt(p * q)
+                )  # Corrected fidelity for probability vectors
             else:
                 self._metric_ = calculate_fidelity_distance_matrix
 
+        # All JTC-based distances (classical, optical, other custom) are handled here
         else:
-            # any custom metric works on *vectors*; choose representation:
             vecmetric = self._make_vector_metric()
 
             if self.encoding == "diag_prob":
                 self._metric_ = vecmetric
             else:
-                # flatten the symmetric matrix ; store upper-triangular part for speed
+                # For non-diag_prob encodings, centroids are density matrices.
+                # These need to be converted to vectors to be used with vecmetric.
+                # The current _mat_to_vec flattens the upper triangular part.
+                # This may not be appropriate for JTC methods expecting image-like vectors
+                # of shape derived from self.n_features_.
+                # This behavior is now consistent for all JTC-like metrics obtained via make_distance_fn.
                 def _mat_to_vec(M: np.ndarray):
+                    # Ensure M is 2D
+                    if M.ndim == 1:
+                        # This case might occur if encoding produces a vector but isn't 'diag_prob'.
+                        # Or if a 1D feature vector was encoded to a 1D 'density matrix' (unlikely for stereographic/informative).
+                        # For now, assume if not 'diag_prob', M should be a matrix.
+                        # If it's already a vector, it might be an error or needs specific handling.
+                        # Returning it as is, but this could be problematic if its length doesn't match expectations.
+                        print(
+                            f"Warning: _mat_to_vec received a 1D array for non-diag_prob encoding. Length: {len(M)}"
+                        )
+                        return M
                     return M[np.triu_indices_from(M)]
 
                 self._metric_ = lambda A, B: vecmetric(_mat_to_vec(A), _mat_to_vec(B))
@@ -178,9 +249,10 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
 
             # choose representation to feed to distance metric
             if self.encoding == "diag_prob":
-                # no rep_x needed
+                # no rep_x needed, enc is the vector
                 pass
             else:
+                # rep_x is the density matrix
                 rep_x = np.outer(enc, enc)
 
             best_dist = np.inf

@@ -5,8 +5,6 @@ This script loads MNIST digit images from the test set, initializes the OpticalJ
 and performs optical correlation between digit pairs. It demonstrates the use of optical
 hardware for image correlation and compares different digits.
 """
-# TODO: THIS IS TAKING A LOT OF TIME TO RUN, CONSIDER LOADING THE TEST SET ONLY ONCE, INSTEAD OF LOAFING EVERY TIME WE DO A CORRELATION
-# TODO: THE CAPTURED IMAGE IS BEING PLOTTED, I DONT WANT THAT
 
 import sys
 import os
@@ -27,10 +25,35 @@ from src.hardware.devices.SLM import SLMdisplay
 from src.hardware.devices.Camera import UC480Controller
 from src.distance.OpticalJTCorrelator import OpticalJTCorrelator
 
+# Global variables for pre-loaded test data
+X_test_global = None
+y_test_global = None
+mnist_shape_global = None
+
+
+def load_mnist_data_globally():
+    """Loads MNIST test data into global variables."""
+    global X_test_global, y_test_global, mnist_shape_global
+    if X_test_global is None:  # Load only if not already loaded
+        print("Loading MNIST test data globally...")
+        X_test_global, y_test_global = get_test_data(dataset_name="mnist")
+
+        # Calculate shape
+        n_features = X_test_global.shape[1]
+        h_candidate = int(np.sqrt(n_features))
+        while n_features % h_candidate != 0 and h_candidate > 0:
+            h_candidate -= 1
+        H = h_candidate
+        W = n_features // H
+        mnist_shape_global = (H, W)
+        print(
+            f"Global MNIST test data loaded. Shape: {X_test_global.shape}, Image Shape: {mnist_shape_global}"
+        )
+
 
 def get_sample_digits(digit1=1, digit2=2):
     """
-    Get one sample of digit1 and one sample of digit2 from MNIST test set.
+    Get one sample of digit1 and one sample of digit2 from the globally loaded MNIST test set.
 
     Parameters:
     -----------
@@ -43,29 +66,27 @@ def get_sample_digits(digit1=1, digit2=2):
         (digit1_image, digit2_image, shape)
         where digit*_image are the flat vectors, and shape is the image shape (H, W)
     """
-    X_test, y_test = get_test_data(dataset_name="mnist")
-    print(f"Test data loaded, shape: {X_test.shape}")
+    global X_test_global, y_test_global, mnist_shape_global
+    if X_test_global is None or y_test_global is None or mnist_shape_global is None:
+        raise RuntimeError(
+            "MNIST data not loaded globally. Call load_mnist_data_globally() first."
+        )
 
     # Find first occurrence of digit1
-    idx1 = np.where(y_test == digit1)[0]
+    idx1 = np.where(y_test_global == digit1)[0]
     if len(idx1) == 0:
         raise RuntimeError(f"No instances of digit {digit1} found in test set")
-    digit1_vec = X_test[idx1[0]].copy()
+    digit1_vec = X_test_global[idx1[0]].copy()
 
     # Find first occurrence of digit2
-    idx2 = np.where(y_test == digit2)[0]
+    idx2 = np.where(y_test_global == digit2)[0]
     if len(idx2) == 0:
         raise RuntimeError(f"No instances of digit {digit2} found in test set")
-    digit2_vec = X_test[idx2[0]].copy()
+    digit2_vec = X_test_global[idx2[0]].copy()
 
     # MNIST is known to be 28x28, but we'll calculate it anyway
     # to be robust to other datasets
-    n_features = X_test.shape[1]
-    h_candidate = int(np.sqrt(n_features))
-    while n_features % h_candidate != 0 and h_candidate > 0:
-        h_candidate -= 1
-    H = h_candidate
-    W = n_features // H
+    H, W = mnist_shape_global
 
     print(
         f"Selected digits: {digit1} at index {idx1[0]} and {digit2} at index {idx2[0]}"
@@ -165,8 +186,6 @@ def plot_images_and_correlation(
     plt.tight_layout()
     plt.savefig(save_path)
     print(f"Saved correlation plot to: {save_path}")
-
-    plt.show()
 
 
 def run_correlation_test(digit1, digit2, correlator, verbose=True):
@@ -298,7 +317,6 @@ def run_multi_correlation(correlator, digits_to_test=None, plot_all=False):
     )
     plt.savefig(summary_path)
     print(f"Saved summary plot to: {summary_path}")
-    plt.show()
 
     return results
 
@@ -322,6 +340,9 @@ def get_config():
 
 def main():
     """Main function to run optical correlation test"""
+    # Load data globally first
+    load_mnist_data_globally()
+
     # Get default configuration
     config = get_config()
 

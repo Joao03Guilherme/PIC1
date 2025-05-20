@@ -58,51 +58,52 @@ class OpticalJTCorrelator:
     def calibrate(self, num_samples: int = 3) -> np.ndarray:
         """
         Measure the background bias in the optical system.
-        
+
         This function displays black images and captures the resulting correlation plane,
         which represents the system's background bias. This bias can be subtracted
         from subsequent correlation measurements for more accurate results.
-        
+
         Parameters
         ----------
         num_samples : int, default=3
             Number of background measurements to average.
-            
+
         Returns
         -------
         bias : np.ndarray
             The average background correlation plane.
         """
         print("Calibrating optical JTC system...")
-        
+
         # Create empty (black) image for input plane
         black_frame = np.zeros((self.resY, self.resX), dtype=np.uint8)
-        
+
         # Accumulate multiple background readings
         background_corrs = []
-        
+
         for i in range(num_samples):
             print(f"  Taking background sample {i+1}/{num_samples}")
-            
+
             # First pass: display black input and capture spectrum
             self.slm.updateArray(black_frame)
             time.sleep(self.sleep)
             bg_spectrum = self.cam.snap()
-            
+
             # Second pass: display spectrum and capture correlation
-            bg_spec_disp = ((bg_spectrum - bg_spectrum.min()) / (bg_spectrum.ptp() + 1e-12) * 255).astype(np.uint8)
-            self.slm.updateArray(bg_spec_disp) 
+            # Assuming bg_spectrum is already in a displayable range (e.g., captured camera data)
+            bg_spec_disp = bg_spectrum.astype(np.uint8)
+            self.slm.updateArray(bg_spec_disp)
             time.sleep(self.sleep)
             bg_corr = self.cam.snap()
-            
+
             background_corrs.append(bg_corr)
-        
+
         # Average the backgrounds
         self.background_bias = np.mean(background_corrs, axis=0)
         print("Calibration complete.")
-        
+
         return self.background_bias
-        
+
     def correlate(
         self,
         img1_vec: np.ndarray,
@@ -139,62 +140,76 @@ class OpticalJTCorrelator:
         # If subtract_bias is True but no calibration has been done yet, do it now
         if subtract_bias and not hasattr(self, "background_bias"):
             self.calibrate()
-            
+
         H, W = shape
         img1 = img1_vec.reshape(shape)
         img2 = img2_vec.reshape(shape)
 
-        # Compute scaling to fit HALF of the available space in each SLM half
-        half_w = self.resX // 2
-        max_scale = min(half_w // W, self.resY // H)
-        
-        # Use only half of the maximum scale to make images smaller
-        scale = max(max_scale // 2, 1)  # Ensure scale is at least 1
-        
-        # Nearest-neighbor upsample and cast directly to uint8 (input already in 0–255 range)
-        kron = lambda img: np.kron(img, np.ones((scale, scale), dtype=img.dtype))
-        
-        # Scale images to 0-255 range if needed
-        img1_scaled = ((img1 - img1.min()) / (img1.ptp() + 1e-12) * 255).astype(np.uint8)
-        img2_scaled = ((img2 - img2.min()) / (img2.ptp() + 1e-12) * 255).astype(np.uint8)
-        
-        # Upsample the images (no binarization)
-        img1_up = kron(img1_scaled).astype(np.uint8)
-        img2_up = kron(img2_scaled).astype(np.uint8)
+        # Prepare uint8 versions for display, assuming inputs are already 0-255 scaled
+        img1_display = img1.astype(np.uint8, copy=False)
+        img2_display = img2.astype(np.uint8, copy=False)
 
-        # Create blank full frame buffer
+        # Create blank full frame buffer for SLM
         frame = np.zeros((self.resY, self.resX), dtype=np.uint8)
-        dh, dw = img1_up.shape
-        
-        # Center the images vertically on the SLM
-        y0 = (self.resY - dh) // 2
-        
-        # Center each image horizontally in its half of the SLM
-        x_off1 = (half_w - dw) // 2
-        x_off2 = half_w + (half_w - dw) // 2
-        
-        # Place images centered in each half of the SLM
-        frame[y0 : y0 + dh, x_off1 : x_off1 + dw] = img1_up
-        frame[y0 : y0 + dh, x_off2 : x_off2 + dw] = img2_up
+        # Define black frame for clearing SLM
+        black_frame = np.zeros((self.resY, self.resX), dtype=np.uint8)
+
+        # Calculate total width and height of the side-by-side images
+        # H_img, W_img are from shape parameter (original image dimensions)
+        combined_width = W * 2
+        combined_height = H
+
+        # Ensure the combined image fits on the SLM.
+        if combined_width > self.resX or combined_height > self.resY:
+            raise ValueError(
+                f"Combined image size ({combined_width}x{combined_height}) "
+                f"exceeds SLM resolution ({self.resX}x{self.resY}). "
+                "Input images must be appropriately pre-sized."
+            )
+
+        # Calculate starting y position to center the block vertically
+        y_start_slm = (self.resY - combined_height) // 2
+        # Calculate starting x position to center the block horizontally
+        x_start_slm_block = (self.resX - combined_width) // 2
+
+        # Place img1_display into the frame
+        frame[
+            y_start_slm : y_start_slm + combined_height,
+            x_start_slm_block : x_start_slm_block + W,
+        ] = img1_display
+
+        # Place img2_display into the frame, immediately to the right of img1_display
+        frame[
+            y_start_slm : y_start_slm + combined_height,
+            x_start_slm_block + W : x_start_slm_block + combined_width,
+        ] = img2_display
 
         # First optical pass: display input and capture spectrum
         self.slm.updateArray(frame)
         time.sleep(self.sleep)
         spectrum = self.cam.snap()
+        # Clear SLM after displaying input
+        self.slm.updateArray(black_frame)
+        time.sleep(self.sleep)
 
         # Second optical pass: display spectrum as-is and capture correlation
-        # Convert spectrum to 0-255 range for display
-        spec_disp = ((spectrum - spectrum.min()) / (spectrum.ptp() + 1e-12) * 255).astype(np.uint8)
+        # Assuming spectrum is already in a displayable range (e.g., captured camera data)
+        spec_disp = spectrum.astype(np.uint8)
         self.slm.updateArray(spec_disp)
         time.sleep(self.sleep)
         corr = self.cam.snap()
-        
+        # Clear SLM after displaying spectrum
+        self.slm.updateArray(black_frame)
+        time.sleep(self.sleep)
+
         # Subtract background bias if requested and available
         if subtract_bias and hasattr(self, "background_bias"):
             if corr.shape == self.background_bias.shape:
                 corr = np.clip(corr - self.background_bias, 0, None)
             else:
-                print(f"Warning: Background shape {self.background_bias.shape} doesn't match correlation plane shape {corr.shape}. Skipping bias subtraction.")
+                print(
+                    f"Warning: Background shape {self.background_bias.shape} doesn't match correlation plane shape {corr.shape}. Skipping bias subtraction."
+                )
 
         # Analyze correlation using existing routine
         peak, (dy, dx) = _peak_and_shift(corr, shape)
@@ -202,6 +217,11 @@ class OpticalJTCorrelator:
         similarity = peak / (2 * norm_val) if norm_val else 0.0
         distance = 1.0 / similarity if similarity else np.inf
         corr_plane_norm = corr.astype(np.float32) / (2 * norm_val + 1e-12)
+
+        # Clear SLM by displaying a black screen
+        black_frame = np.zeros((self.resY, self.resX), dtype=np.uint8)
+        self.slm.updateArray(black_frame)
+        time.sleep(self.sleep)  # Allow time for SLM to update
 
         return distance, (dy, dx), similarity, corr_plane_norm
 

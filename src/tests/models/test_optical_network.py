@@ -1,105 +1,114 @@
 """
 Code to run the main application and do the classification
 """
-
-import sys
-import os
-from pathlib import Path
-
-# Add the src directory to the path to enable absolute imports
-src_path = str(Path(__file__).resolve().parent)
-if src_path not in sys.path:
-    sys.path.append(src_path)
-
+ 
 # Use absolute imports instead of relative imports
-from models.ClassicalNearestMean.c_nearestmean_network import (
+from ...models.ClassicalNearestMean.c_nearestmean_network import (
     ClassicalNearestMeanClassifier,
 )
-from models.QuantumNearestMean.quantum_nearestmean_network import (
+from ...models.QuantumNearestMean.quantum_nearest_mean import (
     QuantumNearestMeanClassifier,
 )
 
-from models.RBF.rbf_network import RBFNet
+from ...models.RBF.rbf_network import RBFNet
 
-from data.data import get_test_data, get_train_data
-from hardware.devices.Camera import UC480Controller
-from hardware.devices.SLM import SLMdisplay
-from distance.OpticalJTCorrelator import OpticalJTCorrelator
+from ...data.data import get_test_data, get_train_data
+from ...hardware.devices.Camera import UC480Controller
+from ...hardware.devices.SLM import SLMdisplay
+from ...distance.OpticalJTCorrelator import OpticalJTCorrelator
 
 import numpy as np
 from sklearn.decomposition import PCA
 from sklearn.metrics import accuracy_score, confusion_matrix
 import time
 
+# Global variables for data caching
+X_train_global = None
+y_train_global = None
+X_test_global = None
+y_test_global = None
+
+def load_all_data_globally():
+    """Loads training and testing data into global variables if not already loaded."""
+    global X_train_global, y_train_global, X_test_global, y_test_global
+    if X_train_global is None or y_train_global is None:
+        print("Loading training data globally...")
+        X_train_global, y_train_global = get_train_data()
+        print(f"Training data loaded: X_train_global shape {X_train_global.shape}, y_train_global shape {y_train_global.shape}")
+    if X_test_global is None or y_test_global is None:
+        print("Loading testing data globally...")
+        X_test_global, y_test_global = get_test_data()
+        print(f"Testing data loaded: X_test_global shape {X_test_global.shape}, y_test_global shape {y_test_global.shape}")
 
 def test_classic_nearest_mean():
     """Test the classical nearest mean classifier with Euclidean distance"""
+    global X_train_global, y_train_global, X_test_global, y_test_global
     print("\nTesting Classical Nearest Mean Classifier (Euclidean distance)...")
-    X_train, y_train = get_train_data()
-    X_test, y_test = get_test_data()
+    # Ensure data is loaded by the main block
+    if X_train_global is None or y_train_global is None or X_test_global is None or y_test_global is None:
+        print("Error: Data not loaded globally. Call load_all_data_globally() in the main execution block.")
+        return
 
-    print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
+    print(f"Using global X_train shape: {X_train_global.shape}, y_train shape: {y_train_global.shape}")
 
     model = ClassicalNearestMeanClassifier(
         distance_metric_name="euclidean", distance_squared=False, random_state=0
     )
 
     start_time = time.time()
-    model.fit(X_train, y_train)
+    model.fit(X_train_global, y_train_global)
     fit_time = time.time() - start_time
 
     start_time = time.time()
-    y_pred = model.predict(X_test)
+    y_pred = model.predict(X_test_global)
     predict_time = time.time() - start_time
 
-    accuracy = accuracy_score(y_test, y_pred)
+    accuracy = accuracy_score(y_test_global, y_pred)
     print(f"Accuracy: {accuracy:.4f}")
     print(f"Fit time: {fit_time:.2f}s, Predict time: {predict_time:.2f}s")
 
 
 def test_quantum_nearest_mean_with_optical_jtc():
     """Test the quantum nearest mean classifier with PCA and OpticalJTCorrelator"""
+    global X_train_global, y_train_global, X_test_global, y_test_global
     print("\nTesting Quantum Nearest Mean Classifier with PCA and Optical JTC...")
 
-    # Load data
-    X_train, y_train = get_train_data()
-    X_test, y_test = get_test_data()
+    # Ensure data is loaded by the main block
+    if X_train_global is None or y_train_global is None or X_test_global is None or y_test_global is None:
+        print("Error: Data not loaded globally. Call load_all_data_globally() in the main execution block.")
+        return
 
-    print(f"Original data - X_train: {X_train.shape}, y_train: {y_train.shape}")
+    print(f"Using global original data - X_train: {X_train_global.shape}, y_train: {y_train_global.shape}")
 
     # Apply PCA to reduce dimensions to 50 features
     n_components = 50
     print(f"Applying PCA to reduce to {n_components} components...")
     pca = PCA(n_components=n_components)
-    X_train_pca = pca.fit_transform(X_train)
-    X_test_pca = pca.transform(X_test)
+    X_train_pca = pca.fit_transform(X_train_global)
+    X_test_pca = pca.transform(X_test_global)
 
     print(f"After PCA - X_train: {X_train_pca.shape}, X_test: {X_test_pca.shape}")
 
     # Initialize hardware resources
     print("Initializing hardware resources (SLM and camera)...")
+    print("Attempting to initialize SLMdisplay...")
     slm = SLMdisplay(monitor=1, isImageLock=True)  # Adjust monitor if needed
+    print("SLMdisplay initialized.")
+    
+    print("Attempting to initialize UC480Controller (camera)...")
     cam = UC480Controller()  # Adjust serial if needed
+    print("UC480Controller (camera) initialized.")
 
     # Setup optical correlator with reasonable defaults
-    print("Setting up OpticalJTCorrelator...")
+    print("Attempting to set up OpticalJTCorrelator...")
     correlator = OpticalJTCorrelator(slm=slm, cam=cam, sleep_time=0.1)
+    print("OpticalJTCorrelator set up.")
 
     # Set camera exposure (adjust as needed for your hardware setup)
-    correlator.set_exposure(11)  # milliseconds
-
-    # Try to set an appropriate ROI for the camera (adjust based on your setup)
-    try:
-        # Get sensor size to determine appropriate ROI
-        width, height = cam.detector_size
-        correlator.set_roi(
-            x=width // 4,  # Start from quarter of the way in
-            y=height // 4,  # Start from quarter of the way down
-            width=width // 2,  # Use half the width
-            height=height // 2,  # Use half the height
-        )
-    except Exception as e:
-        print(f"Warning: Could not set ROI: {e}")
+    exposure_ms = 11
+    print(f"Attempting to set camera exposure to {exposure_ms}ms...")
+    correlator.set_exposure(exposure_ms)  # milliseconds
+    print("Camera exposure set.")
 
     try:
         # Setup Quantum Nearest Mean Classifier with optical correlator
@@ -115,7 +124,7 @@ def test_quantum_nearest_mean_with_optical_jtc():
         subset_size = 100
         indices = np.random.choice(len(X_train_pca), subset_size, replace=False)
         X_train_subset = X_train_pca[indices]
-        y_train_subset = y_train[indices]
+        y_train_subset = y_train_global[indices] # Use global y_train for subset labels
 
         print(f"Training on a subset of {subset_size} examples...")
         start_time = time.time()
@@ -129,7 +138,7 @@ def test_quantum_nearest_mean_with_optical_jtc():
             len(X_test_pca), test_subset_size, replace=False
         )
         X_test_subset = X_test_pca[test_indices]
-        y_test_subset = y_test[test_indices]
+        y_test_subset = y_test_global[test_indices] # Use global y_test for subset labels
 
         print(f"Testing on a subset of {test_subset_size} examples...")
         start_time = time.time()
@@ -158,6 +167,9 @@ def test_quantum_nearest_mean_with_optical_jtc():
 
 if __name__ == "__main__":
     print("Testing classifiers...")
+
+    # Load all data globally once
+    load_all_data_globally()
 
     # Test standard classical classifier
     test_classic_nearest_mean()

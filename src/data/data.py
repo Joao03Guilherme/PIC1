@@ -43,6 +43,7 @@ def load_csv(path: Path) -> Tuple[np.ndarray, np.ndarray]:
         data = np.asarray([list(map(int, row)) for row in reader], dtype=np.uint8)
     labels = data[:, 0].astype(np.int64)
     vectors = data[:, 1:].astype(np.float32)  # 0‥255 range, no normalisation
+
     return vectors, labels
 
 
