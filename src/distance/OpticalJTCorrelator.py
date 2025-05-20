@@ -55,11 +55,60 @@ class OpticalJTCorrelator:
         """Set region of interest on the camera sensor."""
         self.cam.set_roi(x, y, width, height, hbin=hbin, vbin=vbin)
 
+    def calibrate(self, num_samples: int = 3) -> np.ndarray:
+        """
+        Measure the background bias in the optical system.
+        
+        This function displays black images and captures the resulting correlation plane,
+        which represents the system's background bias. This bias can be subtracted
+        from subsequent correlation measurements for more accurate results.
+        
+        Parameters
+        ----------
+        num_samples : int, default=3
+            Number of background measurements to average.
+            
+        Returns
+        -------
+        bias : np.ndarray
+            The average background correlation plane.
+        """
+        print("Calibrating optical JTC system...")
+        
+        # Create empty (black) image for input plane
+        black_frame = np.zeros((self.resY, self.resX), dtype=np.uint8)
+        
+        # Accumulate multiple background readings
+        background_corrs = []
+        
+        for i in range(num_samples):
+            print(f"  Taking background sample {i+1}/{num_samples}")
+            
+            # First pass: display black input and capture spectrum
+            self.slm.updateArray(black_frame)
+            time.sleep(self.sleep)
+            bg_spectrum = self.cam.snap()
+            
+            # Second pass: display spectrum and capture correlation
+            bg_spec_disp = ((bg_spectrum - bg_spectrum.min()) / (bg_spectrum.ptp() + 1e-12) * 255).astype(np.uint8)
+            self.slm.updateArray(bg_spec_disp) 
+            time.sleep(self.sleep)
+            bg_corr = self.cam.snap()
+            
+            background_corrs.append(bg_corr)
+        
+        # Average the backgrounds
+        self.background_bias = np.mean(background_corrs, axis=0)
+        print("Calibration complete.")
+        
+        return self.background_bias
+        
     def correlate(
         self,
         img1_vec: np.ndarray,
         img2_vec: np.ndarray,
         shape: tuple[int, int],
+        subtract_bias: bool = True,
     ) -> tuple[float, tuple[int, int], float, np.ndarray]:
         """
         Perform one optical JTC pass and return metrics.
@@ -72,6 +121,9 @@ class OpticalJTCorrelator:
             Flattened second image vector (values 0–255).
         shape : (H, W)
             Original image shape.
+        subtract_bias : bool, default=True
+            Whether to subtract the calibrated background bias from the correlation plane.
+            If True and calibration hasn't been performed, it will be done automatically.
 
         Returns
         -------
@@ -84,6 +136,10 @@ class OpticalJTCorrelator:
         corr_plane_norm : np.ndarray
             Correlation plane normalized by 2||img1||·||img2||.
         """
+        # If subtract_bias is True but no calibration has been done yet, do it now
+        if subtract_bias and not hasattr(self, "background_bias"):
+            self.calibrate()
+            
         H, W = shape
         img1 = img1_vec.reshape(shape)
         img2 = img2_vec.reshape(shape)
@@ -97,30 +153,9 @@ class OpticalJTCorrelator:
         # Nearest-neighbor upsample and cast directly to uint8 (input already in 0–255 range)
         kron = lambda img: np.kron(img, np.ones((scale, scale), dtype=img.dtype))
         
-        # Binarize the input images (threshold at median value)
-        img1_bin = np.zeros_like(img1, dtype=np.uint8)
-        img1_bin[img1 >= np.median(img1)] = 255
-        
-        img2_bin = np.zeros_like(img2, dtype=np.uint8)
-        img2_bin[img2 >= np.median(img2)] = 255
-        
-        # Upsample the binary images
-        img1_up = kron(img1_bin).astype(np.uint8)
-        img2_up = kron(img2_bin).astype(np.uint8)
-
-        # Helper to normalize and binarize spectrum for display
-        def to_binary(arr: np.ndarray, threshold: str = "median") -> np.ndarray:
-            """Convert array to binary (0 or 255) using threshold."""
-            if threshold == "median":
-                thresh = np.median(arr)
-            elif threshold == "mean":
-                thresh = np.mean(arr)
-            else:
-                thresh = float(threshold) * np.mean(arr)
-                
-            binary = np.zeros_like(arr, dtype=np.uint8)
-            binary[arr >= thresh] = 255
-            return binary
+        # Upsample the images (no binarization)
+        img1_up = kron(img1).astype(np.uint8)
+        img2_up = kron(img2).astype(np.uint8)
 
         # Create blank full frame buffer
         frame = np.zeros((self.resY, self.resX), dtype=np.uint8)
@@ -137,11 +172,19 @@ class OpticalJTCorrelator:
         time.sleep(self.sleep)
         spectrum = self.cam.snap()
 
-        # Second optical pass: display binarized spectrum and capture correlation
-        spec_disp = to_binary(spectrum)
+        # Second optical pass: display spectrum as-is and capture correlation
+        # Convert spectrum to 0-255 range for display
+        spec_disp = ((spectrum - spectrum.min()) / (spectrum.ptp() + 1e-12) * 255).astype(np.uint8)
         self.slm.updateArray(spec_disp)
         time.sleep(self.sleep)
         corr = self.cam.snap()
+        
+        # Subtract background bias if requested and available
+        if subtract_bias and hasattr(self, "background_bias"):
+            if corr.shape == self.background_bias.shape:
+                corr = np.clip(corr - self.background_bias, 0, None)
+            else:
+                print(f"Warning: Background shape {self.background_bias.shape} doesn't match correlation plane shape {corr.shape}. Skipping bias subtraction.")
 
         # Analyze correlation using existing routine
         peak, (dy, dx) = _peak_and_shift(corr, shape)
