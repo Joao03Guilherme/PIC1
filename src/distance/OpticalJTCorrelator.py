@@ -55,6 +55,54 @@ class OpticalJTCorrelator:
         """Set region of interest on the camera sensor."""
         self.cam.set_roi(x, y, width, height, hbin=hbin, vbin=vbin)
 
+    def _center_and_display_on_slm(self, image_to_display: np.ndarray):
+        """
+        Centers an image on the SLM and displays it.
+        Crops the image if it's larger than the SLM resolution.
+        """
+        img_H, img_W = image_to_display.shape
+        slm_H, slm_W = self.resY, self.resX
+
+        # Create a black frame the size of the SLM
+        centered_image_on_slm = np.zeros((slm_H, slm_W), dtype=image_to_display.dtype)
+
+        # Calculate slices for copying the image (cropping if necessary)
+        # and for pasting onto the SLM frame (centering)
+
+        # For Y dimension
+        if img_H <= slm_H:
+            img_y_start_crop = 0
+            img_y_end_crop = img_H
+            frame_y_start_paste = (slm_H - img_H) // 2
+            frame_y_end_paste = frame_y_start_paste + img_H
+        else:  # img_H > slm_H, crop image
+            img_y_start_crop = (img_H - slm_H) // 2
+            img_y_end_crop = img_y_start_crop + slm_H
+            frame_y_start_paste = 0
+            frame_y_end_paste = slm_H
+
+        # For X dimension
+        if img_W <= slm_W:
+            img_x_start_crop = 0
+            img_x_end_crop = img_W
+            frame_x_start_paste = (slm_W - img_W) // 2
+            frame_x_end_paste = frame_x_start_paste + img_W
+        else:  # img_W > slm_W, crop image
+            img_x_start_crop = (img_W - slm_W) // 2
+            img_x_end_crop = img_x_start_crop + slm_W
+            frame_x_start_paste = 0
+            frame_x_end_paste = slm_W
+
+        # Perform the copy
+        centered_image_on_slm[
+            frame_y_start_paste:frame_y_end_paste, frame_x_start_paste:frame_x_end_paste
+        ] = image_to_display[
+            img_y_start_crop:img_y_end_crop, img_x_start_crop:img_x_end_crop
+        ]
+
+        self.slm.updateArray(centered_image_on_slm)
+        time.sleep(self.sleep)
+
     def calibrate(self, num_samples: int = 3) -> np.ndarray:
         """
         Measure the background bias in the optical system.
@@ -92,9 +140,11 @@ class OpticalJTCorrelator:
             # Second pass: display spectrum and capture correlation
             # Assuming bg_spectrum is already in a displayable range (e.g., captured camera data)
             bg_spec_disp = bg_spectrum.astype(np.uint8)
-            self.slm.updateArray(bg_spec_disp)
-            time.sleep(self.sleep)
+            self._center_and_display_on_slm(bg_spec_disp) # Use helper
             bg_corr = self.cam.snap()
+            # Clear SLM
+            self.slm.updateArray(black_frame)
+            time.sleep(self.sleep)
 
             background_corrs.append(bg_corr)
 
@@ -204,49 +254,11 @@ class OpticalJTCorrelator:
         # Second optical pass: display spectrum as-is and capture correlation
         # Assuming spectrum is already in a displayable range (e.g., captured camera data)
         spec_disp = spectrum.astype(np.uint8)
-
-        # Center the spectrum on the SLM display
-        spec_H, spec_W = spec_disp.shape
-        slm_H, slm_W = self.resY, self.resX
-
-        # Create a black frame the size of the SLM
-        centered_spec_on_slm = np.zeros((slm_H, slm_W), dtype=np.uint8)
-
-        # Calculate slices for copying the spectrum (cropping if necessary)
-        # and for pasting onto the SLM frame (centering)
-
-        # For Y dimension
-        if spec_H <= slm_H:
-            spec_y_start_crop = 0
-            spec_y_end_crop = spec_H
-            frame_y_start_paste = (slm_H - spec_H) // 2
-            frame_y_end_paste = frame_y_start_paste + spec_H
-        else: # spec_H > slm_H, crop spectrum
-            spec_y_start_crop = (spec_H - slm_H) // 2
-            spec_y_end_crop = spec_y_start_crop + slm_H
-            frame_y_start_paste = 0
-            frame_y_end_paste = slm_H
-
-        # For X dimension
-        if spec_W <= slm_W:
-            spec_x_start_crop = 0
-            spec_x_end_crop = spec_W
-            frame_x_start_paste = (slm_W - spec_W) // 2
-            frame_x_end_paste = frame_x_start_paste + spec_W
-        else: # spec_W > slm_W, crop spectrum
-            spec_x_start_crop = (spec_W - slm_W) // 2
-            spec_x_end_crop = spec_x_start_crop + slm_W
-            frame_x_start_paste = 0
-            frame_x_end_paste = slm_W
-
-        # Perform the copy
-        centered_spec_on_slm[frame_y_start_paste:frame_y_end_paste, frame_x_start_paste:frame_x_end_paste] = \
-            spec_disp[spec_y_start_crop:spec_y_end_crop, spec_x_start_crop:spec_x_end_crop]
-
-        self.slm.updateArray(centered_spec_on_slm)
-        time.sleep(self.sleep)
+        
+        self._center_and_display_on_slm(spec_disp) # Use helper
         corr = self.cam.snap()
         # Clear SLM after displaying spectrum
+        self.slm.updateArray(black_frame)
 
         # Subtract background bias if requested and available
         if subtract_bias and hasattr(self, "background_bias"):
