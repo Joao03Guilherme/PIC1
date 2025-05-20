@@ -154,35 +154,44 @@ class OpticalJTCorrelator:
         # Define black frame for clearing SLM
         black_frame = np.zeros((self.resY, self.resX), dtype=np.uint8)
 
-        # Calculate total width and height of the side-by-side images
-        # H_img, W_img are from shape parameter (original image dimensions)
-        combined_width = W * 2
-        combined_height = H
+        # Create the joined image block at original size using H, W from shape
+        # H and W are the dimensions of a single original image
+        joined_image_orig_height = H 
+        joined_image_orig_width = W * 2
+        
+        # Ensure joined_image_block is only created and scaled if dimensions are valid
+        if joined_image_orig_height > 0 and joined_image_orig_width > 0 and self.resY > 0 and self.resX > 0:
+            joined_image_block = np.zeros((joined_image_orig_height, joined_image_orig_width), dtype=np.uint8)
+            
+            # Place img1 and img2 into the joined block
+            joined_image_block[:, :W] = img1_display
+            joined_image_block[:, W:W*2] = img2_display
 
-        # Ensure the combined image fits on the SLM.
-        if combined_width > self.resX or combined_height > self.resY:
-            raise ValueError(
-                f"Combined image size ({combined_width}x{combined_height}) "
-                f"exceeds SLM resolution ({self.resX}x{self.resY}). "
-                "Input images must be appropriately pre-sized."
-            )
+            # Expand this joined block to the SLM's full resolution (self.resY, self.resX) 
+            # into the existing 'frame' using nearest neighbor scaling.
+            # 'frame' is already initialized as np.zeros((self.resY, self.resX), dtype=np.uint8).
 
-        # Calculate starting y position to center the block vertically
-        y_start_slm = (self.resY - combined_height) // 2
-        # Calculate starting x position to center the block horizontally
-        x_start_slm_block = (self.resX - combined_width) // 2
+            y_ratio = joined_image_orig_height / self.resY
+            x_ratio = joined_image_orig_width / self.resX
 
-        # Place img1_display into the frame
-        frame[
-            y_start_slm : y_start_slm + combined_height,
-            x_start_slm_block : x_start_slm_block + W,
-        ] = img1_display
-
-        # Place img2_display into the frame, immediately to the right of img1_display
-        frame[
-            y_start_slm : y_start_slm + combined_height,
-            x_start_slm_block + W : x_start_slm_block + combined_width,
-        ] = img2_display
+            for y_slm in range(self.resY):
+                for x_slm in range(self.resX):
+                    # Find corresponding pixel in original joined image
+                    y_orig_joined = int(y_slm * y_ratio)
+                    x_orig_joined = int(x_slm * x_ratio)
+                    
+                    # Clamp coordinates to be within bounds of joined_image_block
+                    y_orig_joined = min(y_orig_joined, joined_image_orig_height - 1)
+                    x_orig_joined = min(x_orig_joined, joined_image_orig_width - 1)
+                    
+                    frame[y_slm, x_slm] = joined_image_block[y_orig_joined, x_orig_joined]
+        else:
+            # If original image dimensions are invalid or SLM resolution is zero,
+            # 'frame' remains black (as initialized).
+            print(f"Warning: Original image shape (H={H}, W={W}) or SLM resolution (resY={self.resY}, resX={self.resX}) is invalid for scaling. SLM frame will be black.")
+            # 'frame' is already zeros, so no explicit action needed to make it black if it was already initialized to zeros.
+            # If frame wasn't initialized to zeros, it should be explicitly set to black here.
+            # Assuming 'frame' is correctly initialized to zeros before this block.
 
         # First optical pass: display input and capture spectrum
         self.slm.updateArray(frame)
