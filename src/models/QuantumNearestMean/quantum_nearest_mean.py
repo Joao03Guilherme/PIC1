@@ -212,25 +212,54 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
             else:
                 # For non-diag_prob encodings, centroids are density matrices.
                 # These need to be converted to vectors to be used with vecmetric.
-                # The current _mat_to_vec flattens the upper triangular part.
-                # This may not be appropriate for JTC methods expecting image-like vectors
-                # of shape derived from self.n_features_.
-                # This behavior is now consistent for all JTC-like metrics obtained via make_distance_fn.
                 def _mat_to_vec(M: np.ndarray):
                     # Ensure M is 2D
                     if M.ndim == 1:
-                        # This case might occur if encoding produces a vector but isn't 'diag_prob'.
-                        # Or if a 1D feature vector was encoded to a 1D 'density matrix' (unlikely for stereographic/informative).
-                        # For now, assume if not 'diag_prob', M should be a matrix.
-                        # If it's already a vector, it might be an error or needs specific handling.
-                        # Returning it as is, but this could be problematic if its length doesn't match expectations.
                         print(
                             f"Warning: _mat_to_vec received a 1D array for non-diag_prob encoding. Length: {len(M)}"
                         )
                         return M
-                    return M[np.triu_indices_from(M)]
-
-                self._metric_ = lambda A, B: vecmetric(_mat_to_vec(A), _mat_to_vec(B))
+                    
+                    # Instead of using upper triangular indices, just flatten the matrix
+                    # This gives us a predictable length for calculating the image shape
+                    return M.flatten()
+                
+                # Create a custom vecmetric that recalculates the correct shape based on the flattened matrix
+                def custom_metric(A, B):
+                    v_A = _mat_to_vec(A)
+                    v_B = _mat_to_vec(B)
+                    
+                    # Get the length of the flattened vector
+                    vec_len = len(v_A)
+                    
+                    # Calculate a reasonable shape based on the vector length
+                    # Try to make it close to square
+                    h_candidate = int(np.sqrt(vec_len))
+                    while vec_len % h_candidate != 0 and h_candidate > 1:
+                        h_candidate -= 1
+                    
+                    if h_candidate > 0 and vec_len % h_candidate == 0:
+                        H = h_candidate
+                        W = vec_len // H
+                    else:
+                        H = 1
+                        W = vec_len
+                    
+                    # Create a new image shape
+                    new_shape = (H, W)
+                    print(f"Using shape {new_shape} for vectors of length {vec_len}")
+                    
+                    # Call the optical correlator with the correct shape
+                    if self.distance == "optical_classical_jtc":
+                        d, _, _, _ = self.optical_correlator.correlate(
+                            v_A, v_B, shape=new_shape
+                        )
+                        return d
+                    else:
+                        # For non-optical metrics, call with the recalculated shape
+                        return vecmetric(v_A, v_B)
+                
+                self._metric_ = custom_metric
 
         return self
 
