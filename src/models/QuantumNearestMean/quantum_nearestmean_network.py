@@ -4,18 +4,26 @@ from typing import Literal, Callable, Optional
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 # reuse the utility that already builds custom metrics for you
-from ..utils import make_distance_fn
+from models.utils import make_distance_fn
 
-from ...distance.JTCorrelator import classical_jtc
-from ...distance.OpticalJTCorrelator import OpticalJTCorrelator
-from ...distance.quantum_distances import (
+import sys
+from pathlib import Path
+
+# Add the src directory to the path for absolute imports
+src_path = str(Path(__file__).resolve().parent.parent.parent)
+if src_path not in sys.path:
+    sys.path.append(src_path)
+
+from distance.JTCorrelator import classical_jtc
+from distance.OpticalJTCorrelator import OpticalJTCorrelator
+from distance.quantum_distances import (
     calculate_trace_distance_diag,
     calculate_fidelity_distance_matrix,
     calculate_trace_distance_matrix,
 )
 
 # Import encoding functions
-from ...encodings.encodings import (
+from encodings.encodings import (
     encode_diag_prob,
     encode_stereographic,
     encode_informative,

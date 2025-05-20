@@ -2,10 +2,20 @@
 Code to run the main application and do the classification
 """
 
+import sys
+import os
+from pathlib import Path
+
+# Add the src directory to the path to enable absolute imports
+src_path = str(Path(__file__).resolve().parent)
+if src_path not in sys.path:
+    sys.path.append(src_path)
+
+# Use absolute imports instead of relative imports
 from models.ClassicalNearestMean.c_nearestmean_network import (
     ClassicalNearestMeanClassifier,
 )
-from src.models.QuantumNearestMean.quantum_nearestmean_network import (
+from models.QuantumNearestMean.quantum_nearestmean_network import (
     QuantumNearestMeanClassifier,
 )
 
