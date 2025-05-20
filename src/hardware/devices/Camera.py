@@ -80,6 +80,7 @@ class UC480Controller:
         """Open the connection to the hardware if not already open."""
         if self._cam is None:
             self._cam = uc480.UC480Camera(backend="uc480")
+            self._cam.set_color_mode("mono8")
 
     def close(self):
         """Gracefully stop acquisition (if running) and close the connection."""
