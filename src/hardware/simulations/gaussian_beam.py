@@ -40,7 +40,7 @@ f2          = 200 * mm
 # ------------------------------------------------------------------
 # SLM fill-factor amplitude mask
 # ------------------------------------------------------------------
-def slm_pixel_aperture(x, y, width, height, duty=0.90):
+def slm_pixel_aperture(x, y, width, height, duty=0.93):
     """1 on each pixel face, 0 in the gaps (duty<1)."""
     gx = (np.mod(x + width/2,  pixel_pitch) < duty*pixel_pitch)
     gy = (np.mod(y + height/2, pixel_pitch) < duty*pixel_pitch)
@@ -86,8 +86,14 @@ def first_pass(digit1, digit2):
     F = RectAperture(F, slm_w, slm_h)
 
     # apply input images as phase
-    phase1 = two_digits_phase_mask(digit1, digit2)(X, Y, slm_w, slm_h)
+    phase_mask = two_digits_phase_mask(digit1, digit2)
+    phase1 = phase_mask(X, Y, slm_w, slm_h)
     F = MultPhase(F, phase1)
+    
+    # Calculate norms of the individual input images
+    bmpL, bmpR = load_digit_bitmap(digit1), load_digit_bitmap(digit2)
+    img1_norm = np.linalg.norm(bmpL.flatten())
+    img2_norm = np.linalg.norm(bmpR.flatten())
 
     # apply pixel gaps
     amp_pix = slm_pixel_aperture(X, Y, slm_w, slm_h)
@@ -96,7 +102,7 @@ def first_pass(digit1, digit2):
     # Fourier → spectrum (raw intensity)
     F = Lens(F, f1);  F = Fresnel(F, f1)
     I1 = Intensity(0, F)
-    return x, I1
+    return x, I1, img1_norm, img2_norm
 
 # ------------------------------------------------------------------
 # Pass 2 → correlation
@@ -124,23 +130,40 @@ def second_pass(I1):
 # ------------------------------------------------------------------
 # Plot helper (linear or log)
 # ------------------------------------------------------------------
-def plot_plane(x, I, title, zeros, slm_w, slm_h, ax, log=False):
+def plot_plane(x, I, title, zeros, slm_w, slm_h, ax, log=False, block_dc=0.0):
     fx = x / (wavelength * f1)
     fx0 = 1/slm_w
     lim = zeros * fx0 / 1e3
     fx_mm = fx/1e3
+    
+    # Create a copy of the intensity array to avoid modifying the original
+    I_display = I.copy()
+    
+    # Block DC component if requested
+    if block_dc > 0:
+        # Calculate the center of the array
+        center_x = I_display.shape[1] // 2
+        
+        # Calculate block size as a fraction of the display width
+        block_size_x = int(I_display.shape[1] * block_dc / 2)
+        
+        # Mask out the central vertical slit (set to zero)
+        I_display[:, center_x-block_size_x:center_x+block_size_x] = 0
+        
+        # Add note to title if blocking is applied
+        title = f"{title} (vertical slit DC blocked)"
 
     if log:
-        im = ax.imshow(I+1e-12,
+        im = ax.imshow(I_display+1e-12,
                        extent=[fx_mm[0], fx_mm[-1], fx_mm[0], fx_mm[-1]],
-                       origin="lower", cmap="gray",
-                       norm=LogNorm(vmin=I.max()*1e-6, vmax=I.max()),
+                       origin="lower", cmap="viridis",
+                       norm=LogNorm(vmin=I_display.max()*1e-6, vmax=I_display.max()),
                        aspect="equal")
         cb_label = "log₁₀ intensity"
     else:
-        im = ax.imshow(I,
+        im = ax.imshow(I_display,
                        extent=[fx_mm[0], fx_mm[-1], fx_mm[0], fx_mm[-1]],
-                       origin="lower", cmap="gray", aspect="equal")
+                       origin="lower", cmap="viridis", aspect="equal")
         cb_label = "intensity"
 
     ax.set_xlim(-lim, lim)
@@ -153,7 +176,7 @@ def plot_plane(x, I, title, zeros, slm_w, slm_h, ax, log=False):
 # ------------------------------------------------------------------
 # 3D Plot helper
 # ------------------------------------------------------------------
-def plot_3d_plane(x, I, title, zeros, slm_w, slm_h, ax, log=False):
+def plot_3d_plane(x, I, title, zeros, slm_w, slm_h, ax, log=False, block_dc=0.0):
     """Create a 3D surface plot of the intensity distribution."""
     fx = x / (wavelength * f1)
     fx0 = 1/slm_w
@@ -167,7 +190,21 @@ def plot_3d_plane(x, I, title, zeros, slm_w, slm_h, ax, log=False):
     # Extract the region of interest
     roi_x = fx_mm[idx_min:idx_max]
     roi_y = fx_mm[idx_min:idx_max]
-    roi_I = I[idx_min:idx_max, idx_min:idx_max]
+    roi_I = I[idx_min:idx_max, idx_min:idx_max].copy()  # Make a copy to avoid modifying original
+    
+    # Block DC component if requested
+    if block_dc > 0:
+        # Calculate the center of the ROI array
+        center_x = roi_I.shape[1] // 2
+        
+        # Calculate block size as a fraction of the display width
+        block_size_x = int(roi_I.shape[1] * block_dc / 2)
+        
+        # Mask out the central vertical slit (set to zero)
+        roi_I[:, center_x-block_size_x:center_x+block_size_x] = 0
+        
+        # Add note to title if blocking is applied
+        title = f"{title} (vertical slit DC blocked)"
     
     # Create mesh grid for 3D plotting
     X, Y = np.meshgrid(roi_x, roi_y)
@@ -181,7 +218,7 @@ def plot_3d_plane(x, I, title, zeros, slm_w, slm_h, ax, log=False):
         z_label = "intensity"
     
     # Create the 3D surface plot
-    surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm, antialiased=False)
+    surf = ax.plot_surface(X, Y, Z, cmap=cm.viridis, antialiased=False)
     
     ax.set_xlabel(r"$f_x\ (\mathrm{cycles/mm})$")
     ax.set_ylabel(r"$f_y\ (\mathrm{cycles/mm})$")
@@ -202,11 +239,47 @@ if __name__ == "__main__":
     p.add_argument("--zoom", type=float, default=5.0, help="±n sinc zeros")
     p.add_argument("--log",  action="store_true",     help="use logarithmic scale")
     p.add_argument("--3d",   dest="plot3d", action="store_true", help="show 3D plot of correlation plane")
+    p.add_argument("--block-dc", type=float, default=0.0, 
+                   help="block central region of correlation plane by this fraction of display area (0.0-1.0)")
     args = p.parse_args()
 
-    x, I1 = first_pass(args.d1, args.d2)
+    x, I1, img1_norm, img2_norm = first_pass(args.d1, args.d2)
     _, I2 = second_pass(I1)
-
+    
+    # Calculate the normalized correlation value using only the zoomed and DC-blocked region
+    # Get the same region of interest that will be shown in the plots
+    fx = x / (wavelength * f1)
+    fx0 = 1/slm_w
+    lim = args.zoom * fx0 / 1e3
+    fx_mm = fx/1e3
+    
+    # Get indices for the region of interest based on the zoom factor
+    idx_min = np.abs(fx_mm - (-lim)).argmin()
+    idx_max = np.abs(fx_mm - lim).argmin()
+    
+    # Extract the region of interest (this matches what's shown in the plot)
+    roi_I = I2[idx_min:idx_max, idx_min:idx_max].copy()
+    
+    # Apply DC blocking to this region of interest
+    if args.block_dc > 0:
+        center_x = roi_I.shape[1] // 2
+        block_size_x = int(roi_I.shape[1] * args.block_dc / 2)
+        roi_I[:, center_x-block_size_x:center_x+block_size_x] = 0
+    
+    # Find maximum correlation value in this zoomed, blocked region
+    max_corr = np.max(roi_I)
+    
+    # Calculate normalized correlation value
+    norm_product = img1_norm * img2_norm
+    if norm_product > 0:  # Avoid division by zero
+        norm_corr = max_corr / norm_product
+        scaled_corr = norm_corr * 1000  # Scale by 1000 as requested
+        print(f"\nMaximum correlation value (in zoomed, DC-blocked region): {max_corr:.6f}")
+        print(f"Product of image norms: {norm_product:.6f}")
+        print(f"Normalized correlation value × 1000: {scaled_corr:.6f}")
+    else:
+        print("\nWarning: Product of image norms is zero, cannot normalize correlation value")
+    
     if args.plot3d:
         # Create a figure with only the 3D plot
         fig = plt.figure(figsize=(10, 8))
@@ -218,7 +291,7 @@ if __name__ == "__main__":
         plot_3d_plane(x, I2,
                     f"3D Correlation plane (digits {args.d1}&{args.d2})",
                     zeros=args.zoom, slm_w=slm_w, slm_h=slm_h,
-                    ax=ax3, log=args.log)
+                    ax=ax3, log=args.log, block_dc=args.block_dc)
     else:
         # Standard 2D plots
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
@@ -229,7 +302,7 @@ if __name__ == "__main__":
         plot_plane(x, I2,
                 "Correlation plane",
                 zeros=args.zoom, slm_w=slm_w, slm_h=slm_h,
-                ax=ax2, log=args.log)
+                ax=ax2, log=args.log, block_dc=args.block_dc)
     
     plt.tight_layout()
     plt.show()
