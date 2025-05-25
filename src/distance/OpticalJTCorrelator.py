@@ -2,6 +2,7 @@ from ..hardware.devices.Camera import UC480Controller
 from ..hardware.devices.SLM import SLMdisplay
 import numpy as np
 import time
+from PIL import Image # Added for image manipulation
 
 # Import the peak-and-shift helper from the computational JTC module
 from .utils import _peak_and_shift
@@ -13,6 +14,7 @@ class OpticalJTCorrelator:
 
     Opens the SLM and camera once in the constructor and reuses them for all correlate() calls.
     Provides methods to configure exposure, ROI, and to cleanly close resources.
+    Supports both binary and analog (grayscale) operation modes for input patterns and JPS processing.
     """
 
     def __init__(
@@ -24,7 +26,31 @@ class OpticalJTCorrelator:
         alwaysTop: bool = False,
         cam_serial: str = None,
         sleep_time: float = 0.1,
+        binary_input: bool = True, # New parameter
+        binary_jps: bool = True,   # New parameter
+        display_scale_factor: float = 0.4, # New parameter
     ):
+        """
+        Initialize the Optical JTC with binary/analog options.
+        
+        Args:
+            slm: Pre-initialized SLMdisplay object.
+            cam: Pre-initialized UC480Controller object.
+            slm_monitor: Monitor index for the SLM.
+            isImageLock: SLM image lock flag.
+            alwaysTop: SLM window always on top flag.
+            cam_serial: Camera serial number.
+            sleep_time: Default wait time between SLM updates and camera captures.
+            binary_input: If True, binarize input patterns to 0/255 values.
+            binary_jps: If True, binarize the Joint Power Spectrum to 0/255.
+            display_scale_factor: Scale factor for digit placement on SLM (0.0-1.0).
+        """
+        # Store operation modes
+        self.binary_input = binary_input
+        self.binary_jps = binary_jps
+        self.display_scale_factor = display_scale_factor
+        self.sleep_time = sleep_time # Renamed from self.sleep for clarity
+
         # Initialize or reuse SLM
         self.slm = slm or SLMdisplay(
             monitor=slm_monitor,
@@ -33,16 +59,172 @@ class OpticalJTCorrelator:
         )
         # Initialize or reuse camera
         self.cam = cam or UC480Controller(serial=cam_serial)
-        # Default wait time between updates
-        self.sleep = sleep_time
+        
         # Query SLM resolution once
-        self.resX, self.resY = self.slm.getSize()
+        self.slm_width, self.slm_height = self.slm.getSize() # Use more descriptive names
 
-    def set_exposure(self, ms: float) -> None:
+    def create_joint_input_plane(self, digit_array_ref: np.ndarray, digit_array_obj: np.ndarray, 
+                                 thresh=None) -> np.ndarray:
+        """
+        Creates a joint input plane for the SLM hardware.
+        The two input digit arrays (assumed to be 0-1 float or 0-255 uint8) 
+        are placed side-by-side, then this combined image
+        is scaled (preserving aspect ratio) to fit the SLM, further scaled by
+        display_scale_factor, and centered on the SLM canvas.
+
+        Args:
+            digit_array_ref: 2D numpy array for the reference digit.
+            digit_array_obj: 2D numpy array for the object/test digit.
+            thresh: Binarization threshold (0-255) or None to use median. 
+                    Only used if self.binary_input is True.
+        Returns:
+            A 2D numpy array (SLM shape, uint8) with values 0/255 if binary_input is True, 
+            or 0-255 grayscale if binary_input is False.
+        """
+        slm_rows, slm_cols = self.slm_height, self.slm_width
+
+        # Ensure input arrays are scaled to 0-255 uint8 for consistent processing
+        def prepare_digit(digit_arr):
+            if digit_arr.max() <= 1.0 and digit_arr.min() >= 0: # Likely 0-1 float
+                return (digit_arr * 255.0).astype(np.uint8)
+            elif digit_arr.dtype == np.uint8: # Already 0-255 uint8
+                return digit_arr
+            else: # Other cases, attempt to scale
+                scaled = (digit_arr - digit_arr.min()) / (digit_arr.max() - digit_arr.min() + 1e-6) * 255.0
+                return scaled.astype(np.uint8)
+
+        ref_scaled_255 = prepare_digit(digit_array_ref)
+        obj_scaled_255 = prepare_digit(digit_array_obj)
+
+        # Combine digits side-by-side
+        combined_digits_arr_raw = np.hstack((ref_scaled_255, obj_scaled_255))
+        H_comb_raw, W_comb_raw = combined_digits_arr_raw.shape
+
+        img_pil_combined = Image.fromarray(combined_digits_arr_raw, 'L')
+
+        # Calculate dimensions to fit combined image onto SLM, preserving aspect ratio
+        scale_h_slm = slm_rows / H_comb_raw
+        scale_w_slm = slm_cols / W_comb_raw
+        scale_slm = min(scale_h_slm, scale_w_slm)
+
+        fit_pil_W_on_slm = int(W_comb_raw * scale_slm)
+        fit_pil_H_on_slm = int(H_comb_raw * scale_slm)
+
+        # Apply the display_scale_factor
+        final_display_W = int(fit_pil_W_on_slm * self.display_scale_factor)
+        final_display_H = int(fit_pil_H_on_slm * self.display_scale_factor)
+        
+        final_display_W = max(1, final_display_W) 
+        final_display_H = max(1, final_display_H)
+
+        img_resized_pil_combined = img_pil_combined.resize((final_display_W, final_display_H), Image.BICUBIC)
+        
+        slm_canvas_arr = np.zeros((slm_rows, slm_cols), dtype=np.float64) # Use float for processing
+        
+        paste_y = (slm_rows - final_display_H) // 2
+        paste_x = (slm_cols - final_display_W) // 2
+        
+        resized_combined_arr = np.asarray(img_resized_pil_combined, dtype=np.float64)
+        
+        slm_canvas_arr[paste_y : paste_y + final_display_H, paste_x : paste_x + final_display_W] = resized_combined_arr
+        
+        if self.binary_input:
+            t_val = np.median(slm_canvas_arr[slm_canvas_arr > 0]) if thresh is None and np.any(slm_canvas_arr > 0) else (thresh if thresh is not None else 127)
+            # Ensure t_val is a scalar, not an array, if median of empty or all-zero is taken
+            if not np.isscalar(t_val): t_val = 127 
+            binary_result = np.where(slm_canvas_arr > t_val, 255.0, 0.0)
+            return binary_result.astype(np.uint8)
+        else:
+            # Normalize to 0-255 range without binarizing
+            min_val = slm_canvas_arr.min()
+            max_val = slm_canvas_arr.max()
+            if max_val > min_val:
+                normalized = (slm_canvas_arr - min_val) / (max_val - min_val) * 255.0
+                return normalized.astype(np.uint8)
+            else: # Handle flat image (all same intensity)
+                return np.full_like(slm_canvas_arr, int(min_val if min_val <=255 else 0), dtype=np.uint8)
+
+
+    def process_jps(self, jps_image: np.ndarray, thresh=None) -> np.ndarray:
+        """
+        Process the Joint Power Spectrum according to self.binary_jps setting.
+        Input jps_image is assumed to be a raw camera capture (typically uint8).
+        
+        Args:
+            jps_image: Raw JPS image from camera.
+            thresh: Binarization threshold (0-255) or None to use median.
+                    Only used if self.binary_jps is True.
+        Returns:
+            Processed JPS (uint8) ready for display on SLM (0/255 if binary, 0-255 grayscale if analog).
+        """
+        if self.binary_jps:
+            t_val = np.median(jps_image) if thresh is None else thresh
+            binary_jps = np.where(jps_image > t_val, 255, 0) # Output 0 or 255
+            return binary_jps.astype(np.uint8)
+        else:
+            # Normalize JPS to 0-255 for analog operation if not already
+            if jps_image.dtype == np.uint8 and jps_image.min() == 0 and jps_image.max() == 255:
+                return jps_image # Already in desired format
+            
+            min_val = jps_image.min()
+            max_val = jps_image.max()
+            if max_val > min_val:
+                normalized = (jps_image.astype(np.float32) - min_val) / (max_val - min_val) * 255.0
+                return normalized.astype(np.uint8)
+            else: # Handle flat image
+                 return np.full_like(jps_image, int(min_val if min_val <=255 else 0), dtype=np.uint8)
+
+    def correlate(self, ref_image: np.ndarray, obj_image: np.ndarray, 
+                                input_thresh=None, jps_thresh=None) -> np.ndarray:
+        """
+        Perform optical correlation using the hardware JTC with binary/analog options.
+        
+        Args:
+            ref_image: Reference image (2D numpy array, e.g., 28x28).
+            obj_image: Object image (2D numpy array, e.g., 28x28).
+            input_thresh: Threshold for input binarization (if self.binary_input=True).
+            jps_thresh: Threshold for JPS binarization (if self.binary_jps=True).
+        Returns:
+            Final correlation image (2D numpy array) from camera.
+        """
+        # Step 1: Create joint input plane
+        joint_input = self.create_joint_input_plane(ref_image, obj_image, input_thresh)
+        
+        # Step 2: Display joint input on SLM
+        self.slm.updateArray(joint_input)
+        time.sleep(self.sleep_time)
+        
+        # Step 3: Capture Joint Power Spectrum with camera
+        jps_raw = self.cam.snap() # Assuming cam.snap() returns a 2D numpy array
+        
+        # Step 4: Process JPS according to binary_jps setting
+        jps_processed = self.process_jps(jps_raw, jps_thresh)
+        
+        # Step 5: Display processed JPS back on SLM
+        self.slm.updateArray(jps_processed)
+        time.sleep(self.sleep_time)
+        
+        # Step 6: Capture final correlation result
+        correlation_result = self.cam.snap()
+        
+        return correlation_result
+
+    def set_binary_modes(self, binary_input: bool = None, binary_jps: bool = None):
+        """Update the binary operation modes."""
+        if binary_input is not None:
+            self.binary_input = binary_input
+        if binary_jps is not None:
+            self.binary_jps = binary_jps
+            
+    def set_display_scale(self, scale_factor: float):
+        """Update the display scale factor for digits on SLM."""
+        self.display_scale_factor = max(0.01, min(1.0, scale_factor)) # Clamp to reasonable range
+
+    def set_exposure(self, ms: float) -> None: # Existing method, ensure it's kept
         """Set camera exposure time in milliseconds."""
         self.cam.set_exposure(ms)
 
-    def set_roi(
+    def set_roi( # Existing method, ensure it's kept
         self,
         x: int,
         y: int,
@@ -55,247 +237,19 @@ class OpticalJTCorrelator:
         """Set region of interest on the camera sensor."""
         self.cam.set_roi(x, y, width, height, hbin=hbin, vbin=vbin)
 
-    def _center_and_display_on_slm(self, image_to_display: np.ndarray):
-        """
-        Centers an image on the SLM and displays it.
-        Crops the image if it's larger than the SLM resolution.
-        """
-        img_H, img_W = image_to_display.shape
-        slm_H, slm_W = self.resY, self.resX
-
-        # Create a black frame the size of the SLM
-        centered_image_on_slm = np.zeros((slm_H, slm_W), dtype=image_to_display.dtype)
-
-        # Calculate slices for copying the image (cropping if necessary)
-        # and for pasting onto the SLM frame (centering)
-
-        # For Y dimension
-        if img_H <= slm_H:
-            img_y_start_crop = 0
-            img_y_end_crop = img_H
-            frame_y_start_paste = (slm_H - img_H) // 2
-            frame_y_end_paste = frame_y_start_paste + img_H
-        else:  # img_H > slm_H, crop image
-            img_y_start_crop = (img_H - slm_H) // 2
-            img_y_end_crop = img_y_start_crop + slm_H
-            frame_y_start_paste = 0
-            frame_y_end_paste = slm_H
-
-        # For X dimension
-        if img_W <= slm_W:
-            img_x_start_crop = 0
-            img_x_end_crop = img_W
-            frame_x_start_paste = (slm_W - img_W) // 2
-            frame_x_end_paste = frame_x_start_paste + img_W
-        else:  # img_W > slm_W, crop image
-            img_x_start_crop = (img_W - slm_W) // 2
-            img_x_end_crop = img_x_start_crop + slm_W
-            frame_x_start_paste = 0
-            frame_x_end_paste = slm_W
-
-        # Perform the copy
-        centered_image_on_slm[
-            frame_y_start_paste:frame_y_end_paste, frame_x_start_paste:frame_x_end_paste
-        ] = image_to_display[
-            img_y_start_crop:img_y_end_crop, img_x_start_crop:img_x_end_crop
-        ]
-
-        self.slm.updateArray(centered_image_on_slm)
-        time.sleep(self.sleep)
-
-    def calibrate(self, num_samples: int = 3) -> np.ndarray:
-        """
-        Measure the background bias in the optical system.
-
-        This function displays black images and captures the resulting correlation plane,
-        which represents the system's background bias. This bias can be subtracted
-        from subsequent correlation measurements for more accurate results.
-
-        Parameters
-        ----------
-        num_samples : int, default=3
-            Number of background measurements to average.
-
-        Returns
-        -------
-        bias : np.ndarray
-            The average background correlation plane.
-        """
-        print("Calibrating optical JTC system...")
-
-        # Create empty (black) image for input plane
-        black_frame = np.zeros((self.resY, self.resX), dtype=np.uint8)
-
-        # Accumulate multiple background readings
-        background_corrs = []
-
-        for i in range(num_samples):
-            print(f"  Taking background sample {i+1}/{num_samples}")
-
-            # First pass: display black input and capture spectrum
-            self.slm.updateArray(black_frame)
-            time.sleep(self.sleep)
-            bg_spectrum = self.cam.snap()
-
-            # Second pass: display spectrum and capture correlation
-            # Assuming bg_spectrum is already in a displayable range (e.g., captured camera data)
-            bg_spec_disp = bg_spectrum.astype(np.uint8)
-            self._center_and_display_on_slm(bg_spec_disp) # Use helper
-            bg_corr = self.cam.snap()
-            # Clear SLM
-            self.slm.updateArray(black_frame)
-            time.sleep(self.sleep)
-
-            background_corrs.append(bg_corr)
-
-        # Average the backgrounds
-        self.background_bias = np.mean(background_corrs, axis=0)
-        print("Calibration complete.")
-
-        return self.background_bias
-
-    def correlate(
-        self,
-        img1_vec: np.ndarray,
-        img2_vec: np.ndarray,
-        shape: tuple[int, int],
-        subtract_bias: bool = True,
-    ) -> tuple[float, tuple[int, int], float, np.ndarray]:
-        """
-        Perform one optical JTC pass and return metrics.
-
-        Parameters
-        ----------
-        img1_vec : array_like
-            Flattened first image vector (values 0–255).
-        img2_vec : array_like
-            Flattened second image vector (values 0–255).
-        shape : (H, W)
-            Original image shape.
-        subtract_bias : bool, default=True
-            Whether to subtract the calibrated background bias from the correlation plane.
-            If True and calibration hasn't been performed, it will be done automatically.
-
-        Returns
-        -------
-        distance : float
-            1 / normalized similarity.
-        (dy, dx) : tuple[int, int]
-            Pixel shift of the correlation peak.
-        similarity : float
-            Normalized correlation peak value.
-        corr_plane_norm : np.ndarray
-            Correlation plane normalized by 2||img1||·||img2||.
-        """
-        # If subtract_bias is True but no calibration has been done yet, do it now
-        if subtract_bias and not hasattr(self, "background_bias"):
-            self.calibrate()
-
-        H, W = shape
-        img1 = img1_vec.reshape(shape)
-        img2 = img2_vec.reshape(shape)
-
-        # Prepare uint8 versions for display, assuming inputs are already 0-255 scaled
-        img1_display = img1.astype(np.uint8, copy=False)
-        img2_display = img2.astype(np.uint8, copy=False)
-
-        # Create blank full frame buffer for SLM
-        frame = np.zeros((self.resY, self.resX), dtype=np.uint8)
-        # Define black frame for clearing SLM
-        black_frame = np.zeros((self.resY, self.resX), dtype=np.uint8)
-
-        # Create the joined image block at original size using H, W from shape
-        # H and W are the dimensions of a single original image
-        joined_image_orig_height = H 
-        joined_image_orig_width = W * 2
-        
-        # Ensure joined_image_block is only created and scaled if dimensions are valid
-        if joined_image_orig_height > 0 and joined_image_orig_width > 0 and self.resY > 0 and self.resX > 0:
-            joined_image_block = np.zeros((joined_image_orig_height, joined_image_orig_width), dtype=np.uint8)
-            
-            # Place img1 and img2 into the joined block
-            joined_image_block[:, :W] = img1_display
-            joined_image_block[:, W:W*2] = img2_display
-
-            # Expand this joined block to the SLM's full resolution (self.resY, self.resX) 
-            # into the existing 'frame' using nearest neighbor scaling.
-            # 'frame' is already initialized as np.zeros((self.resY, self.resX), dtype=np.uint8).
-
-            y_ratio = joined_image_orig_height / self.resY
-            x_ratio = joined_image_orig_width / self.resX
-
-            for y_slm in range(self.resY):
-                for x_slm in range(self.resX):
-                    # Find corresponding pixel in original joined image
-                    y_orig_joined = int(y_slm * y_ratio)
-                    x_orig_joined = int(x_slm * x_ratio)
-                    
-                    # Clamp coordinates to be within bounds of joined_image_block
-                    y_orig_joined = min(y_orig_joined, joined_image_orig_height - 1)
-                    x_orig_joined = min(x_orig_joined, joined_image_orig_width - 1)
-                    
-                    frame[y_slm, x_slm] = joined_image_block[y_orig_joined, x_orig_joined]
-        else:
-            # If original image dimensions are invalid or SLM resolution is zero,
-            # 'frame' remains black (as initialized).
-            print(f"Warning: Original image shape (H={H}, W={W}) or SLM resolution (resY={self.resY}, resX={self.resX}) is invalid for scaling. SLM frame will be black.")
-            # 'frame' is already zeros, so no explicit action needed to make it black if it was already initialized to zeros.
-            # If frame wasn't initialized to zeros, it should be explicitly set to black here.
-            # Assuming 'frame' is correctly initialized to zeros before this block.
-
-        # First optical pass: display input and capture spectrum
-        self.slm.updateArray(frame)
-        time.sleep(self.sleep)
-        spectrum = self.cam.snap()
-        # Clear SLM after displaying input
-        self.slm.updateArray(black_frame)
-        time.sleep(self.sleep)
-
-        # Second optical pass: display spectrum as-is and capture correlation
-        # Assuming spectrum is already in a displayable range (e.g., captured camera data)
-        spec_disp = spectrum.astype(np.uint8)
-        
-        self._center_and_display_on_slm(spec_disp) # Use helper
-        corr = self.cam.snap()
-        # Clear SLM after displaying spectrum
-        self.slm.updateArray(black_frame)
-
-        # Subtract background bias if requested and available
-        if subtract_bias and hasattr(self, "background_bias"):
-            if corr.shape == self.background_bias.shape:
-                corr = np.clip(corr - self.background_bias, 0, None)
-            else:
-                print(
-                    f"Warning: Background shape {self.background_bias.shape} doesn't match correlation plane shape {corr.shape}. Skipping bias subtraction."
-                )
-
-        # Analyze correlation using existing routine
-        peak, (dy, dx) = _peak_and_shift(corr, shape)
-        norm_val = np.linalg.norm(img1) * np.linalg.norm(img2) / 1000
-        similarity = peak / (2 * norm_val) if norm_val else 0.0
-        distance = 1.0 / similarity if similarity else np.inf
-        corr_plane_norm = corr.astype(np.float32) / (2 * norm_val + 1e-12)
-
-        # Clear SLM by displaying a black screen
-        black_frame = np.zeros((self.resY, self.resX), dtype=np.uint8)
-        self.slm.updateArray(black_frame)
-        time.sleep(self.sleep)  # Allow time for SLM to update
-
-        return distance, (dy, dx), similarity, corr_plane_norm
-
-    def close(self) -> None:
+    def close(self) -> None: # Existing method
         """Close hardware resources cleanly."""
         try:
             self.slm.close()
         except Exception:
-            pass
+            pass # Or log error
         try:
             self.cam.close()
         except Exception:
-            pass
+            pass # Or log error
 
-    def __enter__(self):
+    def __enter__(self): # Existing method
         return self
 
-    def __exit__(self, exc_type, exc, tb):
+    def __exit__(self, exc_type, exc, tb): # Existing method
         self.close()
