@@ -40,7 +40,7 @@ When feature vectors are encoded as two-dimensional phase distributions, the cor
 In this work we propose optical implementations of the Quantum-Inspired and Classical Nearest Mean Classifier (\cite{Cruzeiro2024}, \cite{Sergioli2025}), and Radial Basis Function Classifier (\cite{Neifeld1993}, \cite{Foor1995}), that use a single SLM and a 1-f lens system (\cite{Javidi1989}).  We begin by reviewing the theoretical connection between optical correlation and amplitude-based similarity measures. We then describe our experimental set-up, which integrates a single reflective, phase only, spatial light modulator and a CMOS camera to implement a proof-of-concept optical classifier (Section~\ref{sec:setup}).  Finally, we benchmark the models with the MNIST dataset and compare their performances with purely electronic implementations, highlighting the trade-offs in speed, energy, and classification accuracy (Section~\ref{sec:results}).
 
 
-\section{Machine learning and quantum-inspired classification}
+\section{Supervised learning and quantum-inspired classification}
 
 \subsection{Supervised learning}
 
@@ -376,8 +376,6 @@ The quantum-inspired nearest-mean classifier (QNM-C) is the exact same as the CN
         \]
 \end{enumerate}
 
-The 
-
 Having defined both the classical and quantum-inspired nearest-mean classifiers, we can now describe the joint transform correlator (JTC) and how it can be used to implement these classifiers optically.
 
 \section{Joint Transform Correlator}
@@ -401,7 +399,7 @@ the same input plane~\cite{Javidi1989}.
 \end{figure}
 
 \paragraph{Operational principle.}
-Let the two patterns be centred on the SLM display at \(\pm x_{0}\) along the horizontal
+Let the two patterns be centred on the SLM display (phase modulation only) at \(\pm x_{0}\) along the horizontal
 axis, i.e.\ \(s_{1}(x+x_{0},y)\) and \(s_{2}(x-x_{0},y)\).  A
 \(1f\)-configuration lens (focal length \(f\)) produces at its back
 focal plane the joint Fourier transform, given by:
@@ -475,37 +473,10 @@ This gives us a value of $1$ when the two images are identical and $0$ when they
 \end{figure}
 %------------------------------------------------------
 
-\begin{figure}[htbp]
-  \centering
-  \begin{subfigure}[b]{\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{figures/correlation/binary_input.png}
-    \caption{Binary input images of the JTC, notice the grid introduced by the fill-factor of the SLM.}
-    \label{fig:jtc-bin-input}
-  \end{subfigure}
-
-  \begin{subfigure}[b]{\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{figures/correlation/binary_jps.png}
-    \caption{Binary joint power spectrum produced after tresholding the joint power spectrum measured by the camera.}%
-    \label{fig:jtc-bin-jps}
-  \end{subfigure}
-
-  \begin{subfigure}[b]{\linewidth}
-    \centering
-    \includegraphics[width=\linewidth]{figures/correlation/binary_correlation.png}
-    \caption{Correlation plane intensity, showing the cross-correlation peaks at the off-axis positions.}%
-    \label{fig:jtc-bin-corr-plane}
-  \end{subfigure}
-  
-  \caption{Optics python simulation of the joint transform correlator with binary input images. This implementation uses the library LightPipes to simulate the optical propagation and Fourier transforms.}
-\end{figure}
-
 This is the classical version of the JTC. There have been proposals of introducing some non-linearity both at the fourier plane and input plane, and that improves the performance of the JTC (\cite{Psaltis1984}, \cite{Javidi1989}, \cite{Dragulinescu2023}, \cite{alfalou2024understanding}).  
-The binary joint transform correlator, introduced by B.Javidi1989 in \cite{Javidi1989}, 
 
 
-\subsubsection{Binary Joint Transform Correlator}
+\subsection{Binary Joint Transform Correlator}
 \label{subsec:binary-jtc}
 
 Javidi \& Horner’s single–SLM Binary JTC \cite{Javidi1989} applies a hard
@@ -535,7 +506,33 @@ advantage: the binary JTC can raise the correlation-peak intensity by
 the signal-to-noise ratio six-fold compared with the classical JTC
 under identical illumination. 
 
-\subsection{}{JTC-based dissimilarity}
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[b]{0.9\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/correlation/binary_input.png}
+    \caption{Binary input images of the JTC, notice the grid introduced by the fill-factor of the SLM.}
+    \label{fig:jtc-bin-input}
+  \end{subfigure}
+
+  \begin{subfigure}[b]{0.9\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/correlation/binary_jps.png}
+    \caption{Binary joint power spectrum produced after tresholding the joint power spectrum measured by the camera.}%
+    \label{fig:jtc-bin-jps}
+  \end{subfigure}
+
+  \begin{subfigure}[b]{0.9\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/correlation/binary_correlation.png}
+    \caption{Correlation plane intensity, showing the cross-correlation peaks at the off-axis positions.}%
+    \label{fig:jtc-bin-corr-plane}
+  \end{subfigure}
+  
+  \caption{Python-based optical simulation of a binary-input Joint Transform Correlator, implemented with LightPipes for realistic wave-propagation and Fourier-transform modeling.}
+\end{figure}
+
+\subsection{JTC-based dissimilarity}
 Let \(\operatorname{sim}(s_{1},s_{2})\in[0,1]\) denote the normalised
 height of the cross-correlation peak produced by the joint transform
 correlator when the input patterns are \(s_{1}\) and \(s_{2}\).
@@ -550,6 +547,12 @@ mathematical sense: it does not satisfy the triangle inequality and it is not ze
 purpose as a distance — patterns that are more alike yield a smaller
 \(d_{\text{JTC}}\), and that is the most important property for the classification task.
 
+
+The high \(R^{2}\) value in Fig.~\ref{fig:euclidean_vs_jtc} confirms that
+\(d_{\text{JTC}}\) preserves the rank ordering supplied by the Euclidean
+metric while being considerably cheaper to obtain optically, making it a
+suitable drop-in replacement for similarity-based classification.
+
 \begin{figure}[htbp]
   \centering
   \includegraphics[width=\linewidth]{figures/correlation/euclidean_vs_jtcdistance.png}
@@ -562,13 +565,8 @@ purpose as a distance — patterns that are more alike yield a smaller
   \label{fig:euclidean_vs_jtc}
 \end{figure}
 
-The high \(R^{2}\) value in Fig.~\ref{fig:euclidean_vs_jtc} confirms that
-\(d_{\text{JTC}}\) preserves the rank ordering supplied by the Euclidean
-metric while being considerably cheaper to obtain optically, making it a
-suitable drop-in replacement for similarity-based classification.
-
-\subsection{Optical implementations of the classifiers}
-\label{subsec:optical-qnm}
+\section{Optical implementations of the classifiers}
+\label{sec:optical-qnm}
 
 \subsection{Optical implementation of the CNM-C and RBF-C}
 We can leverage the JTC to calculate the distances instead of using the Euclidean distance. (Develop this more).
@@ -623,31 +621,42 @@ Feeding the fidelity obtained from the JTC into the above relation yields an ope
 The only requirement is that the quantum centroids be \emph{nearly pure} (\(P(\varrho_k)\approx1\)); such high purity can be achieved with a smart choice of the encoding, since for each encoding the purity of the quantum centroid varies signifcantly (Tab.\ref{tab:centroid-purity}) As we can see in Table~\ref{tab:cls-results}, the QNM-C classifier achieves a classification accuracy of $85.84\%$ using the trace distance, which is higher than the CNM-C classifier with Euclidean distance ($80.38\%$). This shows that the quantum-inspired approach can improve classification performance.
 % make a plot of a test of purity vs fidelity (calculated using the JTC) and classification accuracy
 
+\section{Experimental results}
+\subsection{Computational simulations}
+
+We ran the 
+
 \begin{table}[htbp]
   \centering
-  \caption{Balanced Accuracy (mean $\pm$ std.) for multiple classifiers on the MNIST dataset. For the QNM-C classifier, we report results for different distance metrics and encodings. The best results are highlighted in bold.}
+  \footnotesize                     % smaller font
+  \setlength{\tabcolsep}{4pt}       % tighter columns
+  \caption{Balanced accuracy (\%\,mean $\pm$ std.) on MNIST.  
+           Best results are in \textbf{bold}.}
   \label{tab:cls-results}
+  % Automatically fit to text width
+  \resizebox{\linewidth}{!}{%
   \begin{tabular}{@{}llcc@{}}
     \toprule
-    Classifier & Metric & Encoding & Balanced Accuracy (\%)\\ 
+    Classifier & Metric & Encoding & Balanced Acc. \\ 
     \midrule
-    RBF-C & Euclidean & — & — \\
-    RBF-C & JTC & — & — \\[2pt]
+    RBF-C & Euclidean & -- & -- \\
+    RBF-C & JTC       & -- & -- \\[2pt]
 
-    CNM-C & Euclidean & — & $80.38 \pm 0.38$ \\ 
-    CNM-C & JTC & — & $72.42 \pm 0.55$ \\[2pt]
+    CNM-C & Euclidean & -- & $80.38 \pm 0.38$ \\ 
+    CNM-C & JTC       & -- & $72.42 \pm 0.55$ \\[2pt]
 
-    QNM-C & Trace     & Standard     & \textbf{$85.84 \pm 0.38$} \\ 
-    QNM-C & Fidelity  & Standard     & $78.77 \pm 0.34$ \\[2pt]
+    QNM-C & Trace     & Standard      & \(\mathbf{85.84 \pm 0.38}\) \\ 
+    QNM-C & Fidelity  & Standard      & \(78.77 \pm 0.34\) \\[2pt]
 
-    QNM-C & Trace     & Stereographic & $80.41 \pm 0.41$ \\
-    QNM-C & Fidelity  & Stereographic & $80.74 \pm 0.44$ \\[2pt]
+    QNM-C & Trace     & Stereographic & \(80.41 \pm 0.41\) \\
+    QNM-C & Fidelity  & Stereographic & \(80.74 \pm 0.44\) \\[2pt]
 
-    QNM-C & Trace     & Informative  & $81.26 \pm 0.37$ \\ 
-    QNM-C & Fidelity  & Informative  & \textbf{$82.39 \pm 0.40$} \\ 
+    QNM-C & Trace     & Informative   & \(81.26 \pm 0.37\) \\ 
+    QNM-C & Fidelity  & Informative   & \(\mathbf{82.39 \pm 0.40}\) \\ 
     \bottomrule
-  \end{tabular}
+  \end{tabular}}
 \end{table}
+
 
 \begin{table}[htbp]
     \label{tab:centroid-purity}
@@ -671,8 +680,6 @@ The only requirement is that the quantum centroids be \emph{nearly pure} (\(P(\v
     \end{tabular}
 \end{table}
 
-
-
 \begin{figure}
   \centering
   \includegraphics[width=\linewidth]{figures/correlation/trace_vs_fidelity.png}
@@ -682,21 +689,6 @@ The only requirement is that the quantum centroids be \emph{nearly pure} (\(P(\v
 
 
 
-\section{Data Encoding}
-\subsection{Gram Matrix Encoding}
-
-We consider a column vector $u$ representing an image sample. To embed this into a higher-order representation, we construct the normalized outer product:
-\[
-\rho = \frac{uu^T}{\text{Tr}(uu^T)}
-\]
-This yields a density-like matrix $\rho$ with trace 1, encoding pairwise correlations between pixels. Such an encoding is inspired by quantum mechanical density operators and preserves structural information in the image.
-
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=0.6\linewidth]{figures/density_matrix_nmist_one.png}
-    \caption{Gram matrix encoding $\rho$ of the digit 1 image}
-    \label{fig:density_matrix}
-\end{figure}
 
 \section{Radial Basis Function Network}
 
