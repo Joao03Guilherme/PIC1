@@ -40,9 +40,9 @@ When feature vectors are encoded as two-dimensional phase distributions, the cor
 In this work we propose optical implementations of the Quantum-Inspired and Classical Nearest Mean Classifier (\cite{Cruzeiro2024}, \cite{Sergioli2025}), and Radial Basis Function Classifier (\cite{Neifeld1993}, \cite{Foor1995}), that use a single SLM and a 1-f lens system (\cite{Javidi1989}).  We begin by reviewing the theoretical connection between optical correlation and amplitude-based similarity measures. We then describe our experimental set-up, which integrates a single reflective, phase only, spatial light modulator and a CMOS camera to implement a proof-of-concept optical classifier (Section~\ref{sec:setup}).  Finally, we benchmark the models with the MNIST dataset and compare their performances with purely electronic implementations, highlighting the trade-offs in speed, energy, and classification accuracy (Section~\ref{sec:results}).
 
 
-\section{Theory}
+\section{Machine learning and quantum-inspired classification}
 
-\subsection{Machine learning and supervised learning}
+\subsection{Supervised learning}
 
 \label{subsec:ml}
 
@@ -380,7 +380,8 @@ The
 
 Having defined both the classical and quantum-inspired nearest-mean classifiers, we can now describe the joint transform correlator (JTC) and how it can be used to implement these classifiers optically.
 
-\subsection{Joint Transform Correlator}
+\section{Joint Transform Correlator}
+\subsection{Classical Joint Transform Correlator}
 \label{subsec:jtc}
 A \emph{joint transform correlator} (JTC) is an optical architecture
 that performs the cross– and auto–correlation of two 2-D patterns by
@@ -534,7 +535,7 @@ advantage: the binary JTC can raise the correlation-peak intensity by
 the signal-to-noise ratio six-fold compared with the classical JTC
 under identical illumination. 
 
-\paragraph{JTC-based dissimilarity.}
+\subsection{}{JTC-based dissimilarity}
 Let \(\operatorname{sim}(s_{1},s_{2})\in[0,1]\) denote the normalised
 height of the cross-correlation peak produced by the joint transform
 correlator when the input patterns are \(s_{1}\) and \(s_{2}\).
@@ -569,8 +570,11 @@ suitable drop-in replacement for similarity-based classification.
 \subsection{Optical implementations of the classifiers}
 \label{subsec:optical-qnm}
 
-\subsection{Optical implementation of the CNM–C classifier}
-In Sec.~\ref{subsec:optical-qnm} we outlined how a joint–transform correlator (JTC) can realise the QNM–C classifier.  There, the decision rule was formulated in terms of the \emph{trace distance}, yet this quantity is not directly accessible in a classical–optical setup: a JTC yields a scalar similarity signal rather than the operator norm \(\tfrac12\lVert\rho-\sigma\rVert_{1}\). So in order to implement the QNM-C we need to find a method to use the JTC to obtain an estimate of the trace distance, which we can then use to classify the test samples. We will start by defining the purity of a quantum state, then the fidelity between two quantum states, and finally relate the fidelity to the trace distance. This will allow us to use the JTC to estimate the trace distance and implement the QNM-C classifier.
+\subsection{Optical implementation of the CNM-C and RBF-C}
+We can leverage the JTC to calculate the distances instead of using the Euclidean distance. (Develop this more).
+
+\subsection{Optical implementation of the QNM–C}
+In Sec.~\ref{subsec:qic} we defined the QNMC-C. There, the decision rule was formulated in terms of the \emph{trace distance}, yet this quantity is not directly accessible in a classical–optical setup: a JTC yields a scalar similarity signal rather than the operator norm \(\tfrac12\lVert\rho-\sigma\rVert_{1}\). So in order to implement the QNM-C we need to find a method to use the JTC to obtain an estimate of the trace distance, which we can then use to classify the test samples. We will start by defining the purity of a quantum state, then the fidelity between two quantum states, and finally relate the fidelity to the trace distance. This will allow us to use the JTC to estimate the trace distance and implement the QNM-C classifier.
 
 \paragraph{Purity.}
 For a single state the purity
@@ -589,7 +593,7 @@ When both states are pure, \(\rho=\lvert\psi\rangle\!\langle\psi\rvert\) and \(\
 \[
 F(\rho,\sigma)=\lvert\langle\psi\mid\phi\rangle\rvert^{2}.
 \]
-Because the JTC peak is proportional to the complex overlap \(\langle\psi\mid\phi\rangle\) of the optical fields, its squared magnitude directly supplies the fidelity of two pure optical encodings.
+Because the JTC peak is proportional to the complex overlap \(\langle\psi\mid\phi\rangle\) of the optical fields, its squared magnitude directly supplies the fidelity of two pure optical encodings (there is more to this, the fidelity can be seen as $\cos^2$ and the JTC also (to be added latter)).
 
 \paragraph{Trace distance from fidelity.}
 The Fuchs–van de Graaf inequalities relate fidelity and trace distance \(D_{\mathrm{tr}}\)~\cite{Fuchs1999}:
@@ -611,33 +615,62 @@ D_{\mathrm{tr}}(\varrho_{k},\varrho_{j})
 \sqrt{1-\operatorname{sim}(\varrho_{k},\varrho_{j})^{2}}.
 \]
 
+It can be seen in Figure~\ref{fig:trace_vs_fidelity} that the trace distance and fidelity are strongly correlated, with an $R^2$ value of $0.986$. This confirms that the JTC can effectively estimate the trace distance from the fidelity (for the inverse stereographic encoding), allowing us to use the JTC to implement the QNM-C classifier.
+This calculation of the trace distance using the JTC is not exclusive to the QNM-C classifier, it can be used in any quantum-inspired classifier that uses the trace distance to perform classification. 
+
 \paragraph{Classifier implementation.}
 Feeding the fidelity obtained from the JTC into the above relation yields an operational estimate of the trace distance entirely compatible with existing optical hardware.  Because fidelity satisfies the axioms of a metric through Uhlmann’s theorem, the CNM–C classifier retains the robustness promised by the original trace–distance formulation while remaining experimentally feasible.  
-The only requirement is that the quantum centroids be \emph{nearly pure} (\(P(\varrho_k)\approx1\)); such high purity can be engineered through a judicious choice of the encoding that maps each training sample to an almost single–mode optical field whose decoherence is negligible over the correlation interval.
-
+The only requirement is that the quantum centroids be \emph{nearly pure} (\(P(\varrho_k)\approx1\)); such high purity can be achieved with a smart choice of the encoding, since for each encoding the purity of the quantum centroid varies signifcantly (Tab.\ref{tab:centroid-purity}) As we can see in Table~\ref{tab:cls-results}, the QNM-C classifier achieves a classification accuracy of $85.84\%$ using the trace distance, which is higher than the CNM-C classifier with Euclidean distance ($80.38\%$). This shows that the quantum-inspired approach can improve classification performance.
 % make a plot of a test of purity vs fidelity (calculated using the JTC) and classification accuracy
-
-
 
 \begin{table}[htbp]
   \centering
-  \caption{Classification accuracy (mean $\pm$ std.)}
+  \caption{Balanced Accuracy (mean $\pm$ std.) for multiple classifiers on the MNIST dataset. For the QNM-C classifier, we report results for different distance metrics and encodings. The best results are highlighted in bold.}
   \label{tab:cls-results}
-  \begin{tabular}{@{}lll c@{}}
+  \begin{tabular}{@{}llcc@{}}
     \toprule
-    Classifier & Distance metric & Encoding & Accuracy (\%)\\ 
+    Classifier & Metric & Encoding & Balanced Accuracy (\%)\\ 
     \midrule
-    RBF-C & Euclidean & - & - \\
-    RBF-C & JTC & - & - \\[2pt]
+    RBF-C & Euclidean & — & — \\
+    RBF-C & JTC & — & — \\[2pt]
+
     CNM-C & Euclidean & — & $80.38 \pm 0.38$ \\ 
     CNM-C & JTC & — & $72.42 \pm 0.55$ \\[2pt]
+
     QNM-C & Trace     & Standard     & \textbf{$85.84 \pm 0.38$} \\ 
     QNM-C & Fidelity  & Standard     & $78.77 \pm 0.34$ \\[2pt]
+
+    QNM-C & Trace     & Stereographic & $80.41 \pm 0.41$ \\
+    QNM-C & Fidelity  & Stereographic & $80.74 \pm 0.44$ \\[2pt]
+
     QNM-C & Trace     & Informative  & $81.26 \pm 0.37$ \\ 
     QNM-C & Fidelity  & Informative  & \textbf{$82.39 \pm 0.40$} \\ 
     \bottomrule
   \end{tabular}
 \end{table}
+
+\begin{table}[htbp]
+    \label{tab:centroid-purity}
+    \centering
+    \caption{Centroid purity for each MNIST class under the three encodings described in sec..}
+    \begin{tabular}{c S[table-format=1.4] S[table-format=1.4] S[table-format=1.4]}
+        \toprule
+        \textbf{Class} & \textbf{Standard} & \textbf{Informative} & \textbf{Stereographic} \\
+        \midrule
+        0 & 0.1776 & 0.4623 & 1.0000 \\
+        1 & 0.3186 & 0.5714 & 1.0000 \\
+        2 & 0.0901 & 0.3682 & 1.0000 \\
+        3 & 0.1052 & 0.3842 & 1.0000 \\
+        4 & 0.0990 & 0.3863 & 1.0000 \\
+        5 & 0.0830 & 0.3270 & 1.0000 \\
+        6 & 0.1321 & 0.4133 & 1.0000 \\
+        7 & 0.1493 & 0.4320 & 1.0000 \\
+        8 & 0.0791 & 0.3454 & 1.0000 \\
+        9 & 0.1065 & 0.3758 & 1.0000 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
 
 
 \begin{figure}

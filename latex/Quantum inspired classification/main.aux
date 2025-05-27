@@ -27,52 +27,50 @@
 \citation{Foor1995}
 \citation{Javidi1989}
 \@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{section.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {II}Theory}{1}{section.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {i}Machine learning and supervised learning}{1}{subsection.2.1}\protected@file@percent }
-\newlabel{subsec:ml}{{i}{1}{Machine learning and supervised learning}{subsection.2.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {II}Machine learning and quantum-inspired classification}{1}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {i}Supervised learning}{1}{subsection.2.1}\protected@file@percent }
+\newlabel{subsec:ml}{{i}{1}{Supervised learning}{subsection.2.1}{}}
 \@writefile{toc}{\contentsline {paragraph}{Input data.}{1}{paragraph*.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Training and test sets.}{1}{paragraph*.2}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces One representative example per class from the MNIST dataset. Each \(28\times 28\) grayscale image is flattened to a \(p=784\)-dimensional feature vector before the pre-processing pipeline (centering, standardisation, PCA).\relax }}{2}{figure.caption.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces One representative example per class from the MNIST dataset. Each \(28\times 28\) grayscale image is flattened to a \(p=784\)-dimensional feature vector before the pre-processing pipeline (centering, standardisation, PCA).\relax }}{1}{figure.caption.3}\protected@file@percent }
 \providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
-\newlabel{fig:mnist-examples}{{1}{2}{One representative example per class from the MNIST dataset. Each \(28\times 28\) grayscale image is flattened to a \(p=784\)-dimensional feature vector before the pre-processing pipeline (centering, standardisation, PCA).\relax }{figure.caption.3}{}}
+\newlabel{fig:mnist-examples}{{1}{1}{One representative example per class from the MNIST dataset. Each \(28\times 28\) grayscale image is flattened to a \(p=784\)-dimensional feature vector before the pre-processing pipeline (centering, standardisation, PCA).\relax }{figure.caption.3}{}}
 \@writefile{toc}{\contentsline {paragraph}{Pre-processing.}{2}{paragraph*.4}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Balanced accuracy.}{2}{paragraph*.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {ii}Distance-based classifiers}{2}{subsection.2.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Classical Nearest-Mean Classifier (CNM-C).}{2}{paragraph*.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Radial-Basis-Function Classifier (RBF-C).}{2}{paragraph*.8}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Ilustration of the CNM-C decision rule. The training set is split into two classes and the centroids are computed. The nearest centroid to the test sample is selected as the predicted class.\relax }}{2}{figure.caption.7}\protected@file@percent }
 \newlabel{fig:nearest_mean_classifier}{{2}{2}{Ilustration of the CNM-C decision rule. The training set is split into two classes and the centroids are computed. The nearest centroid to the test sample is selected as the predicted class.\relax }{figure.caption.7}{}}
-\@writefile{toc}{\contentsline {paragraph}{Radial-Basis-Function Classifier (RBF-C).}{2}{paragraph*.8}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Architecture of the RBF network. The input layer feeds into a hidden layer of radial units, each centered at \(\mathbf  {t}_i\) with width \(\sigma _i\). The output layer combines the gaussian responses through learned weights \(w_{ij}\), followed by a winner-takes-all decision stage to determine the predicted class.\relax }}{2}{figure.caption.9}\protected@file@percent }
+\newlabel{fig:rbf-net}{{3}{2}{Architecture of the RBF network. The input layer feeds into a hidden layer of radial units, each centered at \(\mathbf {t}_i\) with width \(\sigma _i\). The output layer combines the gaussian responses through learned weights \(w_{ij}\), followed by a winner-takes-all decision stage to determine the predicted class.\relax }{figure.caption.9}{}}
 \citation{Sergioli2025}
 \citation{Sergioli2025}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Architecture of the RBF network. The input layer feeds into a hidden layer of radial units, each centered at \(\mathbf  {t}_i\) with width \(\sigma _i\). The output layer combines the gaussian responses through learned weights \(w_{ij}\), followed by a winner-takes-all decision stage to determine the predicted class.\relax }}{3}{figure.caption.9}\protected@file@percent }
-\newlabel{fig:rbf-net}{{3}{3}{Architecture of the RBF network. The input layer feeds into a hidden layer of radial units, each centered at \(\mathbf {t}_i\) with width \(\sigma _i\). The output layer combines the gaussian responses through learned weights \(w_{ij}\), followed by a winner-takes-all decision stage to determine the predicted class.\relax }{figure.caption.9}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {iii}Quantum-inspired classification}{3}{subsection.2.3}\protected@file@percent }
-\newlabel{subsec:qic}{{iii}{3}{Quantum-inspired classification}{subsection.2.3}{}}
-\@writefile{toc}{\contentsline {paragraph}{Density--pattern encodings.}{3}{paragraph*.10}\protected@file@percent }
-\newlabel{par:encodings}{{iii}{3}{Density--pattern encodings}{paragraph*.10}{}}
-\@writefile{toc}{\contentsline {paragraph}{Quantum centroid.}{3}{paragraph*.11}\protected@file@percent }
 \citation{Javidi1989}
-\@writefile{toc}{\contentsline {paragraph}{Quantum distance measure.}{4}{paragraph*.12}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Quantum-inspired nearest-mean classifier (QNM-C).}{4}{paragraph*.13}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {iv}Joint Transform Correlator}{4}{subsection.2.4}\protected@file@percent }
-\newlabel{subsec:jtc}{{iv}{4}{Joint Transform Correlator}{subsection.2.4}{}}
-\@writefile{toc}{\contentsline {paragraph}{Operational principle.}{4}{paragraph*.15}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Optical setup for the joint transform correlator. The SLM displays the reference and query patterns side by side.\relax }}{4}{figure.caption.14}\protected@file@percent }
-\newlabel{fig:optical-classifier}{{4}{4}{Optical setup for the joint transform correlator. The SLM displays the reference and query patterns side by side.\relax }{figure.caption.14}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {ii}Quantum-inspired classification}{3}{subsection.2.2}\protected@file@percent }
+\newlabel{subsec:qic}{{ii}{3}{Quantum-inspired classification}{subsection.2.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Density--pattern encodings.}{3}{paragraph*.10}\protected@file@percent }
+\newlabel{par:encodings}{{ii}{3}{Density--pattern encodings}{paragraph*.10}{}}
+\@writefile{toc}{\contentsline {paragraph}{Quantum centroid.}{3}{paragraph*.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Quantum distance measure.}{3}{paragraph*.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Quantum-inspired nearest-mean classifier (QNM-C).}{3}{paragraph*.13}\protected@file@percent }
 \citation{Psaltis1984}
 \citation{Javidi1989}
 \citation{Dragulinescu2023}
 \citation{alfalou2024understanding}
 \citation{Javidi1989}
+\@writefile{toc}{\contentsline {section}{\numberline {III}Joint Transform Correlator}{4}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {i}Classical Joint Transform Correlator}{4}{subsection.3.1}\protected@file@percent }
+\newlabel{subsec:jtc}{{i}{4}{Classical Joint Transform Correlator}{subsection.3.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Optical setup for the joint transform correlator. The SLM displays the reference and query patterns side by side.\relax }}{4}{figure.caption.14}\protected@file@percent }
+\newlabel{fig:optical-classifier}{{4}{4}{Optical setup for the joint transform correlator. The SLM displays the reference and query patterns side by side.\relax }{figure.caption.14}{}}
+\@writefile{toc}{\contentsline {paragraph}{Operational principle.}{4}{paragraph*.15}\protected@file@percent }
+\newlabel{fig:corr-shifted}{{5a}{4}{Original image vs.\ shifted copy\relax }{figure.caption.16}{}}
+\newlabel{sub@fig:corr-shifted}{{a}{4}{Original image vs.\ shifted copy\relax }{figure.caption.16}{}}
+\newlabel{fig:corr-random}{{5b}{4}{Original image vs.\ random image\relax }{figure.caption.16}{}}
+\newlabel{sub@fig:corr-random}{{b}{4}{Original image vs.\ random image\relax }{figure.caption.16}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Normalized correlation-plane intensity produced by the joint transform correlator (with a simple Python FFT algorithm): (a) shows two strong off-axis peaks because the query is a shifted version of the reference, whereas (b) shows no significant peaks for an unrelated image.\relax }}{4}{figure.caption.16}\protected@file@percent }
+\newlabel{fig:jtc-diagram}{{5}{4}{Normalized correlation-plane intensity produced by the joint transform correlator (with a simple Python FFT algorithm): (a) shows two strong off-axis peaks because the query is a shifted version of the reference, whereas (b) shows no significant peaks for an unrelated image.\relax }{figure.caption.16}{}}
 \citation{Javidi1989}
-\newlabel{fig:corr-shifted}{{5a}{5}{Original image vs.\ shifted copy\relax }{figure.caption.16}{}}
-\newlabel{sub@fig:corr-shifted}{{a}{5}{Original image vs.\ shifted copy\relax }{figure.caption.16}{}}
-\newlabel{fig:corr-random}{{5b}{5}{Original image vs.\ random image\relax }{figure.caption.16}{}}
-\newlabel{sub@fig:corr-random}{{b}{5}{Original image vs.\ random image\relax }{figure.caption.16}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Normalized correlation-plane intensity produced by the joint transform correlator (with a simple Python FFT algorithm): (a) shows two strong off-axis peaks because the query is a shifted version of the reference, whereas (b) shows no significant peaks for an unrelated image.\relax }}{5}{figure.caption.16}\protected@file@percent }
-\newlabel{fig:jtc-diagram}{{5}{5}{Normalized correlation-plane intensity produced by the joint transform correlator (with a simple Python FFT algorithm): (a) shows two strong off-axis peaks because the query is a shifted version of the reference, whereas (b) shows no significant peaks for an unrelated image.\relax }{figure.caption.16}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {iv.1}Binary Joint Transform Correlator}{5}{subsubsection.2.4.1}\protected@file@percent }
-\newlabel{subsec:binary-jtc}{{iv.1}{5}{Binary Joint Transform Correlator}{subsubsection.2.4.1}{}}
 \newlabel{fig:jtc-bin-input}{{6a}{5}{Binary input images of the JTC, notice the grid introduced by the fill-factor of the SLM.\relax }{figure.caption.17}{}}
 \newlabel{sub@fig:jtc-bin-input}{{a}{5}{Binary input images of the JTC, notice the grid introduced by the fill-factor of the SLM.\relax }{figure.caption.17}{}}
 \newlabel{fig:jtc-bin-jps}{{6b}{5}{Binary joint power spectrum produced after tresholding the joint power spectrum measured by the camera.\relax }{figure.caption.17}{}}
@@ -80,27 +78,33 @@
 \newlabel{fig:jtc-bin-corr-plane}{{6c}{5}{Correlation plane intensity, showing the cross-correlation peaks at the off-axis positions.\relax }{figure.caption.17}{}}
 \newlabel{sub@fig:jtc-bin-corr-plane}{{c}{5}{Correlation plane intensity, showing the cross-correlation peaks at the off-axis positions.\relax }{figure.caption.17}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Optics python simulation of the joint transform correlator with binary input images. This implementation uses the library LightPipes to simulate the optical propagation and Fourier transforms.\relax }}{5}{figure.caption.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {i.1}Binary Joint Transform Correlator}{5}{subsubsection.3.1.1}\protected@file@percent }
+\newlabel{subsec:binary-jtc}{{i.1}{5}{Binary Joint Transform Correlator}{subsubsection.3.1.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {ii}}{5}{subsection.3.2}\protected@file@percent }
 \citation{Fuchs1999}
-\@writefile{toc}{\contentsline {paragraph}{JTC-based dissimilarity.}{6}{paragraph*.18}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {v}Optical implementations of the classifiers}{6}{subsection.2.5}\protected@file@percent }
-\newlabel{subsec:optical-qnm}{{v}{6}{Optical implementations of the classifiers}{subsection.2.5}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {vi}Optical implementation of the CNM–C classifier}{6}{subsection.2.6}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Scatter plot of the JTC dissimilarity versus the Euclidean distance for $100$ random pairs of MNIST digits. The coefficient of determination is \(R^{2}=0.428\). While the $R^2$ value is relatively low, multiple outliers contribute to this reduction. However, the general trend of the data is well captured by the fitted line, indicating a meaningful correlation between JTC dissimilarity and Euclidean distance.\relax }}{6}{figure.caption.19}\protected@file@percent }
-\newlabel{fig:euclidean_vs_jtc}{{7}{6}{Scatter plot of the JTC dissimilarity versus the Euclidean distance for $100$ random pairs of MNIST digits. The coefficient of determination is \(R^{2}=0.428\). While the $R^2$ value is relatively low, multiple outliers contribute to this reduction. However, the general trend of the data is well captured by the fitted line, indicating a meaningful correlation between JTC dissimilarity and Euclidean distance.\relax }{figure.caption.19}{}}
-\@writefile{toc}{\contentsline {paragraph}{Purity.}{6}{paragraph*.20}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Fidelity.}{6}{paragraph*.21}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Trace distance from fidelity.}{7}{paragraph*.22}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Classifier implementation.}{7}{paragraph*.23}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Classification accuracy (mean $\pm $ std.)\relax }}{7}{table.caption.24}\protected@file@percent }
-\newlabel{tab:cls-results}{{1}{7}{Classification accuracy (mean $\pm $ std.)\relax }{table.caption.24}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {III}Data Encoding}{7}{section.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {i}Gram Matrix Encoding}{7}{subsection.3.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Scatter plot of the JTC dissimilarity versus the Euclidean distance for $100$ random pairs of MNIST digits. The coefficient of determination is \(R^{2}=0.428\). While the $R^2$ value is relatively low, multiple outliers contribute to this reduction. However, the general trend of the data is well captured by the fitted line, indicating a meaningful correlation between JTC dissimilarity and Euclidean distance.\relax }}{6}{figure.caption.18}\protected@file@percent }
+\newlabel{fig:euclidean_vs_jtc}{{7}{6}{Scatter plot of the JTC dissimilarity versus the Euclidean distance for $100$ random pairs of MNIST digits. The coefficient of determination is \(R^{2}=0.428\). While the $R^2$ value is relatively low, multiple outliers contribute to this reduction. However, the general trend of the data is well captured by the fitted line, indicating a meaningful correlation between JTC dissimilarity and Euclidean distance.\relax }{figure.caption.18}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {iii}Optical implementations of the classifiers}{6}{subsection.3.3}\protected@file@percent }
+\newlabel{subsec:optical-qnm}{{iii}{6}{Optical implementations of the classifiers}{subsection.3.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {iv}Optical implementation of the CNM-C and RBF-C}{6}{subsection.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {v}Optical implementation of the QNM–C}{6}{subsection.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Purity.}{6}{paragraph*.19}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Fidelity.}{6}{paragraph*.20}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Trace distance from fidelity.}{6}{paragraph*.21}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Classifier implementation.}{6}{paragraph*.22}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Data Encoding}{6}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {i}Gram Matrix Encoding}{6}{subsection.4.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Balanced Accuracy (mean $\pm $ std.) for multiple classifiers on the MNIST dataset. For the QNM-C classifier, we report results for different distance metrics and encodings. The best results are highlighted in bold.\relax }}{7}{table.caption.23}\protected@file@percent }
+\newlabel{tab:cls-results}{{1}{7}{Balanced Accuracy (mean $\pm $ std.) for multiple classifiers on the MNIST dataset. For the QNM-C classifier, we report results for different distance metrics and encodings. The best results are highlighted in bold.\relax }{table.caption.23}{}}
+\newlabel{tab:centroid-purity}{{\caption@xref {tab:centroid-purity}{ on input line 653}}{7}{Classifier implementation}{table.caption.24}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Centroid purity for each MNIST class under the three encodings described in sec..\relax }}{7}{table.caption.24}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Trace distance vs. fidelity distance computed with the JTC for the quantum-inspired nearest-mean classifier (QNM-C) using the inverse stereographic encoding. The $R^2$ value of $0.986$ indicates a strong linear relationship between the two measures, confirming that the JTC can effectively estimate the trace distance from the fidelity.\relax }}{7}{figure.caption.25}\protected@file@percent }
 \newlabel{fig:trace_vs_fidelity}{{8}{7}{Trace distance vs. fidelity distance computed with the JTC for the quantum-inspired nearest-mean classifier (QNM-C) using the inverse stereographic encoding. The $R^2$ value of $0.986$ indicates a strong linear relationship between the two measures, confirming that the JTC can effectively estimate the trace distance from the fidelity.\relax }{figure.caption.25}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Gram matrix encoding $\rho $ of the digit 1 image\relax }}{7}{figure.caption.26}\protected@file@percent }
 \newlabel{fig:density_matrix}{{9}{7}{Gram matrix encoding $\rho $ of the digit 1 image\relax }{figure.caption.26}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {IV}Radial Basis Function Network}{7}{section.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {i}Exact Interpolation}{7}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {V}Radial Basis Function Network}{7}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {i}Exact Interpolation}{7}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {ii}Classification}{7}{subsection.5.2}\protected@file@percent }
 \bibdata{references}
 \bibcite{Cruzeiro2024}{1}
 \bibcite{Dragulinescu2023}{2}
@@ -111,12 +115,11 @@
 \bibcite{Sergioli2025}{7}
 \bibcite{VanderLugt1964}{8}
 \bibstyle{plain}
-\@writefile{toc}{\contentsline {subsection}{\numberline {ii}Classification}{8}{subsection.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {iii}Training with Least Squares}{8}{subsection.4.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {V}Choosing RBF Centers}{8}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {iii}Training with Least Squares}{8}{subsection.5.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Choosing RBF Centers}{8}{section.6}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Example of a Gaussian RBF centered at $\mu $\relax }}{8}{figure.caption.27}\protected@file@percent }
 \newlabel{fig:gaussian_rbf}{{10}{8}{Example of a Gaussian RBF centered at $\mu $\relax }{figure.caption.27}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {VI}Implementation Notes}{8}{section.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {VII}Optical Im}{8}{section.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {VIII}Conclusion}{8}{section.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VII}Implementation Notes}{8}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VIII}Optical Im}{8}{section.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {IX}Conclusion}{8}{section.9}\protected@file@percent }
 \gdef \@abspage@last{9}
