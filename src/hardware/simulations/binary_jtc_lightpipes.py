@@ -38,6 +38,8 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 from data.data import get_test_data, get_dataset  # For loading MNIST/Fashion MNIST digits
 
+EPS = 1e-6  # Small constant to prevent division by zero in correlation metrics
+
 # -------------------------- user‑adjustable parameters ----------------------
 wavelength = 633e-9               # 633 nm He‑Ne laser
 slm_size   = 6e-3                 # 6 mm × 6 mm SLM aperture
@@ -47,6 +49,130 @@ pixel_pitch = slm_size / N        # SLM pixel pitch (physical size of each pixel
 
 # binary threshold for images (0–255); set to None to use the pixel median
 img_thresh = None
+
+# ---------------------------------------------------------------------------
+# Correlation function to eliminate code duplication
+# ---------------------------------------------------------------------------
+def perform_jtc_correlation(a0_pair, binary_input=True, binary_jps=True, blocking_factor=0.1, digit1=None, digit2=None):
+    """
+    Perform JTC correlation using LightPipes optical simulation.
+    
+    Parameters:
+    -----------
+    a0_pair : np.ndarray
+        Joint input plane containing the two images side-by-side
+    binary_input : bool
+        Whether the input plane is binary (True) or grayscale (False)
+    binary_jps : bool
+        Whether to binarize the joint power spectrum (True) or use as is (False)
+    blocking_factor : float
+        Factor to determine the size of central region to block (as portion of N)
+    digit1 : int or None
+        First digit label (optional, used for directional search)
+    digit2 : int or None
+        Second digit label (optional, used for directional search)
+        
+    Returns:
+    --------
+    tuple
+        (peak_val, central_peak_intensity, peak_coords, Corr_int)
+        - peak_val: Value of the highest correlation peak after blocking central region
+        - central_peak_intensity: Value of the central DC peak
+        - peak_coords: (dy, dx) coordinates of the highest peak relative to center
+        - Corr_int: Full correlation intensity plane
+    """
+    # Convert to phase based on whether input is binary or analog
+    if binary_input:
+        phase_pair = (a0_pair + 1) / 2 * np.pi  # Map from -1/1 to 0/π
+    else:
+        phase_pair = a0_pair * np.pi  # Scale from 0-1 to 0-π
+    
+    # First optical pass (compute JPS)
+    F1 = Begin(slm_size, wavelength, N)
+    F1 = MultPhase(F1, phase_pair)
+    F1 = Lens(F1, f_lens)
+    F1 = Forvard(F1, f_lens)
+    JPS_int = Intensity(F1, 0)
+    
+    # Process JPS (binarize if needed)
+    if binary_jps:
+        thr_JPS = np.median(JPS_int)
+        JPS_processed = np.where(JPS_int > thr_JPS, 1.0, -1.0)
+        phase_JPS = (JPS_processed + 1) / 2 * np.pi  # Map from -1/1 to 0/π
+    else:
+        JPS_normalized = JPS_int / JPS_int.max() if JPS_int.max() > 0 else JPS_int
+        phase_JPS = JPS_normalized * np.pi  # Scale from 0-1 to 0-π
+    
+    # Second optical pass (correlation)
+    F2 = Begin(slm_size, wavelength, N)
+    F2 = MultPhase(F2, phase_JPS)
+    F2 = Lens(F2, f_lens)
+    F2 = Forvard(F2, f_lens)
+    Corr_int = Intensity(F2, 0)
+    
+    # Get central peak intensity (DC term) before masking
+    center_y, center_x = N // 2, N // 2
+    central_peak_intensity = Corr_int.max()
+    
+    # Block central region to find correlation peak
+    corr_masked = Corr_int.copy()
+    dc_block_half_width = int(N * blocking_factor)
+    ystart = max(0, center_y - dc_block_half_width)
+    yend = min(N, center_y + dc_block_half_width + 1)
+    xstart = max(0, center_x - dc_block_half_width)
+    xend = min(N, center_x + dc_block_half_width + 1)
+    corr_masked[ystart:yend, xstart:xend] = 0.0
+    
+    # Instead of using digit values, we'll examine the correlation pattern
+    # and find peaks on both sides, then decide which one to use
+    
+    # First, try to find peaks in left and right halves separately
+    left_half = corr_masked.copy()
+    left_half[:, center_x:] = 0.0  # Keep only left half
+    
+    right_half = corr_masked.copy()
+    right_half[:, :center_x] = 0.0  # Keep only right half
+    
+    # Find max peaks in each half
+    left_peak_val = left_half.max()
+    left_peak_idx = np.unravel_index(np.argmax(left_half), left_half.shape)
+    left_peak_dy = left_peak_idx[0] - center_y
+    left_peak_dx = left_peak_idx[1] - center_x
+    
+    right_peak_val = right_half.max()
+    right_peak_idx = np.unravel_index(np.argmax(right_half), right_half.shape)
+    right_peak_dy = right_peak_idx[0] - center_y
+    right_peak_dx = right_peak_idx[1] - center_x
+    
+    # Choose the half with the stronger peak
+    if left_peak_val > right_peak_val:
+        # Use left peak
+        peak_val = left_peak_val
+        dy = left_peak_dy
+        dx = left_peak_dx
+        search_region = "left half (stronger peak)"
+        # Update corr_masked to show only the left half in visualization
+        corr_masked = left_half
+    else:
+        # Use right peak
+        peak_val = right_peak_val
+        dy = right_peak_dy
+        dx = right_peak_dx
+        search_region = "right half (stronger peak)"
+        # Update corr_masked to show only the right half in visualization
+        corr_masked = right_half
+    
+    # Get peak and calculate coordinates
+    peak_val = corr_masked.max()
+    peak_idx = np.unravel_index(np.argmax(corr_masked), corr_masked.shape)
+    
+    # Calculate shift from center
+    dy = peak_idx[0] - center_y
+    dx = peak_idx[1] - center_x
+    
+    print(f"Finding correlation peak in {search_region}: peak at ({dx}, {dy})")
+    
+    return peak_val, central_peak_intensity, (dy, dx), Corr_int, corr_masked
 
 # ------------------------------------------------------------------
 # SLM fill-factor amplitude mask
@@ -62,7 +188,7 @@ def slm_pixel_aperture(x, y, width, height, duty=0.93):
 
 def create_joint_input_plane(digit_array_ref: np.ndarray, digit_array_obj: np.ndarray, 
                              slm_shape: tuple[int, int], thresh, 
-                             display_scale_factor: float = 0.4,
+                             display_scale_factor: float = 0.2,
                              binarize: bool = True):
     """
     Creates a joint input plane for the SLM.
@@ -141,6 +267,190 @@ def create_joint_input_plane(digit_array_ref: np.ndarray, digit_array_obj: np.nd
             return (slm_canvas_arr_float - min_val) / (max_val - min_val)
         else:
             return np.zeros_like(slm_canvas_arr_float)
+        
+
+# ---------------------------------------------------------------------
+# Compare Euclidean distance vs JTC distance for random MNIST pairs
+# ---------------------------------------------------------------------
+def compare_euclidean_vs_jtc(dataset="mnist", num_pairs=100, binary_input=True, binary_jps=True, scale=0.2):
+    """
+    Compare Euclidean distances vs JTC distances using LightPipes simulation.
+    
+    Parameters:
+    -----------
+    dataset : str
+        Dataset to use ('mnist' or 'fashion')
+    num_pairs : int
+        Number of random digit pairs to compare
+    binary_input : bool
+        Whether to binarize the input plane
+    binary_jps : bool
+        Whether to binarize the joint power spectrum
+    scale : float
+        Scale factor for digits on the SLM
+        
+    Returns:
+    --------
+    tuple
+        (euclidean_distances, jtc_distances, r_squared)
+    """
+    print(f"\nComparing Euclidean vs JTC distances for {num_pairs} random {dataset} pairs...")
+    
+    # Load dataset
+    X_data, y_data = get_test_data(dataset=dataset)
+    shape = (28, 28)  # MNIST digit shape
+    
+    # Lists to store distances
+    eucl_dists = []
+    jtc_dists = []
+    pairs_info = []
+    
+    # Store the actual images of each pair
+    digit_pairs = []
+    
+    # Process random digit pairs
+    for i in range(num_pairs):
+        if i % 10 == 0:
+            print(f"Processing pair {i}/{num_pairs}...")
+        
+        # Randomly select two digit samples
+        idx1 = np.random.randint(0, len(X_data))
+        idx2 = np.random.randint(0, len(X_data))
+        
+        # Get the digit images and labels
+        img1 = X_data[idx1].reshape(shape).astype(np.float32)
+        img2 = X_data[idx2].reshape(shape).astype(np.float32)
+        lbl1 = y_data[idx1]
+        lbl2 = y_data[idx2]
+        
+        # Store the original images
+        digit_pairs.append((img1, img2))
+        
+        # Calculate Euclidean distance
+        eucl_dist = np.linalg.norm(img1.flatten() - img2.flatten())
+        eucl_dists.append(eucl_dist)
+        
+        # Prepare joint input plane
+        a0_pair = create_joint_input_plane(img1, img2, (N, N), img_thresh, 
+                                           display_scale_factor=scale,
+                                           binarize=binary_input)
+        
+        # Use the reusable correlation function with digit information
+        peak_val, central_peak_intensity, (dy, dx), Corr_int, corr_masked = perform_jtc_correlation(
+            a0_pair, binary_input=binary_input, binary_jps=binary_jps, blocking_factor=0.01,
+            digit1=lbl1, digit2=lbl2  # Pass digit information
+        )
+        
+        # Normalize peak by central peak intensity and convert to distance
+        # Using central peak intensity for normalization instead of product of norms
+        similarity = peak_val / central_peak_intensity
+        jtc_dist = 1.0 / (similarity + EPS)
+        
+        jtc_dists.append(jtc_dist)
+        pairs_info.append((lbl1, lbl2, similarity, (dy, dx)))
+    
+    # Convert to numpy arrays
+    eucl_dists = np.array(eucl_dists)
+    jtc_dists = np.array(jtc_dists)
+    
+    # Fit a line to the data
+    m, c = np.polyfit(jtc_dists, eucl_dists, 1)
+    y_pred = m * jtc_dists + c
+    
+    # Calculate R^2
+    ss_res = np.sum((eucl_dists - y_pred) ** 2)
+    ss_tot = np.sum((eucl_dists - eucl_dists.mean()) ** 2)
+    r2 = 1 - ss_res / (ss_tot + EPS)
+    
+    # Create scatter plot
+    fig, ax = plt.subplots(figsize=(10, 7))
+    
+    # Calculate distance of each point from the regression line
+    # The distance from point (x,y) to line ax + by + c = 0 is |ax + by + c|/√(a² + b²)
+    # Our line is y = mx + c, which can be rewritten as mx - y + c = 0 (a=m, b=-1, c=c)
+    point_distances = np.abs(m * jtc_dists - eucl_dists + c) / np.sqrt(m**2 + 1)
+    
+    # Find indices of the top 5 outliers (points furthest from the regression line)
+    num_outliers = 5
+    outlier_indices = np.argsort(point_distances)[-num_outliers:]
+    
+    # Get the outlier pairs info
+    outlier_pairs = [pairs_info[i] for i in outlier_indices]
+    
+    # Plot data points (non-outliers)
+    mask = np.ones(len(jtc_dists), dtype=bool)
+    mask[outlier_indices] = False
+    ax.scatter(jtc_dists[mask], eucl_dists[mask], alpha=0.7, c='blue', marker='o', 
+              s=30, edgecolor='k', linewidth=0.5)
+    
+    # Plot outliers with different color/style
+    ax.scatter(jtc_dists[outlier_indices], eucl_dists[outlier_indices], alpha=1.0, 
+               c='red', marker='*', s=120, edgecolor='k', linewidth=1.0, 
+               label=f'Top {num_outliers} outliers')
+    
+    # Add labels for outlier points
+    for i, idx in enumerate(outlier_indices):
+        pair = pairs_info[idx]
+        label = f"{pair[0]} vs {pair[1]}"  # Label with digit pair (e.g., "1 vs 7")
+        ax.annotate(label, 
+                   (jtc_dists[idx], eucl_dists[idx]),
+                   textcoords="offset points", 
+                   xytext=(0, 10), 
+                   ha='center',
+                   fontsize=9,
+                   bbox=dict(boxstyle="round,pad=0.3", fc="yellow", alpha=0.7))
+    
+    # Plot the best fit line
+    xfit = np.linspace(jtc_dists.min(), jtc_dists.max(), 100)
+    yfit = m * xfit + c
+    ax.plot(xfit, yfit, 'r--', linewidth=2, 
+           label=f'Fit: y = {m:.2f}x + {c:.2f}\n$R^2$ = {r2:.3f}')
+    
+    # Formatting the plot
+    ax.set_xlabel('JTC Distance (LightPipes Simulation)', fontsize=12)
+    ax.set_ylabel('Euclidean Distance', fontsize=12)
+    ax.set_title(f'Euclidean vs JTC Distance ({num_pairs} random {dataset} pairs)', fontsize=14)
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc='upper left')
+        
+    plt.tight_layout()
+    plt.savefig(f'euclidean_vs_jtc_{dataset}_{num_pairs}pairs_with_outliers.png')
+    
+    # Find the biggest outlier (furthest from regression line)
+    biggest_outlier_idx = outlier_indices[-1]  # Last one has highest distance
+    biggest_outlier_info = pairs_info[biggest_outlier_idx]
+    biggest_outlier_digits = digit_pairs[biggest_outlier_idx]
+    
+    # Plot the digit pair for the biggest outlier
+    plt.figure(figsize=(9, 4))
+    
+    # Plot the two digits side by side
+    plt.subplot(1, 2, 1)
+    plt.imshow(biggest_outlier_digits[0], cmap='gray', vmin=0, vmax=255)
+    plt.title(f"First digit: {biggest_outlier_info[0]}")
+    plt.axis('off')
+    
+    plt.subplot(1, 2, 2)
+    plt.imshow(biggest_outlier_digits[1], cmap='gray', vmin=0, vmax=255)
+    plt.title(f"Second digit: {biggest_outlier_info[1]}")
+    plt.axis('off')
+    
+    # Add overall title
+    plt.suptitle(
+        f"Biggest outlier: {biggest_outlier_info[0]} vs {biggest_outlier_info[1]}\n"
+        f"JTC Distance: {jtc_dists[biggest_outlier_idx]:.2f}, "
+        f"Euclidean Distance: {eucl_dists[biggest_outlier_idx]:.2f}\n"
+        f"Distance from regression line: {point_distances[biggest_outlier_idx]:.2f}",
+        fontsize=12
+    )
+    
+    plt.tight_layout()
+    plt.savefig(f'biggest_outlier_{dataset}_{num_pairs}pairs.png')
+    plt.show()
+    
+    print(f"Analysis complete. Correlation coefficient (R^2): {r2:.3f}")
+    print(f"Biggest outlier: Digits {biggest_outlier_info[0]} vs {biggest_outlier_info[1]}")
+    return eucl_dists, jtc_dists, r2
 
 # -------------------------- build the joint input plane --------------------
 # Load MNIST digits from data.py
@@ -223,96 +533,102 @@ if __name__ == "__main__":
         phase_a0 = (a0 + 1) / 2 * np.pi
     
     # ------------------- optical simulation with LightPipes ---------------------
-    # 1. write input on the SLM as phase
+    # Use our reusable correlation function to perform JTC
+    peak_val, central_peak_intensity, (dy, dx), Corr_int, corr_masked = perform_jtc_correlation(
+        a0, binary_input=args.binary_input, binary_jps=args.binary_jps, blocking_factor=0.05,
+        digit1=args.ref_digit, digit2=args.obj_digit  # Pass digit information
+    )
+    
+    # Get JPS for display (need to recompute this part for visualization only)
+    # Convert to phase based on whether input is binary or analog
+    if args.binary_input:
+        phase_pair = (a0 + 1) / 2 * np.pi  # Map from -1/1 to 0/π
+    else:
+        phase_pair = a0 * np.pi  # Scale from 0-1 to 0-π
+    
+    # First optical pass (compute JPS)
     F1 = Begin(slm_size, wavelength, N)
-    F1 = MultPhase(F1, phase_a0)
-    
-    # Apply SLM fill factor (pixel aperture) - amplitude modulation
-    # Create coordinate grid for the SLM
-    x = np.linspace(-slm_size/2, slm_size/2, N)
-    X, Y = np.meshgrid(x, x)
-    
-    # Generate the amplitude mask for the SLM pixels
-    amp_mask = slm_pixel_aperture(X, Y, slm_size, slm_size)
-    F1 = MultIntensity(F1, amp_mask)
-    
-    # 2. Fourier transform to obtain JPS
+    F1 = MultPhase(F1, phase_pair)
     F1 = Lens(F1, f_lens)
     F1 = Forvard(F1, f_lens)
     JPS_int = Intensity(F1, 0)
     
-    # 3. Process the JPS (binarize or use as is based on the option)
+    # Process JPS for display purposes
     if args.binary_jps:
-        # Threshold the JPS to +1/-1
         thr_JPS = np.median(JPS_int)
-        JPS_processed = np.where(JPS_int > thr_JPS, 1.0, -1.0)
-        # Map from -1/1 to 0/π
-        phase_JPS = (JPS_processed + 1) / 2 * np.pi
-        jps_display = JPS_processed  # For visualization
+        jps_display = np.where(JPS_int > thr_JPS, 1.0, -1.0)
         jps_title = 'Binary JPS (Fourier plane)'
     else:
-        # Normalize JPS to 0-1 for analog operation
-        JPS_normalized = JPS_int / JPS_int.max() if JPS_int.max() > 0 else JPS_int
-        # For analog JPS, scale from 0-1 to 0-π
-        phase_JPS = JPS_normalized * np.pi
-        jps_display = JPS_normalized  # For visualization
+        jps_display = JPS_int / JPS_int.max() if JPS_int.max() > 0 else JPS_int
         jps_title = 'Analog JPS (Fourier plane)'
     
-    # 4. write JPS back onto the SLM
-    F2 = Begin(slm_size, wavelength, N)
-    F2 = MultPhase(F2, phase_JPS)
-    
-    # Apply the same SLM fill factor (pixel aperture) to the JPS
-    F2 = MultIntensity(F2, amp_mask)
-    
-    # 5. second FT to correlation plane
-    F2 = Lens(F2, f_lens)
-    F2 = Forvard(F2, f_lens)
-    Corr_int = Intensity(F2, 0)
-    
     # ---------------------------- visualisation ---------------------------------
-    fig, axs = plt.subplots(1, 3, figsize=(13, 4))
+    fig, axs = plt.subplots(2, 2, figsize=(13, 8))
     
     # Input plane display
     if args.binary_input:
-        axs[0].set_title('Binary input plane')
-        axs[0].imshow(a0, cmap='gray', vmin=-1, vmax=1)
+        axs[0, 0].set_title('Binary input plane')
+        axs[0, 0].imshow(a0, cmap='gray', vmin=-1, vmax=1)
     else:
-        axs[0].set_title('Analog input plane')
-        axs[0].imshow(a0, cmap='gray', vmin=0, vmax=1)
-    axs[0].axis('off')
+        axs[0, 0].set_title('Analog input plane')
+        axs[0, 0].imshow(a0, cmap='gray', vmin=0, vmax=1)
+    axs[0, 0].axis('off')
     
     # JPS display
-    axs[1].set_title(jps_title)
+    axs[0, 1].set_title(jps_title)
     if args.binary_jps:
-        axs[1].imshow(jps_display, cmap='gray', vmin=-1, vmax=1)
+        axs[0, 1].imshow(jps_display, cmap='gray', vmin=-1, vmax=1)
     else:
-        axs[1].imshow(jps_display, cmap='viridis', vmin=0)
-    axs[1].axis('off')
+        axs[0, 1].imshow(jps_display, cmap='viridis', vmin=0)
+    axs[0, 1].axis('off')
     
-    # Correlation output
-    axs[2].set_title(f'Correlation output ({"Binary" if args.binary_jps else "Analog"} JPS)')
-    axs[2].imshow(Corr_int, cmap='inferno')
-    axs[2].axis('off')
+    # Correlation output (full)
+    axs[1, 0].set_title(f'Full Correlation output ({"Binary" if args.binary_jps else "Analog"} JPS)')
+    axs[1, 0].imshow(Corr_int, cmap='inferno')
+    axs[1, 0].axis('off')
+    
+    # Masked Correlation output (shows which side we're searching)
+    axs[1, 1].set_title(f'Masked Correlation (Peak search region for {args.ref_digit} vs {args.obj_digit})')
+    axs[1, 1].imshow(corr_masked, cmap='inferno')
+    # Mark the peak location
+    center_y, center_x = N // 2, N // 2
+    peak_y = center_y + dy
+    peak_x = center_x + dx
+    axs[1, 1].plot(peak_x, peak_y, 'wo', markersize=8, markeredgecolor='black', markeredgewidth=1.5)
+    axs[1, 1].axis('off')
     
     plt.tight_layout()
-    plt.show()
-    
+    # plt.show() # Will be called once at the end
+
     # --------------------------- optional metrics -------------------------------
-    # Uncomment for quick PSR & SNR estimation on the correlation output.
-    """
-    peak_val = Corr_int.max()
-    peak_pos = np.unravel_index(np.argmax(Corr_int), Corr_int.shape)
+    # Calculate and print specific correlation metrics
+    
+    # peak_val and central_peak_intensity are returned by perform_jtc_correlation
+    
+    # EPS is defined globally at the top of the script
+    if central_peak_intensity < EPS: # Avoid division by zero if plane is dark
+        print("\n--- Correlation Metrics ---")
+        print("Warning: Central peak intensity is near zero. Correlation metrics might be unreliable.")
+        print(f"Central Peak Intensity (DC term): {central_peak_intensity:.4e}")
+        normalized_correlation_value = 0.0
+        print(f"Normalized Correlation Value: {normalized_correlation_value:.4f} (due to near-zero central peak)")
+        print(f"---------------------------\n")
+    else:
+        # Calculate the normalized correlation value using central peak intensity
+        # This matches our new normalization method in compare_euclidean_vs_jtc
+        normalized_correlation_value = peak_val / central_peak_intensity
+        
+        print(f"\n--- Correlation Metrics ---")
+        print(f"Central Peak Intensity (DC term): {central_peak_intensity:.4e}")
+        print(f"Max Off-Axis Peak Intensity (after DC block): {peak_val:.4e}")
+        print(f"Normalized Correlation Value (Off-Axis Peak / Central Peak): {normalized_correlation_value:.4f}")
+        print(f"---------------------------\n")
 
-    mask = np.ones_like(Corr_int, bool)
-    py, px = peak_pos
-    mask[max(py-2,0):py+3, max(px-2,0):px+3] = False  # suppress 5×5 around peak
+        compare_euclidean_vs_jtc(num_pairs=1000)
+    
+    plt.show() # Show all figures
 
-    side_vals = Corr_int[mask]
-    psr = peak_val / side_vals.max()
-    noise_rms = np.sqrt(np.mean(side_vals**2))
-    snr  = peak_val / noise_rms
-    print(f"PSR = {psr:.2f}\nSNR = {snr:.2f}")
-    """
 
-# End of file
+
+
+

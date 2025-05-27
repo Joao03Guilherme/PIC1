@@ -376,6 +376,8 @@ The quantum-inspired nearest-mean classifier (QNM-C) is the exact same as the CN
         \]
 \end{enumerate}
 
+The 
+
 Having defined both the classical and quantum-inspired nearest-mean classifiers, we can now describe the joint transform correlator (JTC) and how it can be used to implement these classifiers optically.
 
 \subsection{Joint Transform Correlator}
@@ -401,7 +403,7 @@ the same input plane~\cite{Javidi1989}.
 Let the two patterns be centred on the SLM display at \(\pm x_{0}\) along the horizontal
 axis, i.e.\ \(s_{1}(x+x_{0},y)\) and \(s_{2}(x-x_{0},y)\).  A
 \(1f\)-configuration lens (focal length \(f\)) produces at its back
-focal plane the joint Fourier transform
+focal plane the joint Fourier transform, given by:
 \[
   G(\alpha,\beta)=
     S_{1}\!\bigl(\tfrac{\alpha}{\lambda f},
@@ -414,7 +416,7 @@ focal plane the joint Fourier transform
 where \((\alpha,\beta)\) are spatial-frequency coordinates and
 \(S_{j}\) denotes the Fourier transform of \(s_{j}\).
 A CMOS camera records and stores the \emph{joint power spectrum}
-\(|G|^{2}\); its intensity contains four beating terms:
+\(|G|^{2}\); its intensity contains four terms:
 
 \[
   |G|^{2}
@@ -425,9 +427,10 @@ A CMOS camera records and stores the \emph{joint power spectrum}
 
 The SLM displays the joint power spectrum and the same lens takes the inverse Fourier transform of this intensity
 pattern. This produces at the fourier plane the correlation signals of the two images, given by:
-$$
-g(x', y') = R_{11}(x',y') + R_{22}(x',y') + R_{12}(x' - 2x_{0},y') + R_{21}(x' + 2x_{0},y')
-$$
+\begin{multline*}
+g(x', y') = R_{11}(x',y') + R_{22}(x',y') \\
++ R_{12}(x' - 2x_{0},y') + R_{21}(x' + 2x_{0},y')
+\end{multline*}
 
 where $(x', y')$ are the coordinates at the correlation plane and the correlation signals are defined as:
 \[
@@ -441,12 +444,7 @@ proportional to the cross-correlation
 \(s_{1}\star s_{2}\). As illustrated in Figure \ref{fig:corr-shifted},
 when the input is an image and its shifted version, the patterns are highly similar, resulting in strong and well-defined cross-correlation peaks ($R_{12}$ and $R_{21}$). In contrast, Figure \ref{fig:corr-random} shows the correlation between an image and an unrelated random pattern, yielding weak or undetectable peaks due to the lack of similarity.
 
-Therefore, we just need to measure the intensity of the cross-correlation peaks to determine the similarity between the two patterns. To obtain a normalized value between $0$ and $1$, we can divide the intensity of the cross-correlation peaks by $2 \times \|v_1 \| \times \|v_2 \|$, where $v_1$ and $v_2$ are the input images to perform the correlation. We will define this metric as the \emph{similarity} between the two images:
-\[
-  \text{similarity}(s_1, s_2) = \frac{R_{12}}{2 \times \|s_1 \| \times \|s_2 \|} = \frac{R_{21}}{2 \times \|s_1 \| \times \|s_2 \|}
-\]
-
-
+Therefore, we just need to measure the intensity of the cross-correlation peaks to determine the similarity between the two patterns. To obtain a normalized value between $0$ and $1$, we can divide the intensity of the cross-correlation peaks by the intensity of the auto-correlation peak. This normalization ensures that the resulting value is independent of the absolute intensity levels and only reflects the relative similarity between the two patterns.
 This gives us a value of $1$ when the two images are identical and $0$ when they are completely different.
 
 %------------------------------------------------------
@@ -459,7 +457,7 @@ This gives us a value of $1$ when the two images are identical and $0$ when they
     \caption{Original image vs.\ shifted copy}%
     \label{fig:corr-shifted}
   \end{subfigure}
-  \hfill
+
   \begin{subfigure}[b]{\linewidth}
     \centering
     \includegraphics[width=\linewidth]%
@@ -468,13 +466,73 @@ This gives us a value of $1$ when the two images are identical and $0$ when they
     \label{fig:corr-random}
   \end{subfigure}
 
-  \caption{Correlation-plane intensity produced by the joint transform
-           correlator: (a) shows two strong off-axis peaks because the
+  \caption{Normalized correlation-plane intensity produced by the joint transform
+           correlator (with a simple Python FFT algorithm): (a) shows two strong off-axis peaks because the
            query is a shifted version of the reference, whereas (b)
            shows no significant peaks for an unrelated image.}%
   \label{fig:jtc-diagram}
 \end{figure}
 %------------------------------------------------------
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}[b]{\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/correlation/binary_input.png}
+    \caption{Binary input images of the JTC, notice the grid introduced by the fill-factor of the SLM.}
+    \label{fig:jtc-bin-input}
+  \end{subfigure}
+
+  \begin{subfigure}[b]{\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/correlation/binary_jps.png}
+    \caption{Binary joint power spectrum produced after tresholding the joint power spectrum measured by the camera.}%
+    \label{fig:jtc-bin-jps}
+  \end{subfigure}
+
+  \begin{subfigure}[b]{\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/correlation/binary_correlation.png}
+    \caption{Correlation plane intensity, showing the cross-correlation peaks at the off-axis positions.}%
+    \label{fig:jtc-bin-corr-plane}
+  \end{subfigure}
+  
+  \caption{Optics python simulation of the joint transform correlator with binary input images. This implementation uses the library LightPipes to simulate the optical propagation and Fourier transforms.}
+\end{figure}
+
+This is the classical version of the JTC. There have been proposals of introducing some non-linearity both at the fourier plane and input plane, and that improves the performance of the JTC (\cite{Psaltis1984}, \cite{Javidi1989}, \cite{Dragulinescu2023}, \cite{alfalou2024understanding}).  
+The binary joint transform correlator, introduced by B.Javidi1989 in \cite{Javidi1989}, 
+
+
+\subsubsection{Binary Joint Transform Correlator}
+\label{subsec:binary-jtc}
+
+Javidi \& Horner’s single–SLM Binary JTC \cite{Javidi1989} applies a hard
+threshold at two points of the optical cycle and works entirely with a
+bipolar alphabet \(\{-1,+1\}\).  
+At the input plane the grey-scale reference and query patterns are
+turned into a \(-1/+1\) map by comparing each pixel with the median of
+its histogram (Fig. \ref{fig:jtc-bin-input}). On a phase-only SLM those two levels translate into a
+\(0\) or \(\pi\) phase delay, so no optical power is wasted.
+After a first Fourier lens the camera records the joint power spectrum.
+That spectrum is thresholded in exactly the same fashion and written
+back to the same SLM during a second exposure (Fig. \ref{fig:jtc-bin-jps}), where a
+second Fourier lens produces the correlation plane (Fig. \ref{fig:jtc-bin-corr-plane}).
+
+The double threshold has two immediate consequences.  
+First, the autocorrelation terms collapse to delta-like spikes, freeing
+space on the detector for much larger reference windows and eliminating
+the placement restrictions of the classical JTC.  
+Second, the correct phase of the first harmonic survives the
+non-linearity, whereas higher harmonics are both weaker and spatially
+separated; a simple spatial filter keeps only the desired term.
+
+Computer simulations in the original paper show a dramatic numerical
+advantage: the binary JTC can raise the correlation-peak intensity by
+\(2.8\times10^{6}\), tighten the peak-to-sidelobe ratio by a factor
+\(10^{2}\), narrow the full-width-at-half-maximum by \(38\times\), and lift
+the signal-to-noise ratio six-fold compared with the classical JTC
+under identical illumination. 
 
 \paragraph{JTC-based dissimilarity.}
 Let \(\operatorname{sim}(s_{1},s_{2})\in[0,1]\) denote the normalised
@@ -482,28 +540,24 @@ height of the cross-correlation peak produced by the joint transform
 correlator when the input patterns are \(s_{1}\) and \(s_{2}\).
 We quantify dissimilarity through its reciprocal,
 \[
-  d_{\text{JTC}}(s_{1},s_{2})=\sqrt{1 - \operatorname{sim}(s_{1},s_{2})}.
+  d_{\text{JTC}}(s_{1},s_{2})=\frac{1}{\operatorname{sim}(s_{1},s_{2})}.
 \]
 Because \(\operatorname{sim}=1\) for identical patterns and decreases
 towards 0 as the patterns diverge, \(d_{\text{JTC}}\) is
-non-negative and symmetric, but it is \emph{not} a metric in the strict
-mathematical sense: it does not satisfy the triangle inequality. Nonetheless it serves the same practical
-purpose as a distance—patterns that are more alike yield a smaller
-\(d_{\text{JTC}}\).
+non-negative and symmetric (check this! they are not symmetric), but it is \emph{not} a metric in the strict
+mathematical sense: it does not satisfy the triangle inequality and it is not zero for equal images. Nonetheless it serves the same practical
+purpose as a distance — patterns that are more alike yield a smaller
+\(d_{\text{JTC}}\), and that is the most important property for the classification task.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{figures/correlation/euclidean_vs_jtc_distance.png}
+  \includegraphics[width=\linewidth]{figures/correlation/euclidean_vs_jtcdistance.png}
   \caption{Scatter plot of the JTC dissimilarity versus the Euclidean
-           distance for $10^4$ random pairs of MNIST digits.
+           distance for $100$ random pairs of MNIST digits.
            The coefficient of determination is
-           \(R^{2}=0.867\), indicating that although the two measures are
-           expressed on different scales, they are \emph{strongly
-           monotonically related}: pairs that are close in Euclidean
-           space are also close under the JTC criterion.  For
-           distance-based classifiers, this monotonicity is what matters,
-           because only the relative ordering of distances influences the
-           decision rule.}
+           \(R^{2}=0.428\). While the $R^2$ value is relatively low, 
+           multiple outliers contribute to this reduction. 
+           However, the general trend of the data is well captured by the fitted line, indicating a meaningful correlation between JTC dissimilarity and Euclidean distance.}
   \label{fig:euclidean_vs_jtc}
 \end{figure}
 
@@ -515,8 +569,55 @@ suitable drop-in replacement for similarity-based classification.
 \subsection{Optical implementations of the classifiers}
 \label{subsec:optical-qnm}
 
+\subsection{Optical implementation of the CNM–C classifier}
+In Sec.~\ref{subsec:optical-qnm} we outlined how a joint–transform correlator (JTC) can realise the QNM–C classifier.  There, the decision rule was formulated in terms of the \emph{trace distance}, yet this quantity is not directly accessible in a classical–optical setup: a JTC yields a scalar similarity signal rather than the operator norm \(\tfrac12\lVert\rho-\sigma\rVert_{1}\). So in order to implement the QNM-C we need to find a method to use the JTC to obtain an estimate of the trace distance, which we can then use to classify the test samples. We will start by defining the purity of a quantum state, then the fidelity between two quantum states, and finally relate the fidelity to the trace distance. This will allow us to use the JTC to estimate the trace distance and implement the QNM-C classifier.
 
-\section{Results}
+\paragraph{Purity.}
+For a single state the purity
+\[
+P(\rho)=\operatorname{Tr}\!\bigl(\rho^{2}\bigr)
+\]
+ranges from \(1\) (pure state) to \(1/d\) (maximally mixed state in Hilbert space of dimension \(d\)). 
+
+\paragraph{Fidelity.}
+For two states \(\rho,\sigma\) the fidelity is defined as%
+\footnote{See, e.g.\ M.~A.~Nielsen and I.~L.~Chuang, \emph{Quantum Computation and Quantum Information}, 10th~anniv.\ ed., 2010.}
+\[
+F(\rho,\sigma)=\bigl[\operatorname{Tr}\!\bigl(\sqrt{\smash[b]{\sqrt{\rho}\,\sigma\sqrt{\rho}}}\bigr)\bigr]^{2}.
+\]
+When both states are pure, \(\rho=\lvert\psi\rangle\!\langle\psi\rvert\) and \(\sigma=\lvert\phi\rangle\!\langle\phi\rvert\), this simplifies to
+\[
+F(\rho,\sigma)=\lvert\langle\psi\mid\phi\rangle\rvert^{2}.
+\]
+Because the JTC peak is proportional to the complex overlap \(\langle\psi\mid\phi\rangle\) of the optical fields, its squared magnitude directly supplies the fidelity of two pure optical encodings.
+
+\paragraph{Trace distance from fidelity.}
+The Fuchs–van de Graaf inequalities relate fidelity and trace distance \(D_{\mathrm{tr}}\)~\cite{Fuchs1999}:
+\[
+1-\sqrt{F(\rho,\sigma)}
+\;\le\;
+D_{\mathrm{tr}}(\rho,\sigma)
+\;\le\;
+\sqrt{1-F(\rho,\sigma)}.
+\]
+For pure states the bounds coincide, giving the exact identity
+\[
+D_{\mathrm{tr}}(\rho,\sigma)=\sqrt{1-F(\rho,\sigma)}.
+\]
+Denoting the JTC similarity output by \(\operatorname{sim}(\rho,\sigma)=\lvert\langle\psi\mid\phi\rangle\rvert\), the trace distance between two quantum centroids \(\varrho_{k}\) and \(\varrho_{j}\) is therefore
+\[
+D_{\mathrm{tr}}(\varrho_{k},\varrho_{j})
+=
+\sqrt{1-\operatorname{sim}(\varrho_{k},\varrho_{j})^{2}}.
+\]
+
+\paragraph{Classifier implementation.}
+Feeding the fidelity obtained from the JTC into the above relation yields an operational estimate of the trace distance entirely compatible with existing optical hardware.  Because fidelity satisfies the axioms of a metric through Uhlmann’s theorem, the CNM–C classifier retains the robustness promised by the original trace–distance formulation while remaining experimentally feasible.  
+The only requirement is that the quantum centroids be \emph{nearly pure} (\(P(\varrho_k)\approx1\)); such high purity can be engineered through a judicious choice of the encoding that maps each training sample to an almost single–mode optical field whose decoherence is negligible over the correlation interval.
+
+% make a plot of a test of purity vs fidelity (calculated using the JTC) and classification accuracy
+
+
 
 \begin{table}[htbp]
   \centering
@@ -538,6 +639,13 @@ suitable drop-in replacement for similarity-based classification.
   \end{tabular}
 \end{table}
 
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\linewidth]{figures/correlation/trace_vs_fidelity.png}
+  \caption{Trace distance vs. fidelity distance computed with the JTC for the quantum-inspired nearest-mean classifier (QNM-C) using the inverse stereographic encoding. The $R^2$ value of $0.986$ indicates a strong linear relationship between the two measures, confirming that the JTC can effectively estimate the trace distance from the fidelity.}
+  \label{fig:trace_vs_fidelity}
+\end{figure}
 
 
 
