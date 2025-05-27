@@ -37,7 +37,7 @@ There have been optical implementations of classical classification algorithms (
 Among the various optical architectures, the \emph{Joint Transform Correlator} (JTC) (\cite{Psaltis1984}, \cite{Dragulinescu2023}) stands out for its simplicity and adaptability.  Unlike classical VanderLugt systems (\cite{VanderLugt1964}), the JTC does not require a pre-fabricated filter; instead, the reference and query patterns are placed side by side in the input plane.  A single Fourier transform—implemented with a lens—produces an output intensity whose off-axis terms encode the cross-correlation between the two patterns.  
 When feature vectors are encoded as two-dimensional phase distributions, the correlation peak height provides a direct measure of their similarity, which can be mapped to a distance-based decision rule.
 
-In this work we propose optical implementations of the Quantum-Inspired and Classical Nearest Mean Classifier (\cite{Cruzeiro2024}, \cite{Sergioli2025}), and Radial Basis Function Classifier (\cite{Neifeld1993}, \cite{Foor1995}), that use a single SLM and a 1-f lens system (\cite{Javidi1989}).  We begin by reviewing the theoretical connection between optical correlation and amplitude-based similarity measures. We then describe our experimental set-up, which integrates a single reflective, phase only, spatial light modulator and a CMOS camera to implement a proof-of-concept optical classifier (Section~\ref{sec:setup}).  Finally, we benchmark the models with the MNIST dataset and compare their performances with purely electronic implementations, highlighting the trade-offs in speed, energy, and classification accuracy (Section~\ref{sec:results}).
+In this work we propose optical implementations of the Quantum-Inspired and Classical Nearest Mean Classifier (\cite{Cruzeiro2024}, \cite{Sergioli2025}), and Radial Basis Function Classifier (\cite{Neifeld1993}, \cite{Foor1995}), that use a single SLM and a 1-f lens system (\cite{Javidi1989}).  We begin by reviewing the theoretical connection between optical correlation and distance-based similarity measures. We then describe our experimental set-up, which integrates a single reflective, phase only, spatial light modulator and a CMOS camera to implement a a new version of the QNM-C (Section~\ref{sec:optical-qnm}).  Finally, we benchmark the models with the MNIST dataset and compare their performances with purely electronic implementations, highlighting the trade-offs (Section~\ref{sec:results}).
 
 
 \section{Supervised learning and quantum-inspired classification}
@@ -594,7 +594,7 @@ F(\rho,\sigma)=\lvert\langle\psi\mid\phi\rangle\rvert^{2}.
 Because the JTC peak is proportional to the complex overlap \(\langle\psi\mid\phi\rangle\) of the optical fields, its squared magnitude directly supplies the fidelity of two pure optical encodings (there is more to this, the fidelity can be seen as $\cos^2$ and the JTC also (to be added latter)).
 
 \paragraph{Trace distance from fidelity.}
-The Fuchs–van de Graaf inequalities relate fidelity and trace distance \(D_{\mathrm{tr}}\)~\cite{Fuchs1999}:
+The Fuchs–van de Graaf inequalities relate fidelity and trace distance \(D_{\mathrm{tr}}\):
 \[
 1-\sqrt{F(\rho,\sigma)}
 \;\le\;
@@ -622,6 +622,7 @@ The only requirement is that the quantum centroids be \emph{nearly pure} (\(P(\v
 % make a plot of a test of purity vs fidelity (calculated using the JTC) and classification accuracy
 
 \section{Experimental results}
+\label{sec:results}
 \subsection{Computational simulations}
 
 We ran the 
@@ -687,85 +688,7 @@ We ran the
   \label{fig:trace_vs_fidelity}
 \end{figure}
 
-
-
-
-\section{Radial Basis Function Network}
-
-RBF networks model the hypothesis function $h(x)$ using a radial function centered around key points (called \emph{centers}). Each center influences the prediction based on its proximity to the input $x$. The standard form is:
-\[
-h(x) = \sum_{n=1}^N w_n\exp\left(-\gamma\| x - x_n \|^2\right)
-\]
-where $\gamma$ determines the width of the radial functions, and $w_n$ are the learned weights.
-
-\subsection{Exact Interpolation}
-Given training data $D = \{(x_1, y_1), \dots, (x_N, y_N)\}$, we can formulate the interpolation condition:
-\[
-\sum_{m=1}^N w_m\exp\left(-\gamma\| x_n - x_m \|^2\right) = y_n, \quad \forall n
-\]
-In matrix notation:
-\[
-\Phi \mathbf{w} = \mathbf{y}, \quad \text{where } \Phi_{n,m} = \exp\left(-\gamma\|x_n - x_m\|^2\right)
-\]
-If $\Phi$ is invertible, we can directly solve:
-\[
-\mathbf{w} = \Phi^{-1} \mathbf{y}
-\]
-This yields an exact interpolating function.
-
-\subsection{Classification}
-For classification, we apply a decision rule such as:
-\[
-h(x) = \operatorname{sign}\left(\sum_{n=1}^N w_n\exp(-\gamma\|x - x_n\|^2)\right)
-\]
-In multi-class settings, this can be extended to a softmax output over class scores.
-
-\subsection{Training with Least Squares}
-Instead of enforcing exact interpolation, we may use a least squares approach to minimize:
-\[
-E = \sum_{n=1}^N (h(x_n) - y_n)^2
-\]
-This leads to the ridge-regularized solution:
-\[
-\mathbf{w} = (\Phi^T\Phi + \lambda I)^{-1}\Phi^T \mathbf{y}
-\]
-where $\lambda$ is a regularization parameter.
-
-\section{Choosing RBF Centers}
-Using every data point as a center is computationally expensive. Instead, we reduce the number of centers to $K \ll N$ by clustering the dataset using \textbf{K-Means}:
-
-We define:
-\[
-J = \sum_{k=1}^K \sum_{x_n \in S_k} \| x_n - \mu_k \|^2
-\]
-and use Lloyd's algorithm to iteratively minimize $J$:
-\begin{align*}
-\mu_k &= \frac{1}{|S_k|}\sum_{x_n \in S_k} x_n \\
-S_k &= \{ x_n : \|x_n - \mu_k\| \leq \|x_n - \mu_j\|,\ \forall j \neq k \}
-\end{align*}
-
-Repeat these steps until convergence. Since the process is sensitive to initialization, we typically run K-Means multiple times and choose the best clustering.
-
-\begin{figure}[h!]
-    \centering
-    % Consider plotting a 3D Gaussian RBF here with Gnuplot
-    \input{plots/rbf_gaussian}
-    \caption{Example of a Gaussian RBF centered at $\mu$}
-    \label{fig:gaussian_rbf}
-\end{figure} 
-
-\section{Implementation Notes}
-The RBF network was implemented in Python using NumPy and scikit-learn. To avoid memory issues, we:
-\begin{itemize}
-    \item Use MiniBatchKMeans to find centers efficiently.
-    \item Use perceptron-based or regularized least squares learning.
-    \item Avoid computing large $\Phi^T\Phi$ matrices when possible.
-\end{itemize}
-
-\section{Optical Im}
-
 \section{Conclusion}
-RBF networks provide an elegant and powerful framework for classification. Through Gaussian kernel construction and data-driven center selection, they can adapt to local structures in the data. When combined with efficient encodings such as Gram matrices and practical training algorithms, they scale to real-world tasks like digit recognition.
 
 \bibliography{references}{}
 \bibliographystyle{plain}

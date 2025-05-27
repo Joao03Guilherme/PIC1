@@ -1,14 +1,14 @@
 # Fdb version 4
-["bibtex main"] 1748374593 "main.aux" "main.bbl" "main" 1748374602 0
+["bibtex main"] 1748376303 "main.aux" "main.bbl" "main" 1748376312 0
   "./references.bib" 1748182502 2959 28ea0b809258a1df4c13bb77df628460 ""
   "/usr/local/texlive/2023/texmf-dist/bibtex/bst/base/plain.bst" 1292289607 20613 bd3fbfa9f64872b81ac57a0dd2ed855f ""
-  "main.aux" 1748374602 14078 cb41d49ecd3a8ffef8bcabe5d2c09c42 "pdflatex"
+  "main.aux" 1748376312 13005 a7b181415d0c6ed84e535aa2294c2d16 "pdflatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1748374598 "/Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/latex/Quantum inspired classification/main.tex" "main.pdf" "main" 1748374602 2
-  "/Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/latex/Quantum inspired classification/main.tex" 1748374541 38538 bf94df74b6810968312569617f252a8a ""
+["pdflatex"] 1748376308 "/Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/latex/Quantum inspired classification/main.tex" "main.pdf" "main" 1748376312 2
+  "/Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/latex/Quantum inspired classification/main.tex" 1748376266 35552 408fb62099bb312d176731bbe0573536 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/base/8r.enc" 1165713224 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/usr/local/texlive/2023/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplb8r.tfm" 1136768653 2532 9ad73cf4dd2173a847f2a5f5608e0b9a ""
@@ -16,7 +16,6 @@
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplb9t.tfm" 1136768653 2040 c3786843fde023582f6b55ff84d7bc8b ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplbi8r.tfm" 1136768653 2788 e071e05f6ae1a90dbbbc13a193c3a135 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplr8r.tfm" 1136768653 2796 d37c29814a6717720ee1a7c9a0b2c3b8 ""
-  "/usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplr9c.tfm" 1136768653 1348 f4174868edc712ccb6079f0b57dbcfdf ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplr9e.tfm" 1136768653 6952 02ad5d201b346d62c53c35f081142949 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplr9t.tfm" 1136768653 2284 861e5309a3e09d74071777f716a582cc ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplrc8r.tfm" 1136768653 3528 0711c6c96865155bce7256fa14ac59b1 ""
@@ -56,7 +55,6 @@
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb" 1136849748 52665 661b1e6b26edb5f50dd491f8a701cb57 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/type1/urw/palatino/uplri8a.pfb" 1136849748 50022 90249cba7e3e4e9845f80328d6f9bd13 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/vf/adobe/palatino/pplb9e.vf" 1136768653 2288 8e238fed018b54574a256cd0062e19b9 ""
-  "/usr/local/texlive/2023/texmf-dist/fonts/vf/adobe/palatino/pplr9c.vf" 1136768653 2908 c7a03afe5d67b6476673018447828dc3 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/vf/adobe/palatino/pplr9e.vf" 1136768653 2296 bb1ff9494546688194a48c9b41b39dac ""
   "/usr/local/texlive/2023/texmf-dist/fonts/vf/adobe/palatino/pplr9t.vf" 1136768653 1036 6bf3f57f140c19369dc13ae2329f0e57 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/vf/adobe/palatino/pplrc9e.vf" 1136768653 2476 9ee0dbbdd2dd550350b23d6a93c7c1af ""
@@ -153,7 +151,6 @@
   "/usr/local/texlive/2023/texmf-dist/tex/latex/psnfss/ot1pplx.fd" 1137110629 869 d5724c6202887be8690c71fe9df2f441 ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/psnfss/ot1zplm.fd" 1137110629 436 5e7baa1a259bab50a2bdffad6426f38c ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/psnfss/t1pplx.fd" 1137110629 678 c8b3ffad3ca2f0b681099c1471d12d8b ""
-  "/usr/local/texlive/2023/texmf-dist/tex/latex/psnfss/ts1pplx.fd" 1137110629 634 ff560c0872a0a3a55298084c3a3cbc8f ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/psnfss/ufplmbb.fd" 1137110629 321 077609d8fc08b1f1181795378b603500 ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/refcount/refcount.sty" 1576624809 9878 9e94e8fa600d95f9c7731bb21dfb67a4 ""
   "/usr/local/texlive/2023/texmf-dist/tex/latex/rerunfilecheck/rerunfilecheck.sty" 1657483315 9714 ba3194bd52c8499b3f1e3eb91d409670 ""
@@ -190,15 +187,13 @@
   "figures/nearest_mean_classifier.png" 1747504483 278108 266b5e914207124242041650a043d863 ""
   "figures/rbf_net/rbf_net.png" 1747687627 103499 230948af1e1476e9d547bc00a499e871 ""
   "figures/setup/setup.png" 1747859015 139977 11176ee3394b184a865187fe497f962b ""
-  "main.aux" 1748374602 14078 cb41d49ecd3a8ffef8bcabe5d2c09c42 "pdflatex"
-  "main.bbl" 1748374594 2053 318abcfc84362c72a842e8242514a651 "bibtex main"
+  "main.aux" 1748376312 13005 a7b181415d0c6ed84e535aa2294c2d16 "pdflatex"
+  "main.bbl" 1748376304 2053 318abcfc84362c72a842e8242514a651 "bibtex main"
   "main.gnuploterrors" 1745407397 0 d41d8cd98f00b204e9800998ecf8427e ""
-  "main.out" 1748374602 3605 5c8dafebc40991e6a2d2a425560d1120 "pdflatex"
-  "main.tex" 1748374541 38538 bf94df74b6810968312569617f252a8a ""
-  "plots/rbf_gaussian.tex" 1747504500 421 0ad468166de6c279d5798a1d001e6d4b ""
+  "main.out" 1748376312 2875 e9af1826599b9984a324c1184cad7a9f "pdflatex"
+  "main.tex" 1748376266 35552 408fb62099bb312d176731bbe0573536 ""
   "preamble.sty" 1748340429 2944 311ee7b0adaf139d64c32b3f1520e87c ""
   (generated)
-  "main-gnuplottex-fig1.gnuplot"
   "main.aux"
   "main.log"
   "main.out"
