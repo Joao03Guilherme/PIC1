@@ -219,36 +219,36 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
                             f"Warning: _mat_to_vec received a 1D array for non-diag_prob encoding. Length: {len(M)}"
                         )
                         return M
-                    
+
                     # Instead of using upper triangular indices, just flatten the matrix
                     # This gives us a predictable length for calculating the image shape
                     return M.flatten()
-                
+
                 # Create a custom vecmetric that recalculates the correct shape based on the flattened matrix
                 def custom_metric(A, B):
                     v_A = _mat_to_vec(A)
                     v_B = _mat_to_vec(B)
-                    
+
                     # Get the length of the flattened vector
                     vec_len = len(v_A)
-                    
+
                     # Calculate a reasonable shape based on the vector length
                     # Try to make it close to square
                     h_candidate = int(np.sqrt(vec_len))
                     while vec_len % h_candidate != 0 and h_candidate > 1:
                         h_candidate -= 1
-                    
+
                     if h_candidate > 0 and vec_len % h_candidate == 0:
                         H = h_candidate
                         W = vec_len // H
                     else:
                         H = 1
                         W = vec_len
-                    
+
                     # Create a new image shape
                     new_shape = (H, W)
                     print(f"Using shape {new_shape} for vectors of length {vec_len}")
-                    
+
                     # Call the optical correlator with the correct shape
                     if self.distance == "optical_classical_jtc":
                         d, _, _, _ = self.optical_correlator.correlate(
@@ -258,7 +258,7 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
                     else:
                         # For non-optical metrics, call with the recalculated shape
                         return vecmetric(v_A, v_B)
-                
+
                 self._metric_ = custom_metric
 
         return self

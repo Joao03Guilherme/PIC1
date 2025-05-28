@@ -34,26 +34,30 @@ encodings_to_test = [
     },
     {
         "name": "Stereographic",
-        "func": lambda vec: compute_density_matrix_from_vector(encode_stereographic(vec)),
+        "func": lambda vec: compute_density_matrix_from_vector(
+            encode_stereographic(vec)
+        ),
     },
 ]
 
 unique_classes = np.unique(train_labels)
-all_purities_summary = {} # To store all results for a final summary
+all_purities_summary = {}  # To store all results for a final summary
 
-print("\nCalculating class centroids (average density matrices) and their purities for different encodings:")
+print(
+    "\nCalculating class centroids (average density matrices) and their purities for different encodings:"
+)
 
 for encoding_info in encodings_to_test:
     encoding_name = encoding_info["name"]
     encoding_fn = encoding_info["func"]
-    
+
     print(f"\n--- Encoding: {encoding_name} ---")
-    
-    purities_for_current_encoding = {} # Store purities for the current encoding type
+
+    purities_for_current_encoding = {}  # Store purities for the current encoding type
 
     for class_label in unique_classes:
         class_indices = train_labels == class_label
-        class_samples_pca = X_train_pca[class_indices] # Use PCA'd training data
+        class_samples_pca = X_train_pca[class_indices]  # Use PCA'd training data
 
         if len(class_samples_pca) == 0:
             print(
@@ -79,14 +83,16 @@ for encoding_info in encodings_to_test:
         average_density_matrix_centroid = sum_of_density_matrices / num_density_matrices
 
         trace_val = np.trace(average_density_matrix_centroid)
-        if np.isclose(trace_val, 0) or np.isnan(trace_val) or np.isinf(trace_val): # Added checks for nan/inf
+        if (
+            np.isclose(trace_val, 0) or np.isnan(trace_val) or np.isinf(trace_val)
+        ):  # Added checks for nan/inf
             print(
                 f"  Class {class_label}: Centroid trace is {trace_val}, cannot normalize. Purity will be calculated on unnormalized matrix (or result might be NaN)."
             )
             normalized_centroid_for_purity = average_density_matrix_centroid
         else:
             normalized_centroid_for_purity = average_density_matrix_centroid / trace_val
-        
+
         # centroids_for_current_encoding[class_label] = normalized_centroid_for_purity # If you need to store centroids
 
         purity = calculate_purity_from_density_matrix(normalized_centroid_for_purity)
@@ -102,4 +108,6 @@ print("\n--- Overall Purity Summary ---")
 for encoding_name_summary, class_purities_summary in all_purities_summary.items():
     print(f"Encoding: {encoding_name_summary}")
     for class_label_summary, purity_val_summary in class_purities_summary.items():
-        print(f"  Class {class_label_summary} centroid purity: {purity_val_summary:.4f}")
+        print(
+            f"  Class {class_label_summary} centroid purity: {purity_val_summary:.4f}"
+        )

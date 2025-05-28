@@ -1,7 +1,7 @@
 """
 Code to run the main application and do the classification
 """
- 
+
 # Use absolute imports instead of relative imports
 from ...models.ClassicalNearestMean.c_nearestmean_network import (
     ClassicalNearestMeanClassifier,
@@ -28,28 +28,43 @@ y_train_global = None
 X_test_global = None
 y_test_global = None
 
+
 def load_all_data_globally():
     """Loads training and testing data into global variables if not already loaded."""
     global X_train_global, y_train_global, X_test_global, y_test_global
     if X_train_global is None or y_train_global is None:
         print("Loading training data globally...")
         X_train_global, y_train_global = get_train_data()
-        print(f"Training data loaded: X_train_global shape {X_train_global.shape}, y_train_global shape {y_train_global.shape}")
+        print(
+            f"Training data loaded: X_train_global shape {X_train_global.shape}, y_train_global shape {y_train_global.shape}"
+        )
     if X_test_global is None or y_test_global is None:
         print("Loading testing data globally...")
         X_test_global, y_test_global = get_test_data()
-        print(f"Testing data loaded: X_test_global shape {X_test_global.shape}, y_test_global shape {y_test_global.shape}")
+        print(
+            f"Testing data loaded: X_test_global shape {X_test_global.shape}, y_test_global shape {y_test_global.shape}"
+        )
+
 
 def test_classic_nearest_mean():
     """Test the classical nearest mean classifier with Euclidean distance"""
     global X_train_global, y_train_global, X_test_global, y_test_global
     print("\nTesting Classical Nearest Mean Classifier (Euclidean distance)...")
     # Ensure data is loaded by the main block
-    if X_train_global is None or y_train_global is None or X_test_global is None or y_test_global is None:
-        print("Error: Data not loaded globally. Call load_all_data_globally() in the main execution block.")
+    if (
+        X_train_global is None
+        or y_train_global is None
+        or X_test_global is None
+        or y_test_global is None
+    ):
+        print(
+            "Error: Data not loaded globally. Call load_all_data_globally() in the main execution block."
+        )
         return
 
-    print(f"Using global X_train shape: {X_train_global.shape}, y_train shape: {y_train_global.shape}")
+    print(
+        f"Using global X_train shape: {X_train_global.shape}, y_train shape: {y_train_global.shape}"
+    )
 
     model = ClassicalNearestMeanClassifier(
         distance_metric_name="euclidean", distance_squared=False, random_state=0
@@ -74,11 +89,20 @@ def test_quantum_nearest_mean_with_optical_jtc():
     print("\nTesting Quantum Nearest Mean Classifier with PCA and Optical JTC...")
 
     # Ensure data is loaded by the main block
-    if X_train_global is None or y_train_global is None or X_test_global is None or y_test_global is None:
-        print("Error: Data not loaded globally. Call load_all_data_globally() in the main execution block.")
+    if (
+        X_train_global is None
+        or y_train_global is None
+        or X_test_global is None
+        or y_test_global is None
+    ):
+        print(
+            "Error: Data not loaded globally. Call load_all_data_globally() in the main execution block."
+        )
         return
 
-    print(f"Using global original data - X_train: {X_train_global.shape}, y_train: {y_train_global.shape}")
+    print(
+        f"Using global original data - X_train: {X_train_global.shape}, y_train: {y_train_global.shape}"
+    )
 
     # Apply PCA to reduce dimensions to 50 features
     n_components = 50
@@ -94,7 +118,7 @@ def test_quantum_nearest_mean_with_optical_jtc():
     print("Attempting to initialize SLMdisplay...")
     slm = SLMdisplay(monitor=1, isImageLock=True)  # Adjust monitor if needed
     print("SLMdisplay initialized.")
-    
+
     print("Attempting to initialize UC480Controller (camera)...")
     cam = UC480Controller()  # Adjust serial if needed
     print("UC480Controller (camera) initialized.")
@@ -124,7 +148,7 @@ def test_quantum_nearest_mean_with_optical_jtc():
         subset_size = 100
         indices = np.random.choice(len(X_train_pca), subset_size, replace=False)
         X_train_subset = X_train_pca[indices]
-        y_train_subset = y_train_global[indices] # Use global y_train for subset labels
+        y_train_subset = y_train_global[indices]  # Use global y_train for subset labels
 
         print(f"Training on a subset of {subset_size} examples...")
         start_time = time.time()
@@ -138,7 +162,9 @@ def test_quantum_nearest_mean_with_optical_jtc():
             len(X_test_pca), test_subset_size, replace=False
         )
         X_test_subset = X_test_pca[test_indices]
-        y_test_subset = y_test_global[test_indices] # Use global y_test for subset labels
+        y_test_subset = y_test_global[
+            test_indices
+        ]  # Use global y_test for subset labels
 
         print(f"Testing on a subset of {test_subset_size} examples...")
         start_time = time.time()

@@ -215,7 +215,7 @@ def run_correlation_test(digit1, digit2, correlator, verbose=True):
 
     t_start = datetime.now()
     distance, shift, similarity, corr_plane = correlator.correlate(
-        digit1_vec, digit2_vec, shape=shape
+        digit1_vec, digit2_vec
     )
     elapsed = (datetime.now() - t_start).total_seconds()
 
