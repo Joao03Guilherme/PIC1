@@ -100,10 +100,7 @@ def plot_images_and_correlation(
     digit1_vec,
     digit2_vec,
     shape,
-    similarity,
     correlation_image,
-    distance,
-    shift,
     digit1_label,
     digit2_label,
 ):
@@ -150,26 +147,6 @@ def plot_images_and_correlation(
     ax3.set_title(f"Optical Correlation Plane", fontsize=14)
     plt.colorbar(im, ax=ax3)
 
-    # Add metrics as text
-    textstr = "\n".join(
-        (
-            f"Similarity: {similarity:.4f}",
-            f"Distance: {distance:.4f}",
-            f"Peak Shift: ({shift[0]}, {shift[1]})",
-        )
-    )
-
-    props = dict(boxstyle="round", facecolor="wheat", alpha=0.5)
-    ax3.text(
-        0.05,
-        0.95,
-        textstr,
-        transform=ax3.transAxes,
-        fontsize=12,
-        verticalalignment="top",
-        bbox=props,
-    )
-
     # Set overall title
     fig.suptitle(
         f"Optical JTC Correlation: Digit {digit1_label} vs Digit {digit2_label}",
@@ -213,23 +190,14 @@ def run_correlation_test(digit1, digit2, correlator, verbose=True):
     if verbose:
         print(f"Running optical correlation between digit {digit1} and {digit2}...")
 
-    t_start = datetime.now()
-
     # Reshape vectors to match the expected input shape
     digit1_vec = digit1_vec.reshape(shape[0], shape[1])
     digit2_vec = digit2_vec.reshape(shape[0], shape[1])
-    distance, shift, similarity, corr_plane = correlator.correlate(
+    corr_plane = correlator.correlate(
         digit1_vec, digit2_vec
     )
-    elapsed = (datetime.now() - t_start).total_seconds()
 
-    if verbose:
-        print(f"Correlation completed in {elapsed:.2f} seconds")
-        print(
-            f"Results: Distance={distance:.4f}, Similarity={similarity:.4f}, Shift=({shift[0]}, {shift[1]})"
-        )
-
-    return (digit1_vec, digit2_vec, shape, distance, shift, similarity, corr_plane)
+    return (digit1_vec, digit2_vec, shape, corr_plane)
 
 
 def run_multi_correlation(correlator, digits_to_test=None, plot_all=False):
@@ -398,15 +366,10 @@ def main():
             run_multi_correlation(correlator, plot_all=config["plot_all"])
         else:
             # Run a single correlation test
-            digit1_vec, digit2_vec, shape, distance, shift, similarity, corr_plane = (
+            digit1_vec, digit2_vec, shape, corr_plane = (
                 run_correlation_test(config["digit1"], config["digit2"], correlator)
             )
 
-            # Print detailed results for the single test
-            print(f"Correlation details:")
-            print(f"  Distance: {distance:.4f}")
-            print(f"  Shift: ({shift[0]}, {shift[1]})")
-            print(f"  Similarity: {similarity:.4f}")
             print(f"  Correlation plane shape: {corr_plane.shape}")
 
             # Plot and save results
@@ -414,10 +377,7 @@ def main():
                 digit1_vec,
                 digit2_vec,
                 shape,
-                similarity,
                 corr_plane,
-                distance,
-                shift,
                 config["digit1"],
                 config["digit2"],
             )
