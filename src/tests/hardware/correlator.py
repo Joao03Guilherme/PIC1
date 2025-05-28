@@ -300,7 +300,7 @@ def get_config():
         "digit1": 1,  # First digit to correlate (0-9)
         "digit2": 2,  # Second digit to correlate (0-9)
         "monitor": 1,  # Monitor number for SLM display
-        "exposure": 11,  # Camera exposure time in milliseconds
+        "exposure": 30,  # Camera exposure time in milliseconds
         "sleep_time": 0.05,  # Sleep time between optical passes (seconds)
         "use_roi": False,  # Whether to set camera ROI
         "run_multi": False,  # Run multiple digit pairs
