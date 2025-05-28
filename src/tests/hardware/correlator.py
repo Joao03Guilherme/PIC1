@@ -214,6 +214,10 @@ def run_correlation_test(digit1, digit2, correlator, verbose=True):
         print(f"Running optical correlation between digit {digit1} and {digit2}...")
 
     t_start = datetime.now()
+
+    # Reshape vectors to match the expected input shape
+    digit1_vec = digit1_vec.reshape(shape[0], shape[1])
+    digit2_vec = digit2_vec.reshape(shape[0], shape[1])
     distance, shift, similarity, corr_plane = correlator.correlate(
         digit1_vec, digit2_vec
     )
