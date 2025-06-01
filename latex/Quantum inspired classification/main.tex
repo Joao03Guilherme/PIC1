@@ -631,8 +631,7 @@ We ran the
   \centering
   \footnotesize                     % smaller font
   \setlength{\tabcolsep}{4pt}       % tighter columns
-  \caption{Balanced accuracy (\%\,mean $\pm$ std.) on MNIST.  
-           Best results are in \textbf{bold}.}
+  \caption{Balanced accuracy (\%\,mean $\pm$ std.) on MNIST. For the classical classifiers (RBF-C and CNM-C) the encoding is not applicable, so we leave it empty. For the quantum-inspired classifiers (QNM-C) we show the results for the three encodings described in Sec.~\ref{par:encodings}. The Fidelity distance is being calculated using the JTC, as described in Sec.~\ref{subsec:qic}. The best results for each encoding are in \textbf{bold}.}
   \label{tab:cls-results}
   % Automatically fit to text width
   \resizebox{\linewidth}{!}{%
@@ -689,6 +688,13 @@ We ran the
 \end{figure}
 
 \section{Conclusion}
+
+Weird things: for the quantum nearest mean classifier applying the standard scaller yields worse results, I don't know why
+
+\subsection{Future Work}
+- Paralell JTC
+- Other optical architectures 
+- Explore other quantum inspired classifiers that can leverage optical implementations
 
 \bibliography{references}{}
 \bibliographystyle{plain}

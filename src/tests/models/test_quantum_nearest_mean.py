@@ -15,6 +15,7 @@ from sklearn.metrics import (
     confusion_matrix,
 )
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 from pathlib import Path
 
 # Define ROOT as the directory containing the current test script
@@ -56,14 +57,15 @@ print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
 print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 
 # ---------------------------------------------------------------------
-# Build Quantum Nearest Mean pipeline with PCA
+# Build Quantum Nearest Mean pipeline with PCA and Standardization
 # ---------------------------------------------------------------------
+scaler = StandardScaler()  # Add StandardScaler
 pca = PCA(
     n_components=50, svd_solver="full", random_state=0
-)  # Example: retain 95% variance
+)  
 
 qnmc = QuantumNearestMeanClassifier(
-    encoding="stereographic", distance="trace", random_state=0
+    encoding="standard", distance="trace", random_state=0
 )
 
 model = Pipeline(
@@ -104,32 +106,3 @@ print(
     " mean ± std bal. acc.  : %.4f ± %.4f"
     % (cv_res["test_bal_acc"].mean(), cv_res["test_bal_acc"].std())
 )
-
-# Evaluate the model on the test set
-print("\nEvaluating Quantum Nearest Mean on the test set …")
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-
-print(f"Accuracy = {np.mean(y_pred == y_test)}")
-
-# Compute confusion matrix
-conf_matrix = confusion_matrix(y_test, y_pred)
-print("Confusion Matrix (Quantum Nearest Mean):\n", conf_matrix)
-
-# Save confusion matrix as an image
-plt.figure(figsize=(10, 8))
-sns.heatmap(
-    conf_matrix,
-    annot=True,
-    fmt="d",
-    cmap="Blues",
-    xticklabels=range(10),  # Assuming 10 classes, adjust if necessary
-    yticklabels=range(10),  # Assuming 10 classes, adjust if necessary
-)
-plt.xlabel("Predicted Labels")
-plt.ylabel("True Labels")
-plt.title("Confusion Matrix (Quantum Nearest Mean)")
-conf_matrix_image_path = ROOT / "confusion_matrix_qnmc.png"
-plt.savefig(conf_matrix_image_path)
-plt.close()
-print(f"Confusion matrix image saved to {conf_matrix_image_path}")

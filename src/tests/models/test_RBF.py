@@ -16,6 +16,7 @@ from sklearn.metrics import (
     confusion_matrix,
 )
 from sklearn.decomposition import PCA  # Add PCA import
+from sklearn.preprocessing import StandardScaler  # Add StandardScaler import
 from pathlib import Path  # Add this import
 
 # Define ROOT as the directory containing the current test script
@@ -52,8 +53,8 @@ _, X_test, _, y_test = train_test_split(
 print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
 print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 
-# Create PCA component
-pca = PCA(n_components=0.95, svd_solver="full", random_state=0)
+scaler = StandardScaler()  # Add StandardScaler
+pca = PCA(n_components=50, svd_solver="full", random_state=0)
 
 # Create RBF component
 rbf = RBFNet(
@@ -72,12 +73,6 @@ model = Pipeline(
         ("rbf", rbf),
     ]
 )
-
-# Let's see how many features PCA would retain with our dataset
-pca_check = PCA(n_components=0.95, svd_solver="full", random_state=0)
-X_train_pca = pca_check.fit_transform(X_train)
-print(f"Original number of features: {X_train.shape[1]}")
-print(f"Number of features after PCA: {X_train_pca.shape[1]} (retaining 95% variance)")
 
 # ---------------------------------------------------------------------
 # k-fold cross-validation (stratified)
