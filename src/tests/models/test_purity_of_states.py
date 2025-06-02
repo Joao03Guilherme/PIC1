@@ -5,6 +5,7 @@ from ...encodings.encodings import (
     calculate_purity_from_vector,  # Keep if used elsewhere, or remove if only matrix purity is needed now
     compute_density_matrix_from_vector,
     calculate_purity_from_density_matrix,  # Ensure this is imported
+    encode_length_scaled
 )
 
 from ...data.data import get_train_data, get_test_data
@@ -38,6 +39,12 @@ encodings_to_test = [
             encode_stereographic(vec)
         ),
     },
+    {
+        "name": "Length-Scaled",
+        "func": lambda vec: compute_density_matrix_from_vector(
+            encode_length_scaled(vec)
+        ),
+    }
 ]
 
 unique_classes = np.unique(train_labels)

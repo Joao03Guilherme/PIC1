@@ -93,3 +93,13 @@ def encode_informative(x: np.ndarray) -> np.ndarray:
 
     vec = np.concatenate([x / norm, [1]], dtype=np.float32)
     return 1 / np.sqrt(2) * vec
+
+def encode_length_scaled(x):
+    x = x.astype(np.float32)
+    r = np.linalg.norm(x)
+    if r == 0:
+        return np.pad(np.zeros_like(x), (0,1), constant_values=1)
+    psi = x / np.sqrt(1 + r)
+    extra = r / np.sqrt(1 + r)
+    return np.concatenate([psi, [extra]], dtype=np.float32)
+

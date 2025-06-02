@@ -19,6 +19,7 @@ from ...encodings.encodings import (
     encode_diag_prob,
     encode_stereographic,
     encode_informative,
+    encode_length_scaled,
     normalize_vector,
 )
 
@@ -87,6 +88,8 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
             return encode_informative(x)
         elif self.encoding == "standard":
             return normalize_vector(x)
+        elif self.encoding == "length_scaled":
+            return encode_length_scaled(x)
         else:
             raise ValueError(f"Unknown encoding '{self.encoding}'")
 
@@ -153,7 +156,7 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
                 label: np.zeros(X.shape[1], dtype=np.float32) for label in self.classes_
             }
 
-        elif self.encoding in ("stereographic", "informative"):  # d  ->  d+1
+        elif self.encoding in ("stereographic", "informative", "length_scaled"):  # d  ->  d+1
             dim = X.shape[1] + 1
             sums = {
                 label: np.zeros((dim, dim), dtype=np.float32) for label in self.classes_

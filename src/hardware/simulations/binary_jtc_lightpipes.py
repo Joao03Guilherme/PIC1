@@ -170,8 +170,8 @@ if __name__ == "__main__":
     cli.add_argument("--binary-jps",    action="store_true", default=True)
     cli.add_argument("--analog-jps",    dest="binary_jps",   action="store_false")
     cli.add_argument("--ref-digit",     type=int, default=1)
-    cli.add_argument("--obj-digit",     type=int, default=2)
-    cli.add_argument("--scale",         type=float, default=1)
+    cli.add_argument("--obj-digit",     type=int, default=1)
+    cli.add_argument("--scale",         type=float, default=0.05)
     cli.add_argument("--dataset",       choices=["mnist", "fashion"], default="mnist")
     args = cli.parse_args()
 
@@ -193,15 +193,36 @@ if __name__ == "__main__":
     )
 
     # ------------------- plots ---------------------------------------------
-    plt.figure(figsize=(12, 6))
-    plt.imshow(Corr_int[950:1100, 800:1250], cmap='hot')
-    plt.title("Correlation Plane")
-    plt.colorbar(label='Intensity')
-    plt.xlabel("X Position (pixels)")
-    plt.ylabel("Y Position (pixels)")
+    fig, axs = plt.subplots(1, 2, figsize=(15, 6)) # Create a figure with two subplots
+
+    # Plot the input image (a0) with the SLM pixel aperture (MASK)
+    # Convert phase to amplitude (between 0 and 1) for visualization
+    a0_display = (a0 + 1)/2 if args.binary_input else a0.copy()
+    # Apply the pixel aperture mask
+    a0_with_mask = a0_display * MASK
+    im_a0 = axs[0].imshow(a0_with_mask, cmap='gray')
+    axs[0].set_title("Joint Input Plane (with SLM pixel aperture)")
+    axs[0].set_xlabel("X Position (pixels)")
+    axs[0].set_ylabel("Y Position (pixels)")
+    fig.colorbar(im_a0, ax=axs[0], label='Amplitude')
+
+    # Plot the Correlation Plane
+    # Determine the zoom range for the correlation plane plot
+    center = N // 2
+    quarter_N = N // 4
+    zoom_slice_y = slice(center - quarter_N, center + quarter_N)
+    zoom_slice_x = slice(center - quarter_N, center + quarter_N)
+
+    im_corr = axs[1].imshow(Corr_int[zoom_slice_y, zoom_slice_x], cmap='hot',
+                            extent=[center - quarter_N, center + quarter_N, center + quarter_N, center - quarter_N]) # Adjust extent for correct axis labels
+    axs[1].set_title("Correlation Plane (Zoomed to -N/4 to N/4)")
+    axs[1].set_xlabel("X Position (pixels from center)")
+    axs[1].set_ylabel("Y Position (pixels from center)")
+    fig.colorbar(im_corr, ax=axs[1], label='Intensity')
+
     plt.tight_layout()
     plt.show()
 
     print(f"peak = {peak_val:.3e},  DC = {central_dc:.3e},  "
           f"norm = {peak_val/(central_dc+EPS):.4f}")
-    
+
