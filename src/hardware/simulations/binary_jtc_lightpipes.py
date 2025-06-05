@@ -24,7 +24,7 @@ f_lens     = 100e-3                    # 100 mm Fourier lens (×2 passes)
 N          = 2048                      # simulation grid (square)
 
 slm_size   = active_area[0]            # use SLM width for LightPipes window
-beam_waist = 1.3 * slm_size            # 
+beam_waist = 1.1 * slm_size            # 
 
 # binary threshold for digits (0-255); None → median of canvas
 img_thresh = None
@@ -74,7 +74,7 @@ def create_joint_input_plane(digit_array_ref: np.ndarray,
                              digit_array_obj: np.ndarray,
                              slm_shape: tuple[int, int],
                              thresh,
-                             display_scale_factor: float = 0.2,
+                             display_scale_factor: float = 0.01,
                              binarize: bool = True):
 
     slm_rows, slm_cols = slm_shape
@@ -111,14 +111,15 @@ def create_joint_input_plane(digit_array_ref: np.ndarray,
 def perform_jtc_correlation(a0_pair,
                             binary_input: bool = True,
                             binary_jps: bool   = True,
-                            blocking_factor: float = 0.1):
+                            blocking_factor: float = 0.1,
+                            angle_error: float = 1.0):
     """Two-pass Binary JTC – identical logic, but now with:
        • TEM₀₀ Gaussian illumination (waist = *beam_waist*)
        • physical SLM pixel mask (*MASK*) acting as an amplitude pupil
     """
 
     # ---- phase encoding of the joint input ---------------------------------
-    phase_pair = (a0_pair + 1)/2*np.pi if binary_input else a0_pair*np.pi
+    phase_pair = (a0_pair + 1)/2*np.pi * angle_error if binary_input else a0_pair*np.pi * angle_error
 
     # ---- first optical pass (JPS) ------------------------------------------
     F1 = Begin(slm_size, wavelength, N)
@@ -133,10 +134,10 @@ def perform_jtc_correlation(a0_pair,
     if binary_jps:
         thr_JPS   = np.median(JPS_int)
         JPS_bin   = np.where(JPS_int > thr_JPS, 1., -1.)
-        phase_JPS = (JPS_bin + 1)/2*np.pi
+        phase_JPS = (JPS_bin + 1)/2*np.pi * angle_error
     else:
         JPS_norm  = JPS_int/JPS_int.max() if JPS_int.max() > 0 else JPS_int
-        phase_JPS = JPS_norm*np.pi
+        phase_JPS = JPS_norm*np.pi * angle_error
 
     # ---- second optical pass (correlation) ---------------------------------
     F2 = Begin(slm_size, wavelength, N)
@@ -173,6 +174,7 @@ if __name__ == "__main__":
     cli.add_argument("--obj-digit",     type=int, default=1)
     cli.add_argument("--scale",         type=float, default=0.05)
     cli.add_argument("--dataset",       choices=["mnist", "fashion"], default="mnist")
+    cli.add_argument("--angle-sweep",   action="store_true", help="Run angle error sweep from 0 to 2")
     args = cli.parse_args()
 
     # ------------------- prepare joint input --------------------------------
@@ -208,8 +210,8 @@ if __name__ == "__main__":
 
     # Plot the Correlation Plane
     # Determine the zoom range for the correlation plane plot
-    center = N // 2
-    quarter_N = N // 4
+    center = N
+    quarter_N = N
     zoom_slice_y = slice(center - quarter_N, center + quarter_N)
     zoom_slice_x = slice(center - quarter_N, center + quarter_N)
 

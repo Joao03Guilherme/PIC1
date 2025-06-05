@@ -14,11 +14,11 @@
   \begin{@twocolumnfalse}
     \begin{abstract}
       \noindent
-      We explore the implementation of quantum-inspired and classical distance-based classifiers using an optical architecture known as the Joint Transform Correlator (JTC). 
-      These classifiers, including the classical and quantum nearest-mean classifier (CNM-C, QNM-C) and radial basis function classifier (RBF-C), rely on distance computations between a query sample and class prototypes. 
-      While traditionally executed in software, such operations become computationally intensive in high dimensions or large datasets. 
-      We propose a new optical implementation using a reflective, phase-only, spatial light modulator (SLM) and a CMOS camera within a 1-f Fourier setup, leveraging the speed and parallelism of coherent light. 
-      We detail the theoretical framework linking optical correlation with similarity measures used in classification, and describe the data encoding strategies that map feature vectors to optical patterns.
+      We explore optical implementations of classical and quantum-inspired distance-based classifiers using a Joint Transform Correlator (JTC). 
+      These include the classical and quantum-inspired nearest-mean classifiers (CNM-C, QNM-C) and the radial basis function classifier (RBF-C). 
+      We define and compare multiple quantum encodings that map real feature vectors to density matrices, and propose a method to compute the trace distance between pure states optically using the JTC. 
+      The optical approach offers inherent parallelism, high speed, and energy efficiency, enabling fast, low-power classification. 
+      Our framework is validated through simulations and experiments on the MNIST dataset.
     \end{abstract}
   \end{@twocolumnfalse}
 ]
@@ -28,18 +28,23 @@
 \section{Introduction}
 \label{sec:intro}
 
-Quantum-inspired algorithms are classical routines that use mathematical structures and physical intuitions from quantum mechanics — such as superposition-style probability amplitudes, interference or quantum state discrimination — yet run entirely on conventional hardware.  
+Quantum-inspired algorithms are classical routines that use the mathematical formalism and physical intuitions from quantum mechanics — such as superposition-style probability amplitudes, interference or quantum state discrimination — yet run entirely on conventional hardware.  
 These algorithms have multiple applications, including machine learning, where they promise faster convergence or reduced dimensional dependence compared with traditional methods.
 
 Some machine-learning algorithms are based on distance. 
-Here, the decision rule depends on the similarity between a query sample and a set of prototypes, typically evaluated through dot products or euclidean distance calculation.  Although straightforward in software, these operations become a computational bottleneck for high-dimensional data streams or large datasets.  
-There have been optical implementations of classical classification algorithms (\cite{Neifeld1993}, \cite{Foor1995}). These implementations offer a compelling alternative: coherent light can perform calculations at the speed of propagation, exploiting spatial parallelism while consuming only milliwatts of power.
+Here, the decision rule depends on the similarity between a query sample and a set of prototypes, typically evaluated through dot products or euclidean distance calculation. Quantum-inspired algorithms often outperform classical ones in software, but optical implementations can offer further advantages — particularly for high-dimensional data streams or large-scale datasets—by leveraging speed, parallelism, and energy efficiency.
+There have been optical implementations of classical classification algorithms (\cite{Neifeld1993}, \cite{Foor1995}). 
 
-Among the various optical architectures, the \emph{Joint Transform Correlator} (JTC) (\cite{Psaltis1984}, \cite{Dragulinescu2023}) stands out for its simplicity and adaptability.  Unlike classical VanderLugt systems (\cite{VanderLugt1964}), the JTC does not require a pre-fabricated filter; instead, the reference and query patterns are placed side by side in the input plane.  A single Fourier transform—implemented with a lens—produces an output intensity whose off-axis terms encode the cross-correlation between the two patterns.  
+These advantages arise not simply because light travels fast, but because optical systems can naturally perform certain operations, such as the Fourier transform, in constant time via light propagation and using lenses. 
+Optical setups can also exploit massive spatial parallelism, allowing many operations to be carried out simultaneously. In contrast to digital processors that are limited by clocking, thermal dissipation, and wiring constraints, optical systems offer nearly dissipationless computation through physical propagation, supporting high processing power with minimal energy loss. 
+This makes them especially well-suited for scalable, real-time machine learning tasks (\cite{mcmahonoptical2023}).
+
+Among the various optical systems, the \emph{Joint Transform Correlator} (JTC) (\cite{Psaltis1984}, \cite{Dragulinescu2023}) stands out for its simplicity and adaptability.  Unlike classical VanderLugt systems (\cite{VanderLugt1964}), the JTC does not require a pre-fabricated filter; instead, the reference and query patterns are placed side by side in the input plane.  A single Fourier transform—implemented with a lens—produces an output intensity whose off-axis terms encode the cross-correlation between the two patterns.  
 When feature vectors are encoded as two-dimensional phase distributions, the correlation peak height provides a direct measure of their similarity, which can be mapped to a distance-based decision rule.
 
-In this work we propose optical implementations of the Quantum-Inspired and Classical Nearest Mean Classifier (\cite{Cruzeiro2024}, \cite{Sergioli2025}), and Radial Basis Function Classifier (\cite{Neifeld1993}, \cite{Foor1995}), that use a single SLM and a 1-f lens system (\cite{Javidi1989}).  We begin by reviewing the theoretical connection between optical correlation and distance-based similarity measures. We then describe our experimental set-up, which integrates a single reflective, phase only, spatial light modulator and a CMOS camera to implement a a new version of the QNM-C (Section~\ref{sec:optical-qnm}).  Finally, we benchmark the models with the MNIST dataset and compare their performances with purely electronic implementations, highlighting the trade-offs (Section~\ref{sec:results}).
+In this work we propose optical implementations of the Quantum-Inspired and Classical Nearest Mean Classifier (\cite{Cruzeiro2024}, \cite{Sergioli2025}), and Radial Basis Function Classifier (\cite{Neifeld1993}, \cite{Foor1995}), that use a single SLM and a 1-f lens system (\cite{Javidi1989}).  
 
+We begin by presenting the classical and quantum-inspired classifiers considered in this work (Section~\ref{sec:ml-qic}). We then describe the Joint Transform Correlator (JTC) architecture (Section~\ref{sec:jtc}), establishing its theoretical connection to distance-based similarity measures. In Section~\ref{sec:optical-implementations}, we show explicitly how the JTC can optically compute both classical distances and quantum-inspired measures, such as the trace distance. Finally, we detail our experimental implementation (Section~\ref{sec:experiments}), demonstrating a practical realization of the quantum-inspired nearest-mean classifier (QNM-C) using a single phase-only spatial light modulator (SLM) and a 1-f lens system.
 
 \section{Supervised learning and quantum-inspired classification}
 \label{sec:ml-qic}
@@ -109,8 +114,8 @@ The algorithm is trained on the training set and evaluated on the test set. In t
   \end{tabular}
   \caption{One representative example per class from the MNIST
            dataset.  Each \(28\times28\) grayscale image is flattened to a
-           \(p=784\)-dimensional feature vector before the
-           pre-processing pipeline (centering, standardisation, PCA).}
+           \(d=784\)-dimensional feature vector before the
+           pre-processing (centering, standardisation, PCA).}
   \label{fig:mnist-examples}
 \end{figure}
 
@@ -140,7 +145,7 @@ recognition:
       dimensionality.
 \end{enumerate}
 
-For our experiments, we will only use PCA.
+We apply this pre-processing pipeline to the MNIST dataset in order to reduce the dimensionality of the data and improve the performance of the classifiers. 
 
 \paragraph{Balanced accuracy.}
 Performance is summarised through the
@@ -191,12 +196,12 @@ The RBF model represents a target function as a weighted sum of Gaussian basis f
 
 We can build a simple RBF network, shown in Fig.\ref{fig:rbf-net}, that contains an input layer of
 raw features, a hidden layer of \(M\) Gaussian units, and a linear
-output layer that produces one score per class.  Every hidden unit
+output layer that produces one score per class.  Every radial (hidden) unit
 returns a similarity value
-\(
+\[
   \varphi_i(\mathbf x)=
   \exp\!\bigl[-\|\mathbf x-\mathbf t_i\|^{2}/(2\sigma_i^{2})\bigr]
-\)
+\]
 to its centre \(\mathbf t_i\) with width \(\sigma_i\), so the class score
 is a weighted sum
 \(

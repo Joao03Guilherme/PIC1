@@ -53,7 +53,7 @@ def run_correlation(ref_digit=1, obj_digit=2, slm_monitor=1):
         cam=camera,
         binary_input=True,         # Use binary input
         binary_jps=True,           # Use binary JPS
-        display_scale_factor=0.05, # Use scale factor of 0.05
+        display_scale_factor=0.01, # Use scale factor of 0.05
         sleep_time=0.1             # Time between optical passes
     )
     
