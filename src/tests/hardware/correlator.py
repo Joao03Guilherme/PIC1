@@ -181,7 +181,7 @@ def run_correlation_test(digit1, digit2, correlator, verbose=True):
     Returns:
     --------
     tuple
-        (digit1_vec, digit2_vec, shape, distance, shift, similarity, corr_plane)
+        (digit1_vec, digit2_vec, shape, peak_val, central_dc, peak_coords, corr_plane)
     """
     # Get digit images
     digit1_vec, digit2_vec, shape = get_sample_digits(digit1=digit1, digit2=digit2)
@@ -191,13 +191,25 @@ def run_correlation_test(digit1, digit2, correlator, verbose=True):
         print(f"Running optical correlation between digit {digit1} and {digit2}...")
 
     # Reshape vectors to match the expected input shape
-    digit1_vec = digit1_vec.reshape(shape[0], shape[1])
-    digit2_vec = digit2_vec.reshape(shape[0], shape[1])
-    corr_plane = correlator.correlate(
-        digit1_vec, digit2_vec
+    digit1_img = digit1_vec.reshape(shape[0], shape[1])
+    digit2_img = digit2_vec.reshape(shape[0], shape[1])
+    
+    # The correlate method returns: peak_val, central_dc, (dy, dx), correlation_plane
+    peak_val, central_dc, peak_coords, corr_plane = correlator.correlate(
+        digit1_img, digit2_img
     )
+    
+    # Calculate similarity (normalized peak) matching binary_jtc_lightpipes.py
+    similarity = peak_val / (central_dc + 1e-6)
+    
+    if verbose:
+        print(f"  Correlation results:")
+        print(f"  - Peak value: {peak_val:.4f}")
+        print(f"  - Central DC: {central_dc:.4f}")
+        print(f"  - Normalized peak: {similarity:.4f}")
+        print(f"  - Peak coordinates: {peak_coords}")
 
-    return (digit1_vec, digit2_vec, shape, corr_plane)
+    return (digit1_vec, digit2_vec, shape, peak_val, central_dc, peak_coords, corr_plane, similarity)
 
 
 def run_multi_correlation(correlator, digits_to_test=None, plot_all=False):
@@ -241,19 +253,14 @@ def run_multi_correlation(correlator, digits_to_test=None, plot_all=False):
 
         if plot_all:
             # Unpack the result
-            digit1_vec, digit2_vec, shape, distance, shift, similarity, corr_plane = (
-                result
-            )
+            digit1_vec, digit2_vec, shape, peak_val, central_dc, peak_coords, corr_plane, similarity = result
 
             # Plot this individual result
             plot_images_and_correlation(
                 digit1_vec,
                 digit2_vec,
                 shape,
-                similarity,
-                corr_plane,
-                distance,
-                shift,
+                corr_plane,  # Just pass the correlation plane
                 d1,
                 d2,
             )
@@ -262,8 +269,10 @@ def run_multi_correlation(correlator, digits_to_test=None, plot_all=False):
         sleep(1)
 
     # Create summary plot
-    similarities = [results[pair][5] for pair in digits_to_test]
-    distances = [results[pair][3] for pair in digits_to_test]
+    # Last element in result tuple is the normalized similarity
+    similarities = [results[pair][7] for pair in digits_to_test]
+    # For distances, use 1/similarity
+    distances = [1/(results[pair][7] + 1e-6) for pair in digits_to_test]
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
 
@@ -365,19 +374,21 @@ def main():
             # Run correlation tests between multiple digit pairs
             run_multi_correlation(correlator, plot_all=config["plot_all"])
         else:
-            # Run a single correlation test
-            digit1_vec, digit2_vec, shape, corr_plane = (
-                run_correlation_test(config["digit1"], config["digit2"], correlator)
+            # Run a single correlation test - update to match the new return value format
+            digit1_vec, digit2_vec, shape, peak_val, central_dc, peak_coords, corr_plane, similarity = run_correlation_test(
+                config["digit1"], config["digit2"], correlator
             )
 
             print(f"  Correlation plane shape: {corr_plane.shape}")
+            print(f"  Peak value: {peak_val:.4f}, DC: {central_dc:.4f}, Normalized peak: {similarity:.4f}")
+            print(f"  Peak coordinates: {peak_coords}")
 
             # Plot and save results
             plot_images_and_correlation(
                 digit1_vec,
                 digit2_vec,
                 shape,
-                corr_plane,
+                corr_plane,  # Just pass the correlation plane
                 config["digit1"],
                 config["digit2"],
             )
