@@ -142,7 +142,7 @@ recognition:
       \mathbf x_i=\Pi_{\text{PCA}}\mathbf u_i\in\mathbb R^{p'},
       \)
       thereby discarding redundant noise and shrinking the effective
-      dimensionality.
+      dimensionality. In the case of the MNIST dataset, the PCA will mostly remove the border pixels, that are always black, as they do not contribute to the variance of the data.
 \end{enumerate}
 
 We apply this pre-processing pipeline to the MNIST dataset in order to reduce the dimensionality of the data and improve the performance of the classifiers. 
@@ -195,7 +195,7 @@ The RBF model represents a target function as a weighted sum of Gaussian basis f
 
 
 We can build a simple RBF network, shown in Fig.\ref{fig:rbf-net}, that contains an input layer of
-raw features, a hidden layer of \(M\) Gaussian units, and a linear
+raw features, a hidden layer of \(M\) radial units, and a linear
 output layer that produces one score per class.  Every radial (hidden) unit
 returns a similarity value
 \[
@@ -221,24 +221,34 @@ is a weighted sum
 Learning splits naturally into two parts:
 \begin{enumerate}[leftmargin=1.5em,label=(\alph*)]
   \item \emph{Centre and width selection.}  
-        Mini-batch \(k\)-means clusters the training set; the cluster
+        The \(k\)-means algorithm clusters the training set; the cluster
         centroids become the RBF centres \(\mathbf t_i\).
         Each width is set to
         \(\sigma_i = k_\sigma\,\bar d_i\), where \(\bar d_i\) is the
-        average distance to the nearest neighbouring centre, with a floor
-        \(\sigma_{\min}\) to avoid underflow.
-  \item \emph{Output-weight estimation.}  
-        Defining the design matrix
-        \(
-          \Phi_{n,i}=\varphi_i(\mathbf x_n),
-        \)
-        we solve the ridge-regularised normal equations
-        \(
-          \mathbf W=(\Phi^{\!\top}\Phi+\lambda I)^{-1}\Phi^{\!\top}\mathbf T,
-        \)
-        where \(\mathbf T\) is the one-hot label matrix.
-        This closed-form step replaces slow gradient-descent procedures
-        and finishes in a single pass.
+        distance to the nearest neighbouring centre, with a floor
+        \(\sigma_{\min}\) to avoid underflow and \(k_\sigma\) is a hyperparameter.
+    \item \emph{Output-weight fit.}  
+        Evaluate every RBF on every training sample and stack the
+        responses row-by-row to form the \emph{design matrix}
+        \[
+          \Phi
+          \;=\;
+          \begin{bmatrix}
+            \varphi_0(\mathbf x_1) & \dots & \varphi_M(\mathbf x_1)\\[-2pt]
+            \vdots                 &       & \vdots\\[-2pt]
+            \varphi_0(\mathbf x_N) & \dots & \varphi_M(\mathbf x_N)
+          \end{bmatrix}
+          \in\mathbb R^{N\times(M+1)}.
+        \]
+        Each row contains the \((M{+}1)\) features of a single training
+        point, while each column shows how one basis function behaves
+        across all points.  
+        We then find a weight matrix \(\mathbf W\) that makes the linear
+        prediction \(\Phi\mathbf W\) reproduce the one-hot targets
+        \(\mathbf T\) as closely as possible (least-squares fit with a
+        small ridge term for stability).  Because the problem is linear
+        in \(\mathbf W\), the optimum follows from a single matrix solve.
+
 \end{enumerate}
 
 \smallskip
@@ -255,31 +265,26 @@ then evaluates
 \)
 and assigns the class with a winner-takes-all rule:
 \(c^\star=\arg\max_{c}f_c(\mathbf x)\).
-Because the heavy computation is the \(M\) distance evaluations, we
-replace the Euclidean metric with the optical calculated distance, allowing these distances to be calculated faster and more energy-efficiently.
-
 
 \subsection{Quantum-inspired classification}
 \label{subsec:qic}
 %--------------------------------------------------------------
 
-Quantum-inspired learning borrows mathematical objects native to
-quantum theory—\emph{density operators}, \emph{trace distance},
-\emph{superposition}—but applies them on ordinary CPUs/GPUs.  By
+Quantum-inspired learning uses the mathematical formalism native to
+quantum mechanics - density operators, trace distance, superposition — but applies them on ordinary CPUs/GPUs.  By
 embedding classical feature vectors in a Hilbert space, one can exploit
 the geometry of quantum states to obtain alternative similarity
 measures that sometimes improve accuracy or robustness compared with
-purely classical methods~\cite{Sergioli2025}. 
+purely classical methods~(\cite{Cruzeiro2024}, \cite{Sergioli2025}). 
 Every quantum-inspired algorithm must start with a function that maps each classical data vector $x$ to a density operator $\rho_x$.  
 The choice of this encoding is very important, as it determines the properties of the resulting quantum-inspired algorithm.  
 
 %--------------------------------------------------------------
 \paragraph{Density--pattern encodings.}\label{par:encodings}
-All quantum-inspired classifiers require a map that
-sends a real feature vector \(\mathbf x\in\mathbb R^{d}\) to a
+We must define a a map that sends a real feature vector \(\mathbf x\in\mathbb R^{d}\) to a
 \emph{density operator}
 \(\rho_{\mathbf x}= \tilde{\mathbf x}\,
-                    \tilde{\mathbf x}^{\!\top}\). There are different ways of doing this mapping:
+                    \tilde{\mathbf x}^{\!\top}\). There are many different ways of doing this mapping, for example:
 
 \begin{enumerate}[leftmargin=*,label=\textbf{(\alph*)}]
 %----------------------------------------------------------
@@ -347,7 +352,7 @@ For each class \(k\) with training subset
 
 \[
 \varrho_{k}=\frac{1}{\lvert\mathcal S_{k}^{\mathrm{tr}}\rvert}
-            \sum_{(\mathbf x_i,k)\in\mathcal S_{k}^{\mathrm{tr}}}
+            \sum_{(\mathbf x_i)\in\mathcal S_{k}^{\mathrm{tr}}}
             \rho_{\mathbf x_i}.
 \]
 
@@ -364,10 +369,12 @@ Similarity between two density patterns is quantified by the
 \]
 where \(\lvert A\rvert=\sqrt{A^{\dagger}A}\). Note that the trace distance defines a metric; it satisfies the triangle inequality, $d_{tr}(\rho, \sigma) \geq 0$ and $d_{tr}(\rho, \sigma) = d_{tr}(\sigma, \rho)$, and is equal to zero if and only if $\rho = \sigma$.
 
+\smallskip
+
 Having defined the quantum centroid and quantum distance, we can now define the quantum-inspired version of the nearest-mean classifier.
 
 \paragraph{Quantum-inspired nearest-mean classifier (QNM-C).}
-The quantum-inspired nearest-mean classifier (QNM-C) is the exact same as the CNM-C, but uses the quantum centroid and quantum distance instead of the classical centroid and Euclidean distance. The algorithm is as follows:
+The QNM-C is the exact same as the CNM-C, but uses the quantum centroid and quantum distance instead of the classical centroid and Euclidean distance. The algorithm is as follows:
 \begin{enumerate}[leftmargin=*,label=(\alph*)]
     \item Encode every training sample \(\mathbf x_i\) as a density operator
       \(\rho_{\mathbf x_i}\) using one of the encodings described in \ref{par:encodings}.
@@ -456,6 +463,7 @@ Therefore, we just need to measure the intensity of the cross-correlation peaks 
 This gives us a value of $1$ when the two images are identical and $0$ when they are completely different.
 
 %------------------------------------------------------
+\iffalse
 \begin{figure}[htbp]
   \centering
   \begin{subfigure}[b]{\linewidth}
@@ -480,6 +488,7 @@ This gives us a value of $1$ when the two images are identical and $0$ when they
            shows no significant peaks for an unrelated image.}%
   \label{fig:jtc-diagram}
 \end{figure}
+\fi
 %------------------------------------------------------
 
 This is the classical version of the JTC. There have been proposals of introducing some non-linearity both at the fourier plane and input plane, and that improves the performance of the JTC (\cite{Psaltis1984}, \cite{Javidi1989}, \cite{Dragulinescu2023}, \cite{alfalou2024understanding}).  

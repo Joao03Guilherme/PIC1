@@ -44,6 +44,7 @@
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Ilustration of the CNM-C decision rule. The training set is split into two classes and the centroids are computed. The nearest centroid to the test sample is selected as the predicted class.\relax }}{2}{figure.caption.7}\protected@file@percent }
 \newlabel{fig:nearest_mean_classifier}{{2}{2}{Ilustration of the CNM-C decision rule. The training set is split into two classes and the centroids are computed. The nearest centroid to the test sample is selected as the predicted class.\relax }{figure.caption.7}{}}
 \@writefile{toc}{\contentsline {paragraph}{Radial-Basis-Function Classifier (RBF-C).}{2}{paragraph*.8}\protected@file@percent }
+\citation{Cruzeiro2024}
 \citation{Sergioli2025}
 \citation{Sergioli2025}
 \@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Architecture of the RBF network. The input layer feeds into a hidden layer of radial units, each centered at \(\mathbf  {t}_i\) with width \(\sigma _i\). The output layer combines the gaussian responses through learned weights \(w_{ij}\), followed by a winner-takes-all decision stage to determine the predicted class.\relax }}{3}{figure.caption.9}\protected@file@percent }
@@ -54,13 +55,13 @@
 \newlabel{par:encodings}{{ii}{3}{Density--pattern encodings}{paragraph*.10}{}}
 \@writefile{toc}{\contentsline {paragraph}{Quantum centroid.}{3}{paragraph*.11}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Quantum distance measure.}{3}{paragraph*.12}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Quantum-inspired nearest-mean classifier (QNM-C).}{3}{paragraph*.13}\protected@file@percent }
 \citation{Javidi1989}
 \citation{Psaltis1984}
 \citation{Javidi1989}
 \citation{Dragulinescu2023}
 \citation{alfalou2024understanding}
 \citation{Javidi1989}
+\@writefile{toc}{\contentsline {paragraph}{Quantum-inspired nearest-mean classifier (QNM-C).}{4}{paragraph*.13}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {III}Joint Transform Correlator}{4}{section.3}\protected@file@percent }
 \newlabel{sec:jtc}{{III}{4}{Joint Transform Correlator}{section.3}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {i}Classical Joint Transform Correlator}{4}{subsection.3.1}\protected@file@percent }
@@ -70,49 +71,39 @@
 \@writefile{toc}{\contentsline {paragraph}{Operational principle.}{4}{paragraph*.15}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {ii}Binary Joint Transform Correlator}{4}{subsection.3.2}\protected@file@percent }
 \newlabel{subsec:binary-jtc}{{ii}{4}{Binary Joint Transform Correlator}{subsection.3.2}{}}
-\newlabel{fig:corr-shifted}{{5a}{5}{Original image vs.\ shifted copy\relax }{figure.caption.16}{}}
-\newlabel{sub@fig:corr-shifted}{{a}{5}{Original image vs.\ shifted copy\relax }{figure.caption.16}{}}
-\newlabel{fig:corr-random}{{5b}{5}{Original image vs.\ random image\relax }{figure.caption.16}{}}
-\newlabel{sub@fig:corr-random}{{b}{5}{Original image vs.\ random image\relax }{figure.caption.16}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Normalized correlation-plane intensity produced by the joint transform correlator (with a simple Python FFT algorithm): (a) shows two strong off-axis peaks because the query is a shifted version of the reference, whereas (b) shows no significant peaks for an unrelated image.\relax }}{5}{figure.caption.16}\protected@file@percent }
-\newlabel{fig:jtc-diagram}{{5}{5}{Normalized correlation-plane intensity produced by the joint transform correlator (with a simple Python FFT algorithm): (a) shows two strong off-axis peaks because the query is a shifted version of the reference, whereas (b) shows no significant peaks for an unrelated image.\relax }{figure.caption.16}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {iii}JTC-based dissimilarity}{5}{subsection.3.3}\protected@file@percent }
 \newlabel{subsec:jtc-dissimilarity}{{iii}{5}{JTC-based dissimilarity}{subsection.3.3}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {IV}Optical implementations of the classifiers}{5}{section.4}\protected@file@percent }
 \newlabel{sec:optical-implementations}{{IV}{5}{Optical implementations of the classifiers}{section.4}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {i}Optical implementation of the CNM-C and RBF-C}{5}{subsection.4.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {ii}Optical implementation of the QNM–C}{5}{subsection.4.2}\protected@file@percent }
-\newlabel{fig:jtc-bin-input}{{6a}{6}{Binary input images of the JTC, notice the grid introduced by the fill-factor of the SLM.\relax }{figure.caption.17}{}}
-\newlabel{sub@fig:jtc-bin-input}{{a}{6}{Binary input images of the JTC, notice the grid introduced by the fill-factor of the SLM.\relax }{figure.caption.17}{}}
-\newlabel{fig:jtc-bin-jps}{{6b}{6}{Binary joint power spectrum produced after tresholding the joint power spectrum measured by the camera.\relax }{figure.caption.17}{}}
-\newlabel{sub@fig:jtc-bin-jps}{{b}{6}{Binary joint power spectrum produced after tresholding the joint power spectrum measured by the camera.\relax }{figure.caption.17}{}}
-\newlabel{fig:jtc-bin-corr-plane}{{6c}{6}{Correlation plane intensity, showing the cross-correlation peaks at the off-axis positions.\relax }{figure.caption.17}{}}
-\newlabel{sub@fig:jtc-bin-corr-plane}{{c}{6}{Correlation plane intensity, showing the cross-correlation peaks at the off-axis positions.\relax }{figure.caption.17}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Python-based optical simulation of a binary-input Joint Transform Correlator, implemented with LightPipes for realistic wave-propagation and Fourier-transform modeling.\relax }}{6}{figure.caption.17}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Scatter plot of the JTC dissimilarity versus the Euclidean distance for $100$ random pairs of MNIST digits. The coefficient of determination is \(R^{2}=0.428\). While the $R^2$ value is relatively low, multiple outliers contribute to this reduction. However, the general trend of the data is well captured by the fitted line, indicating a meaningful correlation between JTC dissimilarity and Euclidean distance.\relax }}{6}{figure.caption.18}\protected@file@percent }
-\newlabel{fig:euclidean_vs_jtc}{{7}{6}{Scatter plot of the JTC dissimilarity versus the Euclidean distance for $100$ random pairs of MNIST digits. The coefficient of determination is \(R^{2}=0.428\). While the $R^2$ value is relatively low, multiple outliers contribute to this reduction. However, the general trend of the data is well captured by the fitted line, indicating a meaningful correlation between JTC dissimilarity and Euclidean distance.\relax }{figure.caption.18}{}}
-\@writefile{toc}{\contentsline {paragraph}{Purity.}{6}{paragraph*.19}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Fidelity.}{6}{paragraph*.20}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Trace distance from fidelity.}{6}{paragraph*.21}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Trace distance vs. fidelity distance computed with the JTC for the quantum-inspired nearest-mean classifier (QNM-C) using the inverse stereographic encoding. The $R^2$ value of $0.986$ indicates a strong linear relationship between the two measures, confirming that the JTC can effectively estimate the trace distance from the fidelity.\relax }}{7}{figure.caption.22}\protected@file@percent }
-\newlabel{fig:trace_vs_fidelity}{{8}{7}{Trace distance vs. fidelity distance computed with the JTC for the quantum-inspired nearest-mean classifier (QNM-C) using the inverse stereographic encoding. The $R^2$ value of $0.986$ indicates a strong linear relationship between the two measures, confirming that the JTC can effectively estimate the trace distance from the fidelity.\relax }{figure.caption.22}{}}
-\@writefile{toc}{\contentsline {paragraph}{Uhlmann's theorem.}{7}{paragraph*.23}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Choosing the correct encoding.}{7}{paragraph*.24}\protected@file@percent }
-\newlabel{tab:centroid-purity}{{\caption@xref {tab:centroid-purity}{ on input line 644}}{7}{Choosing the correct encoding}{table.caption.25}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Centroid purity for each MNIST class under the three encodings described in sec..\relax }}{7}{table.caption.25}\protected@file@percent }
+\newlabel{fig:jtc-bin-input}{{5a}{5}{Binary input images of the JTC, notice the grid introduced by the fill-factor of the SLM.\relax }{figure.caption.16}{}}
+\newlabel{sub@fig:jtc-bin-input}{{a}{5}{Binary input images of the JTC, notice the grid introduced by the fill-factor of the SLM.\relax }{figure.caption.16}{}}
+\newlabel{fig:jtc-bin-jps}{{5b}{5}{Binary joint power spectrum produced after tresholding the joint power spectrum measured by the camera.\relax }{figure.caption.16}{}}
+\newlabel{sub@fig:jtc-bin-jps}{{b}{5}{Binary joint power spectrum produced after tresholding the joint power spectrum measured by the camera.\relax }{figure.caption.16}{}}
+\newlabel{fig:jtc-bin-corr-plane}{{5c}{5}{Correlation plane intensity, showing the cross-correlation peaks at the off-axis positions.\relax }{figure.caption.16}{}}
+\newlabel{sub@fig:jtc-bin-corr-plane}{{c}{5}{Correlation plane intensity, showing the cross-correlation peaks at the off-axis positions.\relax }{figure.caption.16}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Python-based optical simulation of a binary-input Joint Transform Correlator, implemented with LightPipes for realistic wave-propagation and Fourier-transform modeling.\relax }}{5}{figure.caption.16}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Scatter plot of the JTC dissimilarity versus the Euclidean distance for $100$ random pairs of MNIST digits. The coefficient of determination is \(R^{2}=0.428\). While the $R^2$ value is relatively low, multiple outliers contribute to this reduction. However, the general trend of the data is well captured by the fitted line, indicating a meaningful correlation between JTC dissimilarity and Euclidean distance.\relax }}{6}{figure.caption.17}\protected@file@percent }
+\newlabel{fig:euclidean_vs_jtc}{{6}{6}{Scatter plot of the JTC dissimilarity versus the Euclidean distance for $100$ random pairs of MNIST digits. The coefficient of determination is \(R^{2}=0.428\). While the $R^2$ value is relatively low, multiple outliers contribute to this reduction. However, the general trend of the data is well captured by the fitted line, indicating a meaningful correlation between JTC dissimilarity and Euclidean distance.\relax }{figure.caption.17}{}}
+\@writefile{toc}{\contentsline {paragraph}{Purity.}{6}{paragraph*.18}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Fidelity.}{6}{paragraph*.19}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Trace distance from fidelity.}{6}{paragraph*.20}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Trace distance vs. fidelity distance computed with the JTC for the quantum-inspired nearest-mean classifier (QNM-C) using the inverse stereographic encoding. The $R^2$ value of $0.986$ indicates a strong linear relationship between the two measures, confirming that the JTC can effectively estimate the trace distance from the fidelity.\relax }}{6}{figure.caption.21}\protected@file@percent }
+\newlabel{fig:trace_vs_fidelity}{{7}{6}{Trace distance vs. fidelity distance computed with the JTC for the quantum-inspired nearest-mean classifier (QNM-C) using the inverse stereographic encoding. The $R^2$ value of $0.986$ indicates a strong linear relationship between the two measures, confirming that the JTC can effectively estimate the trace distance from the fidelity.\relax }{figure.caption.21}{}}
+\@writefile{toc}{\contentsline {paragraph}{Uhlmann's theorem.}{6}{paragraph*.22}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Choosing the correct encoding.}{7}{paragraph*.23}\protected@file@percent }
+\newlabel{tab:centroid-purity}{{\caption@xref {tab:centroid-purity}{ on input line 653}}{7}{Choosing the correct encoding}{table.caption.24}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Centroid purity for each MNIST class under the three encodings described in sec..\relax }}{7}{table.caption.24}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {iii}Optical implementation of the RBF-C and CNM-C classifiers}{7}{subsection.4.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {iv}Computational simulations}{7}{subsection.4.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Balanced accuracy (\%\,mean $\pm $ std.) on MNIST. For the classical classifiers (RBF-C and CNM-C) the encoding is not applicable, so we leave it empty. For the quantum-inspired classifier (QNM-C) we show the results for the three encodings described in Sec.~\ref {par:encodings}. The Fidelity distance is being calculated using the JTC, as described in Sec.~\ref {subsec:qic}. The two best results are in \textbf  {bold}.\relax }}{7}{table.caption.25}\protected@file@percent }
+\newlabel{tab:cls-results}{{2}{7}{Balanced accuracy (\%\,mean $\pm $ std.) on MNIST. For the classical classifiers (RBF-C and CNM-C) the encoding is not applicable, so we leave it empty. For the quantum-inspired classifier (QNM-C) we show the results for the three encodings described in Sec.~\ref {par:encodings}. The Fidelity distance is being calculated using the JTC, as described in Sec.~\ref {subsec:qic}. The two best results are in \textbf {bold}.\relax }{table.caption.25}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {V}Experimental results}{7}{section.5}\protected@file@percent }
+\newlabel{sec:results}{{V}{7}{Experimental results}{section.5}{}}
 \bibdata{references}
 \bibcite{alfalou2024understanding}{1}
 \bibcite{Cruzeiro2024}{2}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Balanced accuracy (\%\,mean $\pm $ std.) on MNIST. For the classical classifiers (RBF-C and CNM-C) the encoding is not applicable, so we leave it empty. For the quantum-inspired classifier (QNM-C) we show the results for the three encodings described in Sec.~\ref {par:encodings}. The Fidelity distance is being calculated using the JTC, as described in Sec.~\ref {subsec:qic}. The two best results are in \textbf  {bold}.\relax }}{8}{table.caption.26}\protected@file@percent }
-\newlabel{tab:cls-results}{{2}{8}{Balanced accuracy (\%\,mean $\pm $ std.) on MNIST. For the classical classifiers (RBF-C and CNM-C) the encoding is not applicable, so we leave it empty. For the quantum-inspired classifier (QNM-C) we show the results for the three encodings described in Sec.~\ref {par:encodings}. The Fidelity distance is being calculated using the JTC, as described in Sec.~\ref {subsec:qic}. The two best results are in \textbf {bold}.\relax }{table.caption.26}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {V}Experimental results}{8}{section.5}\protected@file@percent }
-\newlabel{sec:results}{{V}{8}{Experimental results}{section.5}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Schematic of the experimental setup for the JTC-based optical correlator. The laser beam is expanded and collimated, modulated by the SLM, and Fourier-transformed onto the CMOS camera.\relax }}{8}{figure.caption.27}\protected@file@percent }
-\newlabel{fig:exp-setup}{{9}{8}{Schematic of the experimental setup for the JTC-based optical correlator. The laser beam is expanded and collimated, modulated by the SLM, and Fourier-transformed onto the CMOS camera.\relax }{figure.caption.27}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {VI}Conclusion}{8}{section.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {VII}Future Work}{8}{section.7}\protected@file@percent }
 \bibcite{Dragulinescu2023}{3}
 \bibcite{Foor1995}{4}
 \bibcite{Javidi1989}{5}
@@ -121,4 +112,8 @@
 \bibcite{Sergioli2025}{8}
 \bibcite{VanderLugt1964}{9}
 \bibstyle{plain}
-\gdef \@abspage@last{10}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Schematic of the experimental setup for the JTC-based optical correlator. The laser beam is expanded and collimated, modulated by the SLM, and Fourier-transformed onto the CMOS camera.\relax }}{8}{figure.caption.26}\protected@file@percent }
+\newlabel{fig:exp-setup}{{8}{8}{Schematic of the experimental setup for the JTC-based optical correlator. The laser beam is expanded and collimated, modulated by the SLM, and Fourier-transformed onto the CMOS camera.\relax }{figure.caption.26}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Conclusion}{8}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VII}Future Work}{8}{section.7}\protected@file@percent }
+\gdef \@abspage@last{9}
