@@ -1,190 +1,139 @@
-"""optical_jtc_correlator.py
---------------------------------------------------
-Real‑hardware implementation of the *binary_jtc_lightpipes.py* demo.
+#!/usr/bin/env python3
+"""
+optical_jtc_correlator_exulus.py
+--------------------------------
+Real-hardware binary / analogue Joint-Transform Correlator driven by
 
-► Uses the very same helper functions •create_joint_input_plane• and
-  •perform_jtc_correlation• logic, but replaces LightPipes propagation
-  with an SLM/Camera hardware loop.
+  • **ExulusSLM**  – thin Python wrapper around Thorlabs EXULUS SDK  
+  • **UC480Controller**  – IDS µEye / Thorlabs DCC1545M camera
 
-► Requires two thin wrapper classes already provided elsewhere in the
-  project:
-    • UC480Controller  – IDS µEye / Thorlabs DCC1545M‑style camera
-    • SLMdisplay       – Display‑port driven reflective LCoS SLM
+It follows the same algorithmic flow as *binary_jtc_lightpipes_checkerboard_plot.py*
+but performs the two optical passes on real hardware.
 
-The correlator works in two passes exactly like the simulated Joint
-Transform Correlator (JTC):
-
- 1.  Joint input plane (reference + object) is shown on the SLM, the
-     camera records the raw Joint‑Power Spectrum (JPS).
- 2.  The JPS is optionally binarised, then uploaded back to the SLM.
-     A second camera exposure returns the correlation plane – from
-     which the correlation peaks are extracted.
-
-All amplitude values shown on the SLM are 8‑bit (0‑127) in order to fit
-both positive and negative logic levels of the binary JTC on a
-commercial 8‑bit display pipeline.
+Highlights
+----------
+* **checkerboard** keyword toggles a π-phase chequerboard on the input plane,
+  mirroring the LightPipes simulation option.
+* No plotting or GUI code – this class does *only* the correlation and returns
+  metrics (optionally the raw camera planes) to the caller.
+* Half-wave stroke is selected by default; calibration coefficients *m*, *b*
+  (phase = m·grey + b) are passed straight to the Exulus driver.
 """
 from __future__ import annotations
 
 import time
-from pathlib import Path
-from typing import Any, Dict, Tuple
 import contextlib
+from pathlib import Path
+from typing import Tuple, Any
 
 import numpy as np
-import matplotlib.pyplot as plt
-from PIL import Image
 
-# ------------------------------------------------------------------
-# Local project imports (hardware abstraction layers)
-# ------------------------------------------------------------------
-from ..hardware.devices.Camera import UC480Controller  # noqa: E402, F401
-from ..hardware.devices.SLM import SLMdisplay          # noqa: E402, F401
+# ------------- local hardware abstraction layers ----------------
+from ..hardware.devices.Camera import UC480Controller          # camera
+from ..hardware.devices.SLM import ExulusSLM         # SLM
 
-###############################################################################
-# Constants & pure‑Python helpers (identical to binary_jtc_lightpipes.py)     #
-###############################################################################
+# ----------------------------------------------------------------
+EPS = 1e-6            # avoid divide-by-zero in normalisation
+GREY_RANGE = 127      # use 0..127 for (-1, +1) binary logic
 
-EPS = 1e-6  # avoid divide‑by‑zero
+# ----------------------------------------------------------------
+# Helper: ±1 checkerboard (one-pixel pitch)
+# ----------------------------------------------------------------
+def _checkerboard(shape: Tuple[int, int]) -> np.ndarray:
+    idx_sum = np.indices(shape).sum(axis=0)
+    return 1.0 - 2.0 * (idx_sum % 2)     # 0 → +1, 1 → –1
 
-# ------------------------------------------------------------------
-# create_joint_input_plane (VERBATIM from binary_jtc_lightpipes.py)
-# ------------------------------------------------------------------
-
+# ----------------------------------------------------------------
+# Helper: side-by-side reference/object canvas (identical logic to sim)
+# ----------------------------------------------------------------
 def create_joint_input_plane(
-    digit_array_ref: np.ndarray,
-    digit_array_obj: np.ndarray,
+    ref: np.ndarray,
+    obj: np.ndarray,
     slm_shape: Tuple[int, int],
     thresh,
-    display_scale_factor: float = 0.2,
+    scale: float = 0.05,
     binarize: bool = True,
 ) -> np.ndarray:
-    """Return an SLM‑sized plane containing reference & object side‑by‑side.
+    rows, cols = slm_shape
 
-    Parameters
-    ----------
-    digit_array_ref, digit_array_obj
-        2‑D float arrays in range 0–1 (MNIST digits, for instance).
-    slm_shape
-        (rows, cols) of the physical SLM panel.
-    thresh
-        Manual threshold for binarisation; *None* → median of canvas.
-    display_scale_factor
-        Additional down‑scaling so the digits take only a fraction of the
-        SLM area (allows wider reference/object spacing without
-        clipping).
-    binarize
-        If *True* → output values in {‑1, +1}; else scaled 0–1.
-    """
-    slm_rows, slm_cols = slm_shape
+    to255 = lambda a: np.zeros_like(a, np.uint8) if a.max() == 0 else (
+        a / a.max() * 255).astype(np.uint8)
+    ref255, obj255 = to255(ref), to255(obj)
 
-    # --- helper: bring each digit to 0‑255 ---------------------------------
-    def _scale_0_255(arr: np.ndarray) -> np.ndarray:
-        m = arr.max()
-        return (np.zeros_like(arr, np.uint8) if m == 0 else
-                np.round(arr / m * 255).astype(np.uint8))
+    combo = np.hstack((ref255, obj255))          # e.g. 28×56 for MNIST
+    h0, w0 = combo.shape
+    fac = min(rows / h0, cols / w0) * scale
+    w_new, h_new = max(1, int(w0 * fac)), max(1, int(h0 * fac))
 
-    ref_255 = _scale_0_255(digit_array_ref)
-    obj_255 = _scale_0_255(digit_array_obj)
+    from PIL import Image
+    combo_rs = Image.fromarray(combo).resize((w_new, h_new), Image.BICUBIC)
 
-    # --- side‑by‑side canvas ----------------------------------------------
-    combo = np.hstack((ref_255, obj_255))             # 28 × 56 for MNIST
-    H0, W0 = combo.shape
-
-    scale = min(slm_rows / H0, slm_cols / W0)
-    Wf = int(max(1, W0 * scale * display_scale_factor))
-    Hf = int(max(1, H0 * scale * display_scale_factor))
-
-    combo_rs = Image.fromarray(combo).resize((Wf, Hf), Image.BICUBIC)
-
-    canvas = np.zeros((slm_rows, slm_cols), float)
-    y0, x0 = (slm_rows - Hf) // 2, (slm_cols - Wf) // 2
-    canvas[y0 : y0 + Hf, x0 : x0 + Wf] = np.asarray(combo_rs, float)
+    canvas = np.zeros(slm_shape, float)
+    y0, x0 = (rows - h_new) // 2, (cols - w_new) // 2
+    canvas[y0:y0 + h_new, x0:x0 + w_new] = np.asarray(combo_rs, float)
 
     if binarize:
-        t = np.median(canvas) if thresh is None else thresh
-        return np.where(canvas > t, 1.0, -1.0)
-
+        thr = np.median(canvas) if thresh is None else thresh
+        return np.where(canvas > thr, 1., -1.)
     return (canvas - canvas.min()) / (canvas.ptp() + EPS)
 
 
-# ------------------------------------------------------------------
-# Helper: minimal padding so images always match SLM pixel matrix
-# ------------------------------------------------------------------
-
-def _pad_to_slm(img: np.ndarray, slm_shape: Tuple[int, int]) -> np.ndarray:
-    """Zero‑pad *img* to exactly *slm_shape* (centre‑aligned)."""
-    tgt_h, tgt_w = slm_shape
-    h, w = img.shape
-    out = np.zeros((tgt_h, tgt_w), dtype=img.dtype)
-    y0, x0 = (tgt_h - h) // 2, (tgt_w - w) // 2
-    out[y0 : y0 + h, x0 : x0 + w] = img
-    return out
-
-###############################################################################
-# Core class                                                                  #
-###############################################################################
-
+# ----------------------------------------------------------------
+# Core class
+# ----------------------------------------------------------------
 class OpticalJTCorrelator:
-    """Real‑hardware Joint Transform Correlator.
-
-    The class replicates the two‑pass binary/analogue JTC workflow from
-    *binary_jtc_lightpipes.py*, but swaps out the numerical propagation
-    for:
-        • SLMdisplay.updateArray()   – writes patterns to an LCoS SLM
-        • UC480Controller.snap()     – grabs frames from a camera at the
-                                        Fourier plane.
     """
+    Two-pass hardware Joint-Transform Correlator.
 
-    # ------------------------------------------------------------------
-    # Construction
-    # ------------------------------------------------------------------
+    Parameters
+    ----------
+    slm                 : existing ExulusSLM handle (or None → open new)
+    cam                 : existing UC480Controller handle (or None → new)
+    binary_input        : if True, ±1 encoding for the joint input
+    binary_jps          : if True, binarise the JPS before second pass
+    checkerboard        : if True, multiply input by ±1 chequerboard
+    display_scale       : down-scale for digits on SLM (same as sim)
+    sleep_time          : seconds to wait after each upload (exposure)
+    blocking_fraction   : half-width of DC-blocking square relative to
+                          shorter image dimension
+    """
 
     def __init__(
         self,
-        slm: SLMdisplay | None = None,
-        cam: UC480Controller | None = None,
         *,
-        slm_monitor: int = 1,
-        cam_serial: str | None = None,
+        slm: ExulusSLM | None = None,
+        cam: UC480Controller | None = None,
         binary_input: bool = True,
         binary_jps: bool = True,
-        display_scale_factor: float = 0.05,
+        checkerboard: bool = False,
+        display_scale: float = 0.05,
         sleep_time: float = 0.1,
-        blocking_factor: float = 0.005,
+        blocking_fraction: float = 0.005,
+        exulus_kwargs: dict[str, Any] | None = None,
     ) -> None:
-        # Hardware handles ------------------------------------------------
-        self.slm = slm or SLMdisplay(monitor=slm_monitor)
-        self.cam = cam or UC480Controller(serial=cam_serial)
 
-        # Operating parameters -------------------------------------------
+        self.slm = slm or ExulusSLM(**(exulus_kwargs or {}))
+        self.cam = cam or UC480Controller()
+
         self.binary_input = binary_input
         self.binary_jps = binary_jps
-        self.display_scale_factor = display_scale_factor
+        self.checkerboard = checkerboard
+        self.display_scale = display_scale
         self.sleep_time = sleep_time
-        self.blocking_factor = blocking_factor
+        self.blocking_fraction = blocking_fraction
 
-        # Cache SLM geometry ---------------------------------------------
-        self.slm_w, self.slm_h = self.slm.getSize()
-        print(
-            f"[OpticalJTCorrelator] SLM: {self.slm_w}×{self.slm_h}  |  "
-            f"binary_input={self.binary_input}  binary_jps={self.binary_jps}"
-        )
+        self.w, self.h = self.slm.width, self.slm.height
+        print(f"[OpticalJTC] SLM {self.w}×{self.h}  "
+              f"binary_input={binary_input}  binary_jps={binary_jps}  "
+              f"checkerboard={checkerboard}")
 
-    # ------------------------------------------------------------------
-    # First pass – joint input ➜ JPS
-    # ------------------------------------------------------------------
-
-    def _upload_and_snap(self, img_8bit: np.ndarray) -> np.ndarray:
-        """Upload *img_8bit* to the SLM and return a camera frame."""
-        self.slm.updateArray(img_8bit)
+    # ------------- private wrappers ---------------------------------
+    def _upload_and_snap(self, grey_img: np.ndarray) -> np.ndarray:
+        self.slm.display_grey(grey_img)
         time.sleep(self.sleep_time)
         return self.cam.snap().astype(np.float32)
 
-    # ------------------------------------------------------------------
-    # Public API – one full correlation cycle
-    # ------------------------------------------------------------------
-
+    # ------------- public API ---------------------------------------
     def correlate(
         self,
         ref_digit: np.ndarray,
@@ -193,97 +142,54 @@ class OpticalJTCorrelator:
         input_thresh=None,
         jps_thresh=None,
         return_planes: bool = False,
-    ) -> Tuple[float, float, Tuple[int, int]] | Tuple[Any, ...]:
-        """Run the two‑pass JTC and return correlation metrics.
-
-        Returns (peak_val, central_dc, (dy, dx)) by default.  If
-        *return_planes* is True, also returns the raw camera planes
-        (JPS, correlation, masked correlation).
-        """
-        # --- 1. Joint input plane ---------------------------------------
+    ):
+        """Return (peak, dc, (dy,dx)) or the full set if return_planes."""
+        # 1. build joint input
         a0 = create_joint_input_plane(
-            ref_digit,
-            obj_digit,
-            (self.slm_h, self.slm_w),
-            input_thresh,
-            display_scale_factor=self.display_scale_factor,
+            ref_digit, obj_digit, (self.h, self.w),
+            thresh=input_thresh,
+            scale=self.display_scale,
             binarize=self.binary_input,
         )
+        if self.checkerboard:
+            a0 *= _checkerboard((self.h, self.w))
 
+        # map to 8-bit (0..127)
         if self.binary_input:
-            a0_disp = ((a0 + 1) / 2 * 127).astype(np.uint8)
+            a0_grey = np.round((a0 + 1) / 2 * GREY_RANGE).astype(np.uint8)
         else:
-            a0_disp = np.round(a0 * 127).astype(np.uint8)
+            a0_grey = np.round(a0 * GREY_RANGE).astype(np.uint8)
 
-        jps_raw = self._upload_and_snap(a0_disp)
+        jps_raw = self._upload_and_snap(a0_grey)
 
-        # --- 2. JPS processing / second pass ----------------------------
+        # 2. process JPS, second pass
         if self.binary_jps:
             thr = np.median(jps_raw) if jps_thresh is None else jps_thresh
             jps_phase = np.where(jps_raw > thr, 1.0, -1.0)
-            jps_disp = ((jps_phase + 1) / 2 * 127).astype(np.uint8)
+            jps_grey = np.round((jps_phase + 1) / 2 * GREY_RANGE).astype(np.uint8)
         else:
             jps_norm = jps_raw / (jps_raw.max() + EPS)
-            jps_disp = np.round(jps_norm * 127).astype(np.uint8)
+            jps_grey = np.round(jps_norm * GREY_RANGE).astype(np.uint8)
 
-        jps_disp = _pad_to_slm(jps_disp, (self.slm_h, self.slm_w))
-        corr_plane = self._upload_and_snap(jps_disp)
+        corr_plane = self._upload_and_snap(jps_grey)
 
-        # --- 3. Extract metrics -----------------------------------------
+        # 3. extract metrics
         cy, cx = np.array(corr_plane.shape) // 2
-        central_dc = corr_plane.max()
+        dc_val = corr_plane.max()
 
         masked = corr_plane.copy()
-        r = int(min(corr_plane.shape) * self.blocking_factor)
-        masked[cy - r : cy + r + 1, cx - r : cx + r + 1] = 0.0
+        r = int(min(masked.shape) * self.blocking_fraction)
+        masked[cy - r:cy + r + 1, cx - r:cx + r + 1] = 0.0
 
         peak_val = masked.max()
         py, px = np.unravel_index(masked.argmax(), masked.shape)
         dy, dx = py - cy, px - cx
 
         if return_planes:
-            return (
-                peak_val,
-                central_dc,
-                (dy, dx),
-                jps_raw,
-                corr_plane,
-                masked,
-            )
+            return peak_val, dc_val, (dy, dx), a0_grey, jps_grey, corr_plane, masked
+        return peak_val, dc_val, (dy, dx)
 
-        return peak_val, central_dc, (dy, dx)
-
-    # ------------------------------------------------------------------
-    # Utility visualisation (optional)
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _show(img, ax, title, cmap="gray"):
-        im = ax.imshow(img, cmap=cmap)
-        ax.set_title(title)
-        ax.axis("off")
-        return im
-
-    def debug_plot(
-        self,
-        joint_input_disp: np.ndarray,
-        jps_raw: np.ndarray,
-        corr_plane: np.ndarray,
-        masked: np.ndarray,
-    ) -> None:
-        """Visual helper to verify each plane."""
-        fig, axs = plt.subplots(1, 4, figsize=(20, 4))
-        self._show(joint_input_disp, axs[0], "Joint input (SLM)")
-        self._show(jps_raw, axs[1], "JPS (camera)")
-        self._show(corr_plane, axs[2], "Correlation plane")
-        self._show(masked, axs[3], "Masked correlation")
-        plt.tight_layout()
-        plt.show()
-
-    # ------------------------------------------------------------------
-    # Context‑manager sugar & tidy‑up
-    # ------------------------------------------------------------------
-
+    # ------------- context-manager sugar ----------------------------
     def close(self) -> None:
         with contextlib.suppress(Exception):
             self.slm.close()

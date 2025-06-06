@@ -1,230 +1,178 @@
-from __future__ import annotations
+#!/usr/bin/env python3
+"""
+binary_jtc_lightpipes_checkerboard_plot.py
+------------------------------------------
+Same JTC as before, now returning and plotting:
 
-from LightPipes import *           # optical propagation – NO NumPy FFTs
+  1. Input pattern sent to the SLM (after optional checkerboard)
+  2. Binarised Joint-Power-Spectrum phase map sent back to the SLM
+  3. Correlation plane cropped to the camera field of view
+"""
+from __future__ import annotations
+from LightPipes import *
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
-import sys
-import argparse
+import argparse, sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
-from data.data import get_test_data         # helper for MNIST/F-MNIST
+from data.data import get_test_data
 
 EPS = 1e-6
 
-# -------------------------- real-SLM parameters ----------------------------
-slm_resolution = (1920, 1200)          # (cols, rows) – informational only
-active_area    = (15.42e-3, 9.66e-3)   # physical size (width, height) [m]
-pixel_pitch    = 8e-6                  # 8 µm  (≈ active_area[0]/1920)
-fill_factor    = 0.89                 # 92 % duty cycle (open area)
+# ───────────── geometry & optics ─────────────
+slm_res      = (1920, 1200)
+active_area  = (15.42e-3, 9.66e-3)
+pixel_pitch  = 8e-6
+fill_factor  = 0.89
 
-# ---------------------- optical / simulation settings ----------------------
-wavelength = 633e-9                    # 633 nm He–Ne
-f_lens     = 100e-3                    # 100 mm Fourier lens (×2 passes)
-N          = 2048                      # simulation grid (square)
+cam_res      = (1280, 1024)
+cam_area     = (4.608e-3, 3.686e-3)
 
-slm_size   = active_area[0]            # use SLM width for LightPipes window
-beam_waist = 1.1 * slm_size            # 
+wavelength   = 845e-9
+f_len        = 75e-3
+N            = 2048
 
-# binary threshold for digits (0-255); None → median of canvas
-img_thresh = None
+slm_size     = active_area[0]
+beam_waist   = 1.1 * slm_size
 
-# ---------------------------------------------------------------------------
-# Helper: build pixel-grid amplitude mask (returns values ∈ {0,1})
-# ---------------------------------------------------------------------------
-
-def make_slm_aperture(grid_shape: tuple[int, int],
-                      slm_shape: tuple[int, int],
-                      fill_factor: float = 0.88) -> np.ndarray:
-    """Return a binary mask representing the SLM pixel aperture.
-
-    A value of 1 means light is transmitted by the pixel; 0 represents the
-    inter-pixel gap (dark metal).  The mask is centred on the simulation
-    window, which is square (size = *slm_size*).  Pixels outside the real SLM
-    active area are set to 0 (black frame).
-    """
-    Ny, Nx = grid_shape                # LightPipes: (rows, cols)
-    cols_slm, rows_slm = slm_shape
-
-    # Generate physical x/y coordinates for the simulation grid (metres)
-    x = np.linspace(-slm_size/2, slm_size/2, Nx, endpoint=False)
-    y = np.linspace(-slm_size/2, slm_size/2, Ny, endpoint=False)
+# ───────────── SLM pixel aperture mask ───────
+def make_slm_mask(shape, open_frac):
+    rows, cols = shape
+    x = np.linspace(-slm_size/2, slm_size/2, cols, endpoint=False)
+    y = np.linspace(-slm_size/2, slm_size/2, rows, endpoint=False)
     X, Y = np.meshgrid(x, y)
+    gx = np.mod(X + pixel_pitch/2, pixel_pitch) < open_frac * pixel_pitch
+    gy = np.mod(Y + pixel_pitch/2, pixel_pitch) < open_frac * pixel_pitch
+    mask = gx & gy & (np.abs(Y) <= active_area[1] / 2)
+    return mask.astype(float)
 
-    # Pixel-grid open regions (duty cycle = *fill_factor*)
-    gx = (np.mod(X + pixel_pitch/2, pixel_pitch) < fill_factor*pixel_pitch)
-    gy = (np.mod(Y + pixel_pitch/2, pixel_pitch) < fill_factor*pixel_pitch)
-    pix_open = gx & gy
+MASK = make_slm_mask((N, N), fill_factor)
 
-    # Mask out area outside the active height (since window is square)
-    half_h = active_area[1] / 2
-    within_height = np.abs(Y) <= half_h
-
-    return (pix_open & within_height).astype(float)
-
-
-# Build the global SLM amplitude mask once ----------------------------------
-MASK = make_slm_aperture((N, N), slm_shape=slm_resolution, fill_factor=fill_factor)
-
-# ---------------------------------------------------------------------------
-# helper: create the joint input plane (unchanged)
-# ---------------------------------------------------------------------------
-
-def create_joint_input_plane(digit_array_ref: np.ndarray,
-                             digit_array_obj: np.ndarray,
-                             slm_shape: tuple[int, int],
-                             thresh,
-                             display_scale_factor: float = 0.01,
-                             binarize: bool = True):
-
-    slm_rows, slm_cols = slm_shape
-
-    def scale_digit_to_255(d):
-        m = d.max()
-        return np.zeros_like(d, np.uint8) if m == 0 else (d/m*255).astype(np.uint8)
-
-    ref_255 = scale_digit_to_255(digit_array_ref)
-    obj_255 = scale_digit_to_255(digit_array_obj)
-
-    combo = np.hstack((ref_255, obj_255))       # 28 × 56
-    H0, W0 = combo.shape
-
-    scale = min(slm_rows/H0, slm_cols/W0)
-    Wf = int(W0*scale*display_scale_factor)
-    Hf = int(H0*scale*display_scale_factor)
-    Wf, Hf = max(1, Wf), max(1, Hf)
-
-    combo_rs = Image.fromarray(combo).resize((Wf, Hf), Image.BICUBIC)
-    canvas   = np.zeros(slm_shape, float)
-    y0, x0   = (slm_rows-Hf)//2, (slm_cols-Wf)//2
-    canvas[y0:y0+Hf, x0:x0+Wf] = np.asarray(combo_rs, float)
-
-    if binarize:
-        t = np.median(canvas) if thresh is None else thresh
-        return np.where(canvas > t, 1., -1.)
-    return (canvas - canvas.min())/(canvas.ptp() + EPS)
-
-# ---------------------------------------------------------------------------
-# correlation engine (only two insertions marked «NEW»)
-# ---------------------------------------------------------------------------
-
-def perform_jtc_correlation(a0_pair,
-                            binary_input: bool = True,
-                            binary_jps: bool   = True,
-                            blocking_factor: float = 0.1,
-                            angle_error: float = 1.0):
-    """Two-pass Binary JTC – identical logic, but now with:
-       • TEM₀₀ Gaussian illumination (waist = *beam_waist*)
-       • physical SLM pixel mask (*MASK*) acting as an amplitude pupil
+# ───────────── checkerboard helper ───────────
+def checkerboard(shape: tuple[int, int]) -> np.ndarray:
     """
+    Return a +1 / -1 checkerboard mask with one-pixel pitch.
+    """
+    idx_sum = np.indices(shape).sum(axis=0)   # integer array
+    return 1.0 - 2.0 * (idx_sum % 2)          # 0 -> +1, 1 -> -1
 
-    # ---- phase encoding of the joint input ---------------------------------
-    phase_pair = (a0_pair + 1)/2*np.pi * angle_error if binary_input else a0_pair*np.pi * angle_error
+# ───────────── crop slices for camera FOV ────
+def cam_slices():
+    pitch_ft = wavelength * f_len / slm_size   # m per sim pixel
+    nx = int(round(cam_area[0] / pitch_ft))
+    ny = int(round(cam_area[1] / pitch_ft))
+    ctr = N // 2
+    return slice(ctr - ny//2, ctr + ny//2), slice(ctr - nx//2, ctr + nx//2)
 
-    # ---- first optical pass (JPS) ------------------------------------------
+SL_y, SL_x = cam_slices()
+
+# ───────────── input-canvas helper ───────────
+def mk_joint_plane(ref, obj, slm_shape, scale=0.05, binarize=True):
+    rows, cols = slm_shape
+    scale_255 = lambda a: np.zeros_like(a, np.uint8) if a.max()==0 else (a/a.max()*255).astype(np.uint8)
+    ref255, obj255 = scale_255(ref), scale_255(obj)
+    combo = np.hstack((ref255, obj255))             # 28×56
+    h0, w0 = combo.shape
+    fac = min(rows/h0, cols/w0) * scale
+    w_new, h_new = max(1, int(w0*fac)), max(1, int(h0*fac))
+    combo_rs = Image.fromarray(combo).resize((w_new, h_new), Image.BICUBIC)
+
+    canvas = np.zeros(slm_shape, float)
+    y0, x0 = (rows-h_new)//2, (cols-w_new)//2
+    canvas[y0:y0+h_new, x0:x0+w_new] = np.asarray(combo_rs, float)
+    if binarize:
+        thr = np.median(canvas)
+        return np.where(canvas > thr, 1., -1.)
+    return (canvas - canvas.min()) / (canvas.ptp() + EPS)
+
+# ───────────── JTC engine ───────────
+def jtc(a0, binary_in=True, binary_jps=True, block_frac=0.01):
+    # phase map for first pass
+    phase_in = ((a0+1)/2*np.pi if binary_in else a0*np.pi)
+
     F1 = Begin(slm_size, wavelength, N)
-    F1 = GaussBeam(F1, beam_waist)          # «NEW» Gaussian envelope
-    F1 = MultIntensity(F1, MASK)            # pixel-grid aperture (amp.)
-    F1 = MultPhase(F1, phase_pair)
-    F1 = Lens(F1, f_lens)
-    F1 = Forvard(F1, f_lens)
-    JPS_int = Intensity(F1, 0)
+    F1 = GaussBeam(F1, beam_waist); F1 = MultIntensity(F1, MASK)
+    F1 = MultPhase(F1, phase_in)
+    F1 = Lens(F1, f_len);           F1 = Forvard(F1, f_len)
+    JPS = Intensity(F1, 0)
 
-    # ---- JPS processing / binarisation -------------------------------------
+    JPS_cam = JPS[SL_y, SL_x]
     if binary_jps:
-        thr_JPS   = np.median(JPS_int)
-        JPS_bin   = np.where(JPS_int > thr_JPS, 1., -1.)
-        phase_JPS = (JPS_bin + 1)/2*np.pi * angle_error
+        thr = np.median(JPS_cam)
+        phase_cam = np.where(JPS_cam > thr, 1., -1.)
+        phase_cam = (phase_cam + 1) / 2 * np.pi
     else:
-        JPS_norm  = JPS_int/JPS_int.max() if JPS_int.max() > 0 else JPS_int
-        phase_JPS = JPS_norm*np.pi * angle_error
+        phase_cam = (JPS_cam / JPS_cam.max()) * np.pi if JPS_cam.max() > 0 else JPS_cam
 
-    # ---- second optical pass (correlation) ---------------------------------
+    # pad to full field for second pass
+    phase_full = np.zeros_like(JPS)
+    phase_full[SL_y, SL_x] = phase_cam
+
     F2 = Begin(slm_size, wavelength, N)
-    F2 = GaussBeam(F2, beam_waist)          # 
-    F2 = MultIntensity(F2, MASK)            # pixel-grid aperture (amp.)
-    F2 = MultPhase(F2, phase_JPS)
-    F2 = Lens(F2, f_lens)
-    F2 = Forvard(F2, f_lens)
-    Corr_int = Intensity(F2, 0)
+    F2 = GaussBeam(F2, beam_waist); F2 = MultIntensity(F2, MASK)
+    F2 = MultPhase(F2, phase_full)
+    F2 = Lens(F2, f_len);           F2 = Forvard(F2, f_len)
+    Corr = Intensity(F2, 0)
 
-    # ---- peak search (unchanged) -------------------------------------------
-    center = N//2
-    central_dc = Corr_int.max()
+    Corr_cam = Corr[SL_y, SL_x]
+    h, w = Corr_cam.shape; cy, cx = h//2, w//2
+    dc_val = Corr_cam.max()
 
-    corr_masked = Corr_int.copy()
-    half = int(N*blocking_factor)
-    corr_masked[center-half:center+half+1,
-                center-half:center+half+1] = 0.0
+    blocked = Corr_cam.copy()
+    half = int(min(h, w)*block_frac)
+    blocked[cy-half:cy+half+1, cx-half:cx+half+1] = 0
+    peak_val = blocked.max()
 
-    peak_val = corr_masked[600:1400, 600:1400].max()
+    return peak_val, dc_val, phase_full, Corr_cam
 
-    return peak_val, central_dc, Corr_int, corr_masked
-
-# ------------------------- main script ------------------------------------
+# ───────────── CLI & main ───────────
 if __name__ == "__main__":
+    ap = argparse.ArgumentParser(description="Plot input, JPS mask, and correlation plane")
+    ap.add_argument("--checkerboard", action="store_true", help="apply +/-1 checkerboard")
+    ap.add_argument("--binary-input", action="store_true", default=True)
+    ap.add_argument("--analog-input", dest="binary_input", action="store_false")
+    ap.add_argument("--binary-jps", action="store_true", default=True)
+    ap.add_argument("--analog-jps", dest="binary_jps", action="store_false")
+    ap.add_argument("--ref-digit", type=int, default=1)
+    ap.add_argument("--obj-digit", type=int, default=1)
+    ap.add_argument("--scale", type=float, default=0.05)
+    ap.add_argument("--dataset", choices=["mnist","fashion"], default="mnist")
+    args = ap.parse_args()
 
-    cli = argparse.ArgumentParser(
-        description="Binary / Analogue Joint-Transform Correlator simulation")
-    cli.add_argument("--binary-input",  action="store_true", default=True)
-    cli.add_argument("--analog-input",  dest="binary_input", action="store_false")
-    cli.add_argument("--binary-jps",    action="store_true", default=True)
-    cli.add_argument("--analog-jps",    dest="binary_jps",   action="store_false")
-    cli.add_argument("--ref-digit",     type=int, default=1)
-    cli.add_argument("--obj-digit",     type=int, default=1)
-    cli.add_argument("--scale",         type=float, default=0.05)
-    cli.add_argument("--dataset",       choices=["mnist", "fashion"], default="mnist")
-    cli.add_argument("--angle-sweep",   action="store_true", help="Run angle error sweep from 0 to 2")
-    args = cli.parse_args()
-
-    # ------------------- prepare joint input --------------------------------
     X, y = get_test_data(dataset=args.dataset)
-    ref = X[y == args.ref_digit][0].reshape(28, 28) / 255.
-    obj = X[y == args.obj_digit][0].reshape(28, 28) / 255.
+    ref = X[y==args.ref_digit][0].reshape(28,28)/255.
+    obj = X[y==args.obj_digit][0].reshape(28,28)/255.
 
-    a0 = create_joint_input_plane(ref, obj, (N, N), img_thresh,
-                                  display_scale_factor=args.scale,
-                                  binarize=args.binary_input)
+    a0 = mk_joint_plane(ref, obj, (N,N), scale=args.scale, binarize=args.binary_input)
+    if args.checkerboard:
+        a0 *= checkerboard((N, N))
 
-    # ------------------- run correlator -------------------------------------
-    peak_val, central_dc, Corr_int, corr_masked = perform_jtc_correlation(
+    peak, dc_val, phase_full, Corr_cam = jtc(
         a0,
-        binary_input=args.binary_input,
+        binary_in=args.binary_input,
         binary_jps=args.binary_jps,
-        blocking_factor=0.005
+        block_frac=0.01
     )
 
-    # ------------------- plots ---------------------------------------------
-    fig, axs = plt.subplots(1, 2, figsize=(15, 6)) # Create a figure with two subplots
+    # build images for display
+    input_disp = ((a0 + 1)/2) if args.binary_input else (a0 - a0.min()) / (a0.ptp() + EPS)
+    jps_disp   = phase_full / np.pi            # shows 0 or 1 for binarised
+    corr_disp  = Corr_cam / Corr_cam.max()
 
-    # Plot the input image (a0) with the SLM pixel aperture (MASK)
-    # Convert phase to amplitude (between 0 and 1) for visualization
-    a0_display = (a0 + 1)/2 if args.binary_input else a0.copy()
-    # Apply the pixel aperture mask
-    a0_with_mask = a0_display * MASK
-    im_a0 = axs[0].imshow(a0_with_mask, cmap='gray')
-    axs[0].set_title("Joint Input Plane (with SLM pixel aperture)")
-    axs[0].set_xlabel("X Position (pixels)")
-    axs[0].set_ylabel("Y Position (pixels)")
-    fig.colorbar(im_a0, ax=axs[0], label='Amplitude')
+    # plots
+    fig, ax = plt.subplots(1, 3, figsize=(18, 5))
+    ax[0].imshow(input_disp * MASK, cmap='gray')
+    ax[0].set_title("Input sent to SLM")
+    ax[0].axis('off')
 
-    # Plot the Correlation Plane
-    # Determine the zoom range for the correlation plane plot
-    center = N
-    quarter_N = N
-    zoom_slice_y = slice(center - quarter_N, center + quarter_N)
-    zoom_slice_x = slice(center - quarter_N, center + quarter_N)
+    ax[1].imshow(jps_disp, cmap='gray')
+    ax[1].set_title("Binarised JPS phase mask")
+    ax[1].axis('off')
 
-    im_corr = axs[1].imshow(Corr_int[zoom_slice_y, zoom_slice_x], cmap='hot',
-                            extent=[center - quarter_N, center + quarter_N, center + quarter_N, center - quarter_N]) # Adjust extent for correct axis labels
-    axs[1].set_title("Correlation Plane (Zoomed to -N/4 to N/4)")
-    axs[1].set_xlabel("X Position (pixels from center)")
-    axs[1].set_ylabel("Y Position (pixels from center)")
-    fig.colorbar(im_corr, ax=axs[1], label='Intensity')
+    im = ax[2].imshow(corr_disp, cmap='hot')
+    ax[2].set_title("Correlation plane (camera FOV)")
+    ax[2].axis('off'); fig.colorbar(im, ax=ax[2])
+    plt.tight_layout(); plt.show()
 
-    plt.tight_layout()
-    plt.show()
-
-    print(f"peak = {peak_val:.3e},  DC = {central_dc:.3e},  "
-          f"norm = {peak_val/(central_dc+EPS):.4f}")
-
+    print(f"peak = {peak:.3e},  DC = {dc_val:.3e},  norm = {peak/(dc_val+EPS):.4f}")

@@ -631,12 +631,12 @@ This calculation of the trace distance using the JTC is not exclusive to the QNM
 \begin{figure}
   \centering
   \includegraphics[width=\linewidth]{figures/correlation/trace_vs_fidelity.png}
-  \caption{Trace distance vs. fidelity distance computed with the JTC for the quantum-inspired nearest-mean classifier (QNM-C) using the inverse stereographic encoding. The $R^2$ value of $0.986$ indicates a strong linear relationship between the two measures, confirming that the JTC can effectively estimate the trace distance from the fidelity.}
+  \caption{Trace distance vs. fidelity distance computed with the JTC using the inverse stereographic encoding. The $R^2$ value of $0.986$ indicates a strong linear relationship between the two measures, confirming that the JTC can effectively estimate the trace distance.}
   \label{fig:trace_vs_fidelity}
 \end{figure}
 
 \paragraph{Uhlmann's theorem.}
-The main difficulty in using this approach to compute the trace distance is that we can only evaluate the trace distance directly for pure states, whereas quantum centroids are generally mixed states. 
+The main difficulty in using this approach to compute the trace distance is that we can only evaluate the trace distance directly for pure states, whereas quantum centroids are generally mixed states (Table~\ref{tab:centroid-purity}). 
 However, Uhlmann's theorem allows us to calculate the fidelity between two mixed states by using their purifications. A purification is the process of representing a mixed state as a pure quantum state of higher-dimensional Hilbert space.
 Uhlmann's theorem states that for any two density operators \(\rho\) and \(\sigma\), there exist purifications \(\lvert \psi_p \rangle\) of \(\rho\) and \(\lvert \phi_p \rangle\) of \(\sigma\) such that
 \[
@@ -644,7 +644,9 @@ F(\rho, \sigma) = \max_{|\psi_p\rangle, |\phi_p\rangle} |\langle \psi_p | \phi_p
 \]
 where the maximum is taken over all purifications of \(\rho\) and \(\sigma\). This means that we can compute the trace distance between two mixed states by computing the fidelity between their purifications, which can be done using the JTC.
 
-Therefore, even though the quantum centroids are generally mixed states, we can still compute the trace distance between the quantum centroid and input vector by finding a suitable purification of the quantum centroid (the input vector is already pure). This allows us to use the JTC to compute the trace distance between the quantum centroid and the input vector, which can then be used to classify the input vector.
+Although each quantum centroid is, in general, a mixed state, we can still evaluate its trace-distance to a (pure) input state by first selecting an appropriate purification for the centroid. 
+With that purification, the Joint Transform Correlator (JTC) can be used to calculate the trace distance between the centroid and the input, and that distance then serves as our classification metric. 
+Implementing this calculation based on Uhlmann's theorem lies beyond the scope of the present study; we mention it only as a promising direction for future improvements to this implementation of the QNM-C.
 
 \paragraph{Choosing the correct encoding.}
 The encoding used has a significant impact on the performance of the QNM-C classifier, as can be seen in table~\ref{tab:cls-results}. For the optical version this is especially true, since the choice of the encoding impacts the purity of the quantum centroids (table~\ref{tab:centroid-purity}), which in turn affects the fidelity and trace distance calculations.
@@ -683,7 +685,7 @@ We ran all the classifiers using the MNIST dataset using only PCA to reduce the 
   \centering
   \footnotesize                     % smaller font
   \setlength{\tabcolsep}{4pt}       % tighter columns
-  \caption{Balanced accuracy (\%\,mean $\pm$ std.) on MNIST. For the classical classifiers (RBF-C and CNM-C) the encoding is not applicable, so we leave it empty. For the quantum-inspired classifier (QNM-C) we show the results for the three encodings described in Sec.~\ref{par:encodings}. The Fidelity distance is being calculated using the JTC, as described in Sec.~\ref{subsec:qic}. The two best results are in \textbf{bold}.}
+  \caption{Balanced accuracy (\%\,mean $\pm$ std.) on MNIST. For the classical classifiers (RBF-C and CNM-C) the encoding is not applicable, so we leave it empty. For the quantum-inspired classifier (QNM-C) we show the results for the three encodings described in Sec.~\ref{par:encodings}. The Fidelity distance is being calculated using the software implementation of the JTC. The two best results are in \textbf{bold}.}
   \label{tab:cls-results}
   % Automatically fit to text width
   \resizebox{\linewidth}{!}{%
@@ -717,6 +719,8 @@ We can see that the RBF-C classifier performs better than the CNM-C and QNM-C, a
 The optical setup used for the experiments consisted of a reflective, phase-only SLM (Thorlabs Exulus-HD3) with a pixel pitch of \(8~\mu m\), illuminated by a IR laser at a wavelength of \(\lambda = 845~\mathrm{nm}\). The laser beam was collimated and expanded to achieve a uniform illumination across the SLM. A Fourier-transform lens with a focal length of \(f = x~\mathrm{mm}\) was used to perform the optical Fourier transform. The CMOS camera (at the output plane had a resolution of \(2048 \times 2048\) pixels and a pixel size of \(5.5~\mu m\), capturing the joint power spectrum and the correlation plane.
 
 The input patterns were encoded onto the SLM using binary phase modulation (\(0\) or \(\pi\)) to maximize diffraction efficiency while maintaining a clear mapping of input data. The fill-factor of the SLM introduced a visible grid pattern in the recorded images, resulting in diffraction effects that produced multiple correlation peaks in the Fourier plane.
+
+We did a calibration of the SLM to know which phase values correspond to a pixel value (0-255). The camera was saturating due to the dynamic range of the spectrum, so we applied a checkerboard pattern to the SLM to replicate the fourier transforms at the corners (\cite{Wilkinson1998BinaryPOJTC})
 
 Figure~\ref{fig:exp-setup} illustrates the optical setup, including the laser, collimation optics, SLM, Fourier-transform lens, and CMOS camera.
 

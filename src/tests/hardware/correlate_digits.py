@@ -1,119 +1,141 @@
+#!/usr/bin/env python3
 """
-Simple script to run binary optical correlation between two MNIST digits.
-Uses the OpticalJTCorrelator with binary mode and specific scale factor.
+run_optical_jtc.py
+──────────────────
+Command-line utility that performs one binary- or analogue
+Joint-Transform-Correlation step between two MNIST digits on **real
+hardware** (Thorlabs Exulus HD SLM + IDS/Thorlabs camera).
+
+Everything is configured through a single Python dictionary `cfg`.
+No plotting/GUI code lives inside the correlator – all visualisation
+is done here.
+
+Requires:
+
+* `ExulusSLM`  (see exulus_driver.py)
+* `UC480Controller`  (thin wrapper around uEye SDK)
+* `OpticalJTCorrelator`  (see optical_jtc_correlator_exulus.py)
+* `get_test_data()`  for MNIST/F-MNIST digits
 """
 
-import os
-import sys
+# ───────────────────────── imports ──────────────────────────────
+from pathlib import Path
+from datetime import datetime
+import sys, os, argparse
 import numpy as np
 import matplotlib.pyplot as plt
-from datetime import datetime
 
-# Add project root to path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
+# --- project imports -------------------------------------------
+root = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(root))                 # project root → PYTHONPATH
 
 from src.data.data import get_test_data
-from src.hardware.devices.SLM import SLMdisplay
+from src.hardware.devices.SLM import ExulusSLM
 from src.hardware.devices.Camera import UC480Controller
 from src.distance.OpticalJTCorrelator import OpticalJTCorrelator
 
-def run_correlation(ref_digit=1, obj_digit=2, slm_monitor=1):
-    """
-    Run optical correlation between two digits.
-    
-    Parameters:
-    -----------
-    ref_digit : int
-        Reference digit (0-9)
-    obj_digit : int
-        Object digit to compare (0-9)
-    slm_monitor : int
-        Monitor number for SLM display
-    """
-    print(f"Loading MNIST data...")
-    X_test, y_test = get_test_data(dataset_name="mnist")
-    
-    # Get digit images
-    ref_idx = np.where(y_test == ref_digit)[0][0]
-    obj_idx = np.where(y_test == obj_digit)[0][0]
-    
-    ref_image = X_test[ref_idx].reshape(28, 28) / 255.0
-    obj_image = X_test[obj_idx].reshape(28, 28) / 255.0
-    
-    print(f"Initializing hardware...")
-    # Initialize hardware
-    slm = SLMdisplay(monitor=slm_monitor, isImageLock=True, alwaysTop=True)
-    camera = UC480Controller()
-    
-    # Create correlator with binary mode and specified scale factor
-    correlator = OpticalJTCorrelator(
-        slm=slm,
-        cam=camera,
-        binary_input=True,         # Use binary input
-        binary_jps=True,           # Use binary JPS
-        display_scale_factor=0.01, # Use scale factor of 0.05
-        sleep_time=0.1             # Time between optical passes
-    )
-    
-    # Set ultra-short exposure
-    correlator.set_exposure(0.001)  # 0.001 ms exposure
-    print(f"Camera exposure set to 0.001ms")
-    
-    try:
-        print(f"Running correlation between digit {ref_digit} and {obj_digit}...")
-        # Run correlation
-        peak_val, central_dc, peak_coords, corr_plane = correlator.correlate(ref_image, obj_image)
-        
-        # Calculate normalized peak
-        similarity = peak_val / (central_dc + 1e-6)
-        
-        # Display results
-        print(f"Results:")
-        print(f"  Peak value: {peak_val:.4f}")
-        print(f"  Central DC: {central_dc:.4f}")
-        print(f"  Normalized peak: {similarity:.4f}")
-        print(f"  Peak coordinates: {peak_coords}")
-        
-        # Plot results
-        plt.figure(figsize=(15, 5))
-        
-        # Input images
-        plt.subplot(131)
-        plt.imshow(ref_image, cmap='gray')
-        plt.title(f"Reference Digit {ref_digit}")
-        plt.axis('off')
-        
-        plt.subplot(132)
-        plt.imshow(obj_image, cmap='gray')
-        plt.title(f"Object Digit {obj_digit}")
-        plt.axis('off')
-        
-        # Correlation plane
-        plt.subplot(133)
-        plt.imshow(corr_plane, cmap='hot')
-        plt.title(f"Correlation Plane (Peak: {similarity:.4f})")
-        plt.colorbar()
-        
-        # Save the figure
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        save_path = f"correlation_{ref_digit}vs{obj_digit}_{timestamp}.png"
-        plt.tight_layout()
-        plt.savefig(save_path)
-        plt.show()
-        print(f"Saved result to {save_path}")
-        
-    finally:
-        # Clean up resources
-        print("Closing hardware resources...")
-        correlator.close()
+# ─────────────────────── configuration ─────────────────────────
+cfg: dict = {
+    # I/O
+    "dataset":       "mnist",      # "mnist" | "fashion"
+    "ref_digit":     1,
+    "obj_digit":     2,
 
+    # SLM
+    "stroke_mode":   "half",       # "half" | "full"
+    "m":             0.0174,       # calibration slope  (rad / grey)
+    "b":             0.0,          # calibration offset (rad)
+    "checkerboard":  True,         # apply ±1 checkerboard
+
+    # camera
+    "cam_exposure":  0.005,          # [ms] – adjust for your laser power
+    "cam_serial":    None,         # set if you have >1 IDS camera
+
+    # JTC algorithm
+    "binary_input":  True,
+    "binary_jps":    True,
+    "display_scale": 0.05,
+    "sleep":         0.10,         # s between uploads
+    "blocking_frac": 0.005,
+}
+
+# ─────────────────────── helper: load digits ───────────────────
+def load_two_digits(dataset: str, d_ref: int, d_obj: int):
+    X, y = get_test_data(dataset_name=dataset)
+    ref = X[np.where(y == d_ref)[0][0]].reshape(28, 28) / 255.0
+    obj = X[np.where(y == d_obj)[0][0]].reshape(28, 28) / 255.0
+    return ref, obj
+
+# ─────────────────────── main routine ──────────────────────────
+def main(cfg):
+
+    # — open hardware ——————————————————————————
+    slm = ExulusSLM(device_index=0,
+                    m=cfg["m"], b=cfg["b"],
+                    stroke_mode=cfg["stroke_mode"])
+    cam = UC480Controller(serial=cfg["cam_serial"])
+    cam.setExposure(cfg["cam_exposure"])        # ms
+
+    jtc = OpticalJTCorrelator(
+        slm=slm,
+        cam=cam,
+        binary_input=cfg["binary_input"],
+        binary_jps=cfg["binary_jps"],
+        checkerboard=cfg["checkerboard"],
+        display_scale=cfg["display_scale"],
+        sleep_time=cfg["sleep"],
+        blocking_fraction=cfg["blocking_frac"],
+    )
+
+    # — prepare digits ————————————————————————
+    ref, obj = load_two_digits(cfg["dataset"],
+                               cfg["ref_digit"],
+                               cfg["obj_digit"])
+
+    # — run correlation ————————————————————————
+    pk, dc, shift, a0_8bit, jps_8bit, corr, masked = jtc.correlate(
+        ref, obj, return_planes=True
+    )
+    norm = pk / (dc + 1e-6)
+
+    # — simple plots ———————————————————————————
+    fig, ax = plt.subplots(2, 3, figsize=(16, 9))
+    ax[0, 0].imshow(ref, cmap="gray"); ax[0, 0].set_title(f"Reference {cfg['ref_digit']}")
+    ax[0, 1].imshow(obj, cmap="gray"); ax[0, 1].set_title(f"Object {cfg['obj_digit']}")
+    ax[0, 2].imshow(a0_8bit, cmap="gray"); ax[0, 2].set_title("SLM input (8-bit)")
+
+    ax[1, 0].imshow(jps_8bit, cmap="gray"); ax[1, 0].set_title("JPS → SLM (8-bit)")
+    im = ax[1, 1].imshow(corr, cmap="hot"); ax[1, 1].set_title("Correlation plane")
+    fig.colorbar(im, ax=ax[1, 1])
+    ax[1, 2].imshow(masked, cmap="hot"); ax[1, 2].set_title("Masked corr (peak)")
+    for a in ax.ravel(): a.axis("off")
+    plt.suptitle(f"peak={pk:.3e}  DC={dc:.3e}  norm={norm:.4f}  shift={shift}")
+    plt.tight_layout()
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    out = f"JTC_{cfg['ref_digit']}vs{cfg['obj_digit']}_{ts}.png"
+    plt.savefig(out, dpi=150)
+    print("saved →", out)
+    plt.show()
+
+    # — tidying up ————————————————————————————
+    jtc.close()
+
+# ───────────────────── CLI wrapper (optional) ──────────────────
 if __name__ == "__main__":
-    # Define which digits to correlate
-    ref_digit = 1  # Change as needed
-    obj_digit = 2  # Change as needed
-    slm_monitor = 1  # Change to your SLM monitor number
-    
-    # Run correlation
-    run_correlation(ref_digit, obj_digit, slm_monitor)
+    pr = argparse.ArgumentParser(description="Run optical JTC between two digits")
+    pr.add_argument("--ref", type=int, default=cfg["ref_digit"])
+    pr.add_argument("--obj", type=int, default=cfg["obj_digit"])
+    pr.add_argument("--dataset", choices=["mnist", "fashion"], default=cfg["dataset"])
+    pr.add_argument("--full", action="store_true", help="use full-wave stroke")
+    pr.add_argument("--no-checker", action="store_true", help="disable checkerboard")
+    args = pr.parse_args()
+
+    cfg["ref_digit"] = args.ref
+    cfg["obj_digit"] = args.obj
+    cfg["dataset"]   = args.dataset
+    if args.full:
+        cfg["stroke_mode"] = "full"
+    if args.no_checker:
+        cfg["checkerboard"] = False
+
+    main(cfg)
