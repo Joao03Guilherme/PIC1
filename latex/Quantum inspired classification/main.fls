@@ -1060,11 +1060,11 @@ INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplr8r.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/vf/adobe/palatino/pplr9e.vf
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplr8r.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/mathpazo/fplmr.tfm
+INPUT /usr/local/texlive/2023/texmf-dist/fonts/vf/adobe/palatino/pplr9e.vf
+INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/mathpazo/fplmr.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/vf/adobe/palatino/pplri9e.vf
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplri8r.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/mathpazo/fplmri.tfm
-INPUT /usr/local/texlive/2023/texmf-dist/fonts/vf/adobe/palatino/pplr9e.vf
-INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/mathpazo/fplmr.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/vf/public/mathpazo/zplmr7m.vf
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/cm/cmmi10.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/vf/public/mathpazo/zplmb7t.vf
@@ -1098,11 +1098,6 @@ INPUT ./figures/nearest_mean_classifier.png
 INPUT figures/nearest_mean_classifier.png
 INPUT ./figures/nearest_mean_classifier.png
 INPUT ./figures/nearest_mean_classifier.png
-INPUT ./figures/rbf_net/rbf_net.png
-INPUT ./figures/rbf_net/rbf_net.png
-INPUT figures/rbf_net/rbf_net.png
-INPUT ./figures/rbf_net/rbf_net.png
-INPUT ./figures/rbf_net/rbf_net.png
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/vf/public/mathpazo/zplmr7v.vf
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/cm/cmex10.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/cm/cmex10.tfm
@@ -1126,11 +1121,6 @@ INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/mathpazo/fplmb.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplb8r.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/tfm/public/cm/cmbx10.tfm
 INPUT /usr/local/texlive/2023/texmf-dist/fonts/vf/adobe/palatino/pplr9t.vf
-INPUT ./figures/setup/setup.png
-INPUT ./figures/setup/setup.png
-INPUT figures/setup/setup.png
-INPUT ./figures/setup/setup.png
-INPUT ./figures/setup/setup.png
 INPUT ./figures/correlation/binary_input.png
 INPUT ./figures/correlation/binary_input.png
 INPUT figures/correlation/binary_input.png
