@@ -2,12 +2,12 @@
 """
 optical_jtc_correlator_exulus.py
 --------------------------------
-Real-hardware binary / analogue Joint-Transform Correlator driven by
+Real-hardware binary / analog Joint-Transform Correlator driven by
 
-  • **ExulusSLM**  – thin Python wrapper around Thorlabs EXULUS SDK  
-  • **UC480Controller**  – IDS µEye / Thorlabs DCC1545M camera
+  • **ExulusSLM**  - Python wrapper around Thorlabs EXULUS SDK  
+  • **UC480Controller**  - IDS µEye / Thorlabs DCC1545M camera
 
-It follows the same algorithmic flow as *binary_jtc_lightpipes_checkerboard_plot.py*
+It follows the same algorithmic flow as *binary_jtc_lightpipes.py*
 but performs the two optical passes on real hardware.
 
 Highlights
@@ -34,7 +34,7 @@ from ..hardware.devices.SLM import ExulusSLM         # SLM
 
 # ----------------------------------------------------------------
 EPS = 1e-6            # avoid divide-by-zero in normalisation
-GREY_RANGE = 127      # use 0..127 for (-1, +1) binary logic
+ANGLE_RANGE = np.pi      # use 0 to pi range for phase encoding
 
 # ----------------------------------------------------------------
 # Helper: ±1 checkerboard (one-pixel pitch)
@@ -128,7 +128,9 @@ class OpticalJTCorrelator:
               f"checkerboard={checkerboard}")
 
     # ------------- private wrappers ---------------------------------
-    def _upload_and_snap(self, grey_img: np.ndarray) -> np.ndarray:
+    def _upload_and_snap(self, phase_img: np.ndarray) -> np.ndarray:
+        # Calibrate the grey image
+        grey_img = self.slm.phase_to_grey(phase_img)
         self.slm.display_grey(grey_img)
         time.sleep(self.sleep_time)
         return self.cam.snap().astype(np.float32)
@@ -154,24 +156,24 @@ class OpticalJTCorrelator:
         if self.checkerboard:
             a0 *= _checkerboard((self.h, self.w))
 
-        # map to 8-bit (0..127)
+        # map to 8-bit (0..127 (0...pi))
         if self.binary_input:
-            a0_grey = np.round((a0 + 1) / 2 * GREY_RANGE).astype(np.uint8)
+            a0_phase_map = (a0 + 1) / 2 * ANGLE_RANGE
         else:
-            a0_grey = np.round(a0 * GREY_RANGE).astype(np.uint8)
+            a0_phase_map = a0 * ANGLE_RANGE
 
-        jps_raw = self._upload_and_snap(a0_grey)
+        jps_raw = self._upload_and_snap(a0_phase_map)
 
         # 2. process JPS, second pass
         if self.binary_jps:
             thr = np.median(jps_raw) if jps_thresh is None else jps_thresh
             jps_phase = np.where(jps_raw > thr, 1.0, -1.0)
-            jps_grey = np.round((jps_phase + 1) / 2 * GREY_RANGE).astype(np.uint8)
+            jps_phase_map = (jps_phase + 1) / 2 * ANGLE_RANGE
         else:
             jps_norm = jps_raw / (jps_raw.max() + EPS)
-            jps_grey = np.round(jps_norm * GREY_RANGE).astype(np.uint8)
+            jps_phase_map = jps_norm * ANGLE_RANGE
 
-        corr_plane = self._upload_and_snap(jps_grey)
+        corr_plane = self._upload_and_snap(jps_phase_map)
 
         # 3. extract metrics
         cy, cx = np.array(corr_plane.shape) // 2
@@ -186,7 +188,7 @@ class OpticalJTCorrelator:
         dy, dx = py - cy, px - cx
 
         if return_planes:
-            return peak_val, dc_val, (dy, dx), a0_grey, jps_grey, corr_plane, masked
+            return peak_val, dc_val, (dy, dx), a0_phase_map, jps_phase_map, corr_plane, masked
         return peak_val, dc_val, (dy, dx)
 
     # ------------- context-manager sugar ----------------------------

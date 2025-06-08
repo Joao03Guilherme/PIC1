@@ -44,7 +44,7 @@ class ExulusSLM:
         Select π or 2π stroke right after opening the device.
     """
 
-    def __init__(self, *, device_index=0, m=0.0174, b=0.0,
+    def __init__(self, *, device_index=0, m=0.0174, b=0.3639,
                  stroke_mode="half") -> None:
 
         self.dev = exulus.open_device(device_index)   # handle from SDK

@@ -15,7 +15,7 @@
     \begin{abstract}
       \noindent
       We explore optical implementations of classical and quantum-inspired distance-based classifiers using a Joint Transform Correlator (JTC). 
-      These include the classical and quantum-inspired nearest-mean classifiers (CNM-C, QNM-C) and the radial basis function classifier (RBF-C). 
+      These include the classical and quantum-inspired nearest-mean classifiers (CNM-C, QNM-C). 
       We define and compare multiple quantum encodings that map real feature vectors to density matrices, and propose a method to compute the trace distance between pure states optically using the JTC. 
       The optical approach offers inherent parallelism, high speed, and energy efficiency, enabling fast, low-power classification. 
       Our framework is validated through simulations and experiments on the MNIST dataset.
@@ -42,7 +42,7 @@ This makes them especially well-suited for scalable, real-time machine learning 
 Among the various optical systems, the \emph{Joint Transform Correlator} (JTC) (\cite{Psaltis1984}, \cite{Dragulinescu2023}) stands out for its simplicity and adaptability.  Unlike classical VanderLugt systems (\cite{VanderLugt1964}), the JTC does not require a pre-fabricated filter; instead, the reference and query patterns are placed side by side in the input plane.  A single Fourier transform—implemented with a lens—produces an output intensity whose off-axis terms encode the cross-correlation between the two patterns.  
 When feature vectors are encoded as two-dimensional phase distributions, the correlation peak height provides a direct measure of their similarity, which can be mapped to a distance-based decision rule.
 
-In this work we propose optical implementations of the Quantum-Inspired and Classical Nearest Mean Classifier (\cite{Cruzeiro2024}, \cite{Sergioli2025}), and Radial Basis Function Classifier (\cite{Neifeld1993}, \cite{Foor1995}), that use a single SLM and a 1-f lens system (\cite{Javidi1989}).  
+In this work we propose optical implementations of the Quantum-Inspired and Classical Nearest Mean Classifier (\cite{Cruzeiro2024}, \cite{Sergioli2025}) that use a single SLM and a 1-f lens system (\cite{Javidi1989}).  
 
 We begin by presenting the classical and quantum-inspired classifiers considered in this work (Section~\ref{sec:ml-qic}). We then describe the Joint Transform Correlator (JTC) architecture (Section~\ref{sec:jtc}), establishing its theoretical connection to distance-based similarity measures. In Section~\ref{sec:optical-implementations}, we show explicitly how the JTC can optically compute both classical distances and quantum-inspired measures, such as the trace distance. Finally, we detail our experimental implementation (Section~\ref{sec:experiments}), demonstrating a practical realization of the quantum-inspired nearest-mean classifier (QNM-C) using a single phase-only spatial light modulator (SLM) and a 1-f lens system.
 
@@ -190,6 +190,7 @@ The CNM classifier is simple to implement, as it only requires the computation o
     \label{fig:nearest_mean_classifier}
 \end{figure}
 
+\iffalse
 \paragraph{Radial-Basis-Function Classifier (RBF-C).}
 The RBF model represents a target function as a weighted sum of Gaussian basis functions, each centered at a specific location in the input space. These Gaussian functions produce localized responses that decrease with distance from their centers, allowing the model to approximate smooth and continuous mappings. By tuning the centers, widths, and weights of the basis functions, the RBF network can adapt to complex data distributions and interpolate between training samples with controlled generalization.
 
@@ -265,6 +266,7 @@ then evaluates
 \)
 and assigns the class with a winner-takes-all rule:
 \(c^\star=\arg\max_{c}f_c(\mathbf x)\).
+\fi
 
 \subsection{Quantum-inspired classification}
 \label{subsec:qic}
@@ -276,7 +278,7 @@ embedding classical feature vectors in a Hilbert space, one can exploit
 the geometry of quantum states to obtain alternative similarity
 measures that sometimes improve accuracy or robustness compared with
 purely classical methods~(\cite{Cruzeiro2024}, \cite{Sergioli2025}). 
-Every quantum-inspired algorithm must start with a function that maps each classical data vector $x$ to a density operator $\rho_x$.  
+Every quantum-inspired algorithm must start with a function that maps each classical data vector $\mathbb{x}$ to a density operator $\rho_x$.  
 The choice of this encoding is very important, as it determines the properties of the resulting quantum-inspired algorithm.  
 
 %--------------------------------------------------------------
@@ -400,19 +402,20 @@ Having defined both the classical and quantum-inspired nearest-mean classifiers,
 A \emph{joint transform correlator} (JTC) is an optical architecture
 that performs the cross– and auto–correlation of two 2-D patterns by
 means of only \emph{free-space propagation} and \emph{Fourier
-transform} lenses, thereby exploiting the inherent parallelism and
-picosecond‐scale speed of coherent light.  Unlike classical
-Vander~Lugt correlators, the JTC dispenses with a pre-fabricated
+transform} lenses. Unlike classical
+Vander~Lugt correlators, the JTC does not need a pre-fabricated
 matched filter: both the \emph{reference} pattern \(s_{1}(x,y)\) and
 the \emph{query} pattern \(s_{2}(x,y)\) are displayed side-by-side in
 the same input plane~\cite{Javidi1989}.
 
+\iffalse
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figures/setup/setup.png}
     \caption{Optical setup for the joint transform correlator. The SLM displays the reference and query patterns side by side.}
     \label{fig:optical-classifier}
 \end{figure}
+\fi
 
 \paragraph{Operational principle.}
 Let the two patterns be centred on the SLM display (phase modulation only) at \(\pm x_{0}\) along the horizontal
@@ -579,7 +582,7 @@ suitable drop-in replacement for similarity-based classification.
 \section{Optical implementations of the classifiers}
 \label{sec:optical-implementations}
 
-\subsection{Optical implementation of the CNM-C and RBF-C}
+\subsection{Optical implementation of the CNM-C}
 We can leverage the JTC to calculate the distances instead of using the Euclidean distance. (Develop this more).
 
 \subsection{Optical implementation of the QNM–C}
@@ -646,12 +649,13 @@ where the maximum is taken over all purifications of \(\rho\) and \(\sigma\). Th
 
 Although each quantum centroid is, in general, a mixed state, we can still evaluate its trace-distance to a (pure) input state by first selecting an appropriate purification for the centroid. 
 With that purification, the Joint Transform Correlator (JTC) can be used to calculate the trace distance between the centroid and the input, and that distance then serves as our classification metric. 
+
 Implementing this calculation based on Uhlmann's theorem lies beyond the scope of the present study; we mention it only as a promising direction for future improvements to this implementation of the QNM-C.
 
 \paragraph{Choosing the correct encoding.}
 The encoding used has a significant impact on the performance of the QNM-C classifier, as can be seen in table~\ref{tab:cls-results}. For the optical version this is especially true, since the choice of the encoding impacts the purity of the quantum centroids (table~\ref{tab:centroid-purity}), which in turn affects the fidelity and trace distance calculations.
 
-\begin{table}[htbp]
+\begin{table}[]
     \label{tab:centroid-purity}
     \centering
     \caption{Centroid purity for each MNIST class under the three encodings described in sec..}
@@ -673,19 +677,19 @@ The encoding used has a significant impact on the performance of the QNM-C class
     \end{tabular}
 \end{table}
 
-\subsection{Optical implementation of the RBF-C and CNM-C classifiers}
-To implement the RBF-C and CNM-C classifier optically, we can just swap the Euclidean distance for the JTC dissimilarity. This means that we can use the JTC to compute the dissimilarity between the input vector and the centroids of each class, and then assign the class with the lowest dissimilarity. This is a straightforward implementation, as the JTC can be used to compute the dissimilarity in a parallel and efficient manner.
-
-
 \subsection{Computational simulations}
 
-We ran all the classifiers using the MNIST dataset using only PCA to reduce the dimensionality to 50 features. For the RBF-C we used a reduced version of the dataset (6000 training samples and 1000 test samples) to speed up the training process, as the RBF-C is computationally expensive. The CNM-C and QNM-C were trained on the full dataset (60000 training samples and 10000 test samples). In the simulation we used the binary version of the JTC, as described in Sec.~\ref{subsec:binary-jtc}. The results are shown in table~\ref{tab:cls-results}.
+We started by creating a simulation of the JTC using Python and the LighPipes library, which allows us to simulate the propagation of light through optical systems. 
+The simulation was used to validate the performance of the JTC and the classifiers before implementing them in hardware.
+
+We ran all the classifiers using the MNIST dataset using the pre-processing pipeline described in Sec.~\ref{sec:ml-qic}. 
+The PCA reduced the number of features to \(d=50\). The results are presented in Table~\ref{tab:cls-results}. 
 
 \begin{table}[htbp]
   \centering
   \footnotesize                     % smaller font
   \setlength{\tabcolsep}{4pt}       % tighter columns
-  \caption{Balanced accuracy (\%\,mean $\pm$ std.) on MNIST. For the classical classifiers (RBF-C and CNM-C) the encoding is not applicable, so we leave it empty. For the quantum-inspired classifier (QNM-C) we show the results for the three encodings described in Sec.~\ref{par:encodings}. The Fidelity distance is being calculated using the software implementation of the JTC. The two best results are in \textbf{bold}.}
+  \caption{Balanced accuracy (\%\,mean $\pm$ std.) on MNIST. For the CNM-C the encoding is not applicable, so we leave it empty. For the QNM-C we show the results for the three encodings described in Sec.~\ref{par:encodings}. The Fidelity distance is being calculated using the software implementation of the JTC. The two best results are in \textbf{bold}.}
   \label{tab:cls-results}
   % Automatically fit to text width
   \resizebox{\linewidth}{!}{%
@@ -693,8 +697,6 @@ We ran all the classifiers using the MNIST dataset using only PCA to reduce the 
     \toprule
     Classifier & Metric & Encoding & Balanced Acc. \\ 
     \midrule
-    RBF-C & Euclidean & -- & -- \\
-    RBF-C & JTC       & -- & -- \\[2pt]
 
     CNM-C & Euclidean & -- & $80.38 \pm 0.38$ \\ 
     CNM-C & JTC       & -- & $72.42 \pm 0.55$ \\[2pt]
@@ -711,7 +713,7 @@ We ran all the classifiers using the MNIST dataset using only PCA to reduce the 
   \end{tabular}}
 \end{table}
 
-We can see that the RBF-C classifier performs better than the CNM-C and QNM-C, as expected, since it is a more powerful classifier. The QNM-C classifier performs better than both classical classifiers, with the informative encoding yielding the best results. The standard encoding performs worse than the informative encoding, but better than the stereographic encoding. This shows that the choice of encoding has a significant impact on the performance of the QNM-C classifier, as discussed in Sec.~\ref{subsec:qic}.
+The QNM-C classifier performs better than the classical classifier, with the informative encoding yielding the best results. The standard encoding performs worse than the informative encoding, but better than the stereographic encoding. This shows that the choice of encoding has a significant impact on the performance of the QNM-C classifier.
 
 \section{Experimental results}
 \label{sec:results}

@@ -21,7 +21,7 @@ Requires:
 # ───────────────────────── imports ──────────────────────────────
 from pathlib import Path
 from datetime import datetime
-import sys, os, argparse
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -44,7 +44,7 @@ cfg: dict = {
     # SLM
     "stroke_mode":   "half",       # "half" | "full"
     "m":             0.0174,       # calibration slope  (rad / grey)
-    "b":             0.0,          # calibration offset (rad)
+    "b":             0.3639,       # calibration offset (rad)
     "checkerboard":  True,         # apply ±1 checkerboard
 
     # camera
@@ -122,20 +122,4 @@ def main(cfg):
 
 # ───────────────────── CLI wrapper (optional) ──────────────────
 if __name__ == "__main__":
-    pr = argparse.ArgumentParser(description="Run optical JTC between two digits")
-    pr.add_argument("--ref", type=int, default=cfg["ref_digit"])
-    pr.add_argument("--obj", type=int, default=cfg["obj_digit"])
-    pr.add_argument("--dataset", choices=["mnist", "fashion"], default=cfg["dataset"])
-    pr.add_argument("--full", action="store_true", help="use full-wave stroke")
-    pr.add_argument("--no-checker", action="store_true", help="disable checkerboard")
-    args = pr.parse_args()
-
-    cfg["ref_digit"] = args.ref
-    cfg["obj_digit"] = args.obj
-    cfg["dataset"]   = args.dataset
-    if args.full:
-        cfg["stroke_mode"] = "full"
-    if args.no_checker:
-        cfg["checkerboard"] = False
-
     main(cfg)
