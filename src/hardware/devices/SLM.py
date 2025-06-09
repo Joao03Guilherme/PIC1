@@ -137,19 +137,13 @@ class ExulusSLM:
                 break
 
         if self._win <= 0:
-            raise RuntimeError(
-                f"Could not create {self.width}×{self.height} window on any "
-                f"monitor 0–{mon_cnt-1}.  Match one monitor to that exact "
-                "resolution (no scaling) and try again."
-            )
+            print("[Exulus] CghDisplayCreateWindow failed on all monitors.")
 
         ret = disp.CghDisplaySetWindowInfo(
             self._win, self.width, self.height, 1  # 1 = 8-bit greyscale
         )
         if ret != 0:
-            raise RuntimeError(
-                f"CghDisplaySetWindowInfo failed (code {ret})."
-            )
+            print(f"[Exulus] CghDisplaySetWindowInfo failed (code {ret}).")
 
         # calibration parameters
         self.m = float(m)
@@ -218,4 +212,4 @@ class ExulusSLM:
         ptr = buf.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
         ret = disp.CghDisplayShowWindow(self._win, ptr)
         if ret != 0:
-            raise RuntimeError(f"CghDisplayShowWindow failed (code {ret}).")
+            print(f"[Exulus] CghDisplayShowWindow failed (code {ret}).")
