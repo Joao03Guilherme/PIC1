@@ -128,13 +128,13 @@ class ExulusSLM:
 
     def display_phase(self, phase_rad: np.ndarray) -> None:
         """Send a *phase map* to the SLM."""
-        self._shape_guard(phase_rad)
+        phase_rad = self._shape_guard(phase_rad)
         img = self.phase_to_grey(phase_rad)
         self._send(img)
 
     def display_grey(self, img: np.ndarray) -> None:
         """Send an 8-bit image (already γ-corrected) to the SLM."""
-        self._shape_guard(img)
+        img = self._shape_guard(img)
         if img.dtype != np.uint8:
             img = np.clip(img, 0, 255).astype(np.uint8)
         self._send(img)
@@ -155,11 +155,24 @@ class ExulusSLM:
     # ———————————————————————————————————————————————
     # internal helpers
     # ———————————————————————————————————————————————
-    def _shape_guard(self, arr: np.ndarray) -> None:
+    def _shape_guard(self, arr: np.ndarray) -> np.ndarray:
+        """Check array shape and pad/center if necessary."""
         if arr.shape != (self.height, self.width):
-            raise ValueError(f"Array shape {arr.shape} "
-                             f"does not match SLM resolution "
-                             f"({self.height}, {self.width})")
+            # Create a centered padded array instead of raising an error
+            padded_arr = np.zeros((self.height, self.width), dtype=arr.dtype)
+            # Calculate the centering offsets
+            y_offset = max(0, (self.height - arr.shape[0]) // 2)
+            x_offset = max(0, (self.width - arr.shape[1]) // 2)
+            # Calculate the region to copy (handle arrays larger than SLM too)
+            y_slice = slice(0, min(arr.shape[0], self.height))
+            x_slice = slice(0, min(arr.shape[1], self.width))
+            y_target = slice(y_offset, y_offset + min(arr.shape[0], self.height))
+            x_target = slice(x_offset, x_offset + min(arr.shape[1], self.width))
+            # Copy the visible part of the input to the padded array
+            padded_arr[y_target, x_target] = arr[y_slice, x_slice]
+            print(f"Resized input array from {arr.shape} to SLM resolution {(self.height, self.width)}")
+            return padded_arr
+        return arr
 
     def _send(self, img_u8: np.ndarray) -> None:
         """Push the buffer to the already-created display window."""
