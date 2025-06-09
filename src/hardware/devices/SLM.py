@@ -207,7 +207,25 @@ class ExulusSLM:
         return padded
 
     def _send(self, img_u8: np.ndarray) -> None:
-        """Push the buffer to the CGH-Display window."""
+        """Push the buffer to the CGH-Display window and save a copy."""
+        # Save a copy of the image
+        import os
+        from datetime import datetime
+        import matplotlib.pyplot as plt
+        
+        # Create output directory if it doesn't exist
+        save_dir = os.path.join(os.path.expanduser("~"), "SLM_Images")
+        os.makedirs(save_dir, exist_ok=True)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        filename = os.path.join(save_dir, f"slm_image_{timestamp}.png")
+        
+        # Save the image
+        plt.imsave(filename, img_u8, cmap='gray')
+        print(f"[Exulus] Image saved to {filename}")
+        
+        # Continue with normal operation
         buf = np.ascontiguousarray(img_u8)
         ptr = buf.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
         ret = disp.CghDisplayShowWindow(self._win, ptr)
