@@ -122,11 +122,17 @@ class ExulusSLM:
             raise RuntimeError("CGH-Display DLL reports no monitors.")
 
         self._win = 0
-        title = b"EXULUS SLM"                              # ANSI bytes!
+        title = "EXULUS SLM"                              
         for mon_id in range(mon_cnt):
-            win = disp.CghDisplayCreateWindow(
-                mon_id, self.width, self.height, title
-            )
+            try:
+                win = disp.CghDisplayCreateWindow(
+                    mon_id, self.width, self.height, title
+                )
+            except RuntimeError as exc:
+                print(f"[Exulus] CghDisplayCreateWindow failed on monitor "
+                      f"{mon_id}: {exc}")
+                continue
+
             if win > 0:                                    # success
                 self._win = win
                 break
