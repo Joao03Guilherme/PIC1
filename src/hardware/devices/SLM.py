@@ -128,7 +128,7 @@ class ExulusSLM:
                 win = disp.CghDisplayCreateWindow(
                     mon_id, self.width, self.height, title
                 )
-            except RuntimeError as exc:
+            except:
                 print(f"[Exulus] CghDisplayCreateWindow failed on monitor "
                       f"{mon_id}: {exc}")
                 continue
