@@ -109,7 +109,7 @@ class ExulusSLM:
         self._win = 0
         for mon_id in range(mon_cnt):
             win = disp.CghDisplayCreateWindow(
-                mon_id, self.width, self.height, b"EXULUS SLM"
+                mon_id, self.width, self.height, "EXULUS SLM"
             )
             if win > 0:                       # success
                 self._win = win
