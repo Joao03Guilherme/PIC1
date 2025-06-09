@@ -93,10 +93,14 @@ class ExulusSLM:
 
         # 5. create a full-screen border-less window on monitor #1
         mon_cnt = disp.CghDisplayGetMonitorCount()
-        mon_id  = 1 if mon_cnt >= 1 else 0
+        mon_id  = 1 if mon_cnt >= 2 else 0
         self._win = disp.CghDisplayCreateWindow(mon_id,
                                                 self.width, self.height,
                                                 "EXULUS SLM")
+        
+        if self._win <= 0:
+            raise RuntimeError(f"Failed to create display window for {serial!s}")
+        
         disp.CghDisplaySetWindowInfo(self._win,
                                      self.width, self.height,
                                      1)                 # 1 = greyscale
@@ -178,7 +182,7 @@ class ExulusSLM:
         """Push the buffer to the already-created display window."""
         # ensure C-contiguous memory for ctypes
         buf = np.ascontiguousarray(img_u8)
-        c_ptr = buf.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte))
-        ret   = disp.CghDisplayShowWindow(self._win, c_ptr)
+        buf_ptr = buf.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
+        ret   = disp.CghDisplayShowWindow(self._win, buf_ptr)
         if ret != 0:
-            print(f"[Exulus] CghDisplayShowWindow returned {ret}")
+            raise RuntimeError(f"Failed to display image on SLM: {ret}")
