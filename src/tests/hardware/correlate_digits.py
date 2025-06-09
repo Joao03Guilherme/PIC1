@@ -70,7 +70,7 @@ def main(cfg):
                     m=cfg["m"], b=cfg["b"],
                     stroke_mode=cfg["stroke_mode"])
     cam = UC480Controller(serial=cfg["cam_serial"])
-    cam.setExposure(cfg["cam_exposure"])        # ms
+    cam.set_exposure(cfg["cam_exposure"])        # ms
 
     jtc = OpticalJTCorrelator(
         slm=slm,
