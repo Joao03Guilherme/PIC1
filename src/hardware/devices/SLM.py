@@ -33,7 +33,7 @@ except ImportError as exc:
 # ----------------------------------------------------------------
 _PANEL_SIZE = {
     "EXULUS-HD2":   (1920, 1080),
-    "EXULUS-HD3":   (1920, 1152),
+    "EXULUS-HD3":   (1920, 1200),
     "EXULUS-HD4":   (1920, 1080),
     "EXULUS-HDxHP": (3840, 2160),   # high-power version
 }
