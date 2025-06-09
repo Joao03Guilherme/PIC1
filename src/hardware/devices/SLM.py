@@ -1,14 +1,14 @@
 # exulus_driver.py
 # ───────────────────────────────────────────────────────────────
-# Lightweight Python interface for a Thorlabs Exulus-HD SLM
+# Lightweight Python interface for a Thorlabs EXULUS-HD SLM
 # © 2025 – MIT licence
 #
 # Requirements
-# • Thorlabs EXULUS software 2.5 or newer
-#   – EXULUS_COMMAND_LIB.py
-#   – Thorlabs_EXULUS_CGHDisplay.py
-#   – exulus_command_library.dll  (same folder / on PATH)
-# • numpy ≥ 1.20
+#   • Thorlabs EXULUS software 2.5 or newer
+#       – EXULUS_COMMAND_LIB.py
+#       – Thorlabs_EXULUS_CGHDisplay.py
+#       – exulus_command_library.dll     (same folder / on PATH)
+#   • numpy ≥ 1.20
 # ───────────────────────────────────────────────────────────────
 from pathlib import Path
 import ctypes
@@ -18,8 +18,8 @@ import numpy as np
 # 1.  Load Thorlabs’ SDK wrappers
 # ----------------------------------------------------------------
 try:
-    from . import EXULUS_COMMAND_LIB as ex      # device-control wrapper
-    from . import Thorlabs_EXULUS_CGHDisplay as disp  # display helper
+    from . import EXULUS_COMMAND_LIB as ex                # device control
+    from . import Thorlabs_EXULUS_CGHDisplay as disp       # display helper
 except ImportError as exc:
     raise ImportError(
         "Thorlabs SDK modules not found.  Ensure the EXULUS SDK’s "
@@ -28,16 +28,15 @@ except ImportError as exc:
 
 
 # ----------------------------------------------------------------
-# 2.  Hard-coded panel resolutions (pixels)
-#     SDK does not expose these programmatically.
+# 2.  Panel resolutions (pixels) – WUXGA for every HD model
 # ----------------------------------------------------------------
 _PANEL_SIZE = {
-    "EXULUS-HD2":   (1920, 1080),
+    "EXULUS-HD2":   (1920, 1200),
     "EXULUS-HD3":   (1920, 1200),
-    "EXULUS-HD4":   (1920, 1080),
-    "EXULUS-HDxHP": (3840, 2160),   # high-power version
+    "EXULUS-HD4":   (1920, 1200),
+    "EXULUS-HDxHP": (3840, 2160),   # 4 K high-power head
+    "EXULUS-4K1":   (3840, 2160),
 }
-
 
 # ----------------------------------------------------------------
 # 3.  Helper class
@@ -69,11 +68,22 @@ class ExulusSLM:
         if not devs:
             raise RuntimeError("No EXULUS devices detected.")
         try:
-            serial, dev_type = devs[device_index]
-            if "HD3" in dev_type:
-                dev_type = "EXULUS-HD3"
+            serial, dev_type_raw = devs[device_index]
         except IndexError:
             raise ValueError(f"device_index {device_index} out of range.")
+
+        # normalise dev_type to one of our table keys
+        dev_type_raw = dev_type_raw.upper()
+        if "HD2" in dev_type_raw:
+            dev_type = "EXULUS-HD2"
+        elif "HD3" in dev_type_raw:
+            dev_type = "EXULUS-HD3"
+        elif "HD4" in dev_type_raw:
+            dev_type = "EXULUS-HD4"
+        elif "4K" in dev_type_raw:
+            dev_type = "EXULUS-4K1"
+        else:
+            dev_type = dev_type_raw           # hope for an exact match
 
         # 2. open the chosen device
         hdl = ex.EXULUSOpen(serial, 115200, 5)
@@ -91,19 +101,32 @@ class ExulusSLM:
         # 4. set stroke mode
         self.set_stroke_mode(stroke_mode)
 
-        # 5. create a full-screen border-less window on monitor #1
+        # 5. create a full-screen, border-less window – try each monitor
         mon_cnt = disp.CghDisplayGetMonitorCount()
-        mon_id  = 1 if mon_cnt >= 2 else 0
-        self._win = disp.CghDisplayCreateWindow(mon_id,
-                                                self.width, self.height,
-                                                "EXULUS SLM")
-        
+        if mon_cnt == 0:
+            raise RuntimeError("CGH-Display DLL reports no monitors.")
+
+        self._win = 0
+        for mon_id in range(mon_cnt):
+            win = disp.CghDisplayCreateWindow(
+                mon_id, self.width, self.height, b"EXULUS SLM"
+            )
+            if win > 0:                       # success
+                self._win = win
+                break
+
         if self._win <= 0:
-            raise RuntimeError(f"Failed to create display window for {serial!s}")
-        
-        disp.CghDisplaySetWindowInfo(self._win,
-                                     self.width, self.height,
-                                     1)                 # 1 = greyscale
+            raise RuntimeError(
+                f"Failed to create {self.width}×{self.height} window on any "
+                f"monitor 0–{mon_cnt-1}.  "
+                "Check that one display is set to the exact WUXGA or 4 K "
+                "mode required by the SLM."
+            )
+
+        ret = disp.CghDisplaySetWindowInfo(self._win,
+                                           self.width, self.height, 1)  # 1 = 8-bit γ
+        if ret != 0:
+            raise RuntimeError(f"CghDisplaySetWindowInfo failed (code {ret}).")
 
         # calibration parameters
         self.m = float(m)
@@ -144,10 +167,7 @@ class ExulusSLM:
         self._send(img)
 
     def set_stroke_mode(self, mode: str) -> None:
-        """
-        `"half"` → π-radian stroke  
-        `"full"` → 2π-radian stroke
-        """
+        """“half” → π-stroke, “full” → 2π-stroke."""
         mode = mode.lower()
         if mode.startswith("half"):
             ex.EXULUSSetPhaseStrokeMode(self.dev, 0x01)
@@ -160,29 +180,23 @@ class ExulusSLM:
     # internal helpers
     # ———————————————————————————————————————————————
     def _shape_guard(self, arr: np.ndarray) -> np.ndarray:
-        """Check array shape and pad/center if necessary."""
+        """Check array shape and pad/centre if necessary."""
         if arr.shape != (self.height, self.width):
-            # Create a centered padded array instead of raising an error
-            padded_arr = np.zeros((self.height, self.width), dtype=arr.dtype)
-            # Calculate the centering offsets
-            y_offset = max(0, (self.height - arr.shape[0]) // 2)
-            x_offset = max(0, (self.width - arr.shape[1]) // 2)
-            # Calculate the region to copy (handle arrays larger than SLM too)
-            y_slice = slice(0, min(arr.shape[0], self.height))
-            x_slice = slice(0, min(arr.shape[1], self.width))
-            y_target = slice(y_offset, y_offset + min(arr.shape[0], self.height))
-            x_target = slice(x_offset, x_offset + min(arr.shape[1], self.width))
-            # Copy the visible part of the input to the padded array
-            padded_arr[y_target, x_target] = arr[y_slice, x_slice]
-            print(f"Resized input array from {arr.shape} to SLM resolution {(self.height, self.width)}")
-            return padded_arr
+            padded = np.zeros((self.height, self.width), dtype=arr.dtype)
+            # centre the incoming array (crop if larger)
+            y = max(0, (self.height - arr.shape[0]) // 2)
+            x = max(0, (self.width  - arr.shape[1]) // 2)
+            ys = slice(0, min(arr.shape[0], self.height))
+            xs = slice(0, min(arr.shape[1], self.width))
+            padded[y:y+ys.stop, x:x+xs.stop] = arr[ys, xs]
+            print(f"Resized input {arr.shape} → {(self.height, self.width)}")
+            return padded
         return arr
 
     def _send(self, img_u8: np.ndarray) -> None:
-        """Push the buffer to the already-created display window."""
-        # ensure C-contiguous memory for ctypes
+        """Push the buffer to the CGH-Display window."""
         buf = np.ascontiguousarray(img_u8)
-        buf_ptr = buf.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
-        ret   = disp.CghDisplayShowWindow(self._win, buf_ptr)
+        ptr = buf.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
+        ret = disp.CghDisplayShowWindow(self._win, ptr)
         if ret != 0:
-            raise RuntimeError(f"Failed to display image on SLM: {ret}")
+            raise RuntimeError(f"CghDisplayShowWindow failed (code {ret}).")
