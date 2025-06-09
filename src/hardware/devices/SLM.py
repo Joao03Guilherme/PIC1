@@ -181,5 +181,4 @@ class ExulusSLM:
         c_ptr = buf.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte))
         ret   = disp.CghDisplayShowWindow(self._win, c_ptr)
         if ret != 0:
-            raise RuntimeError("CghDisplayShowWindow failed "
-                               f"(error code {ret})")
+            print(f"[Exulus] CghDisplayShowWindow returned {ret}")
