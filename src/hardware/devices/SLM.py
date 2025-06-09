@@ -96,7 +96,7 @@ class ExulusSLM:
         mon_id  = 1 if mon_cnt >= 1 else 0
         self._win = disp.CghDisplayCreateWindow(mon_id,
                                                 self.width, self.height,
-                                                b"EXULUS SLM")
+                                                "EXULUS SLM")
         disp.CghDisplaySetWindowInfo(self._win,
                                      self.width, self.height,
                                      1)                 # 1 = greyscale
