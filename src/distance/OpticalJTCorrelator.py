@@ -37,11 +37,32 @@ EPS = 1e-6            # avoid divide-by-zero in normalisation
 ANGLE_RANGE = np.pi      # use 0 to pi range for phase encoding
 
 # ----------------------------------------------------------------
-# Helper: ±1 checkerboard (one-pixel pitch)
+# Helper: ±1 checkerboard (5x5 pixel blocks)
 # ----------------------------------------------------------------
-def _checkerboard(shape: Tuple[int, int]) -> np.ndarray:
-    idx_sum = np.indices(shape).sum(axis=0)
-    return 1.0 - 2.0 * (idx_sum % 2)     # 0 → +1, 1 → –1
+def _checkerboard(shape: Tuple[int, int], block_size: int = 3) -> np.ndarray:
+    height, width = shape
+    pattern = np.ones(shape, dtype=float)
+    
+    # Calculate blocks in each dimension
+    h_blocks = height // block_size
+    w_blocks = width // block_size
+    
+    # Generate a block-level checkerboard pattern first
+    for i in range(h_blocks + 1):  # +1 to handle edge case
+        for j in range(w_blocks + 1):  # +1 to handle edge case
+            # Determine if this block should be black or white
+            # (in the checkerboard pattern, blocks are inverted when i+j is odd)
+            if (i + j) % 2 == 1:
+                # Calculate block boundaries (handling edge cases)
+                y_start = i * block_size
+                y_end = min((i + 1) * block_size, height)
+                x_start = j * block_size
+                x_end = min((j + 1) * block_size, width)
+                
+                # Set this block to -1
+                pattern[y_start:y_end, x_start:x_end] = -1.0
+    
+    return pattern    # Values are +1.0 or -1.0
 
 # ----------------------------------------------------------------
 # Helper: side-by-side reference/object canvas (identical logic to sim)
