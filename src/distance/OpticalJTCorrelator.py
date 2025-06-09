@@ -135,6 +135,7 @@ class OpticalJTCorrelator:
 
         self.slm = slm or ExulusSLM(**(exulus_kwargs or {}))
         self.cam = cam or UC480Controller()
+        cam.reset_roi()
 
         self.binary_input = binary_input
         self.binary_jps = binary_jps
