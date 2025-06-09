@@ -39,7 +39,7 @@ ANGLE_RANGE = np.pi      # use 0 to pi range for phase encoding
 # ----------------------------------------------------------------
 # Helper: ±1 checkerboard (5x5 pixel blocks)
 # ----------------------------------------------------------------
-def _checkerboard(shape: Tuple[int, int], block_size: int = 3) -> np.ndarray:
+def _checkerboard(shape: Tuple[int, int], block_size: int = 10) -> np.ndarray:
     height, width = shape
     pattern = np.ones(shape, dtype=float)
     
