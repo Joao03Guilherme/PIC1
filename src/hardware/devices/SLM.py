@@ -129,8 +129,7 @@ class ExulusSLM:
                     mon_id, self.width, self.height, title
                 )
             except:
-                print(f"[Exulus] CghDisplayCreateWindow failed on monitor "
-                      f"{mon_id}: {exc}")
+                print(f"[Exulus] CghDisplayCreateWindow failed on monitor {mon_id}.")
                 continue
 
             if win > 0:                                    # success
