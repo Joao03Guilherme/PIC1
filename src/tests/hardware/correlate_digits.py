@@ -94,6 +94,9 @@ def main(cfg):
     )
     norm = pk / (dc + 1e-6)
 
+    # — tidying up ————————————————————————————
+    jtc.close()
+
     # — simple plots ———————————————————————————
     fig, ax = plt.subplots(2, 3, figsize=(16, 9))
     ax[0, 0].imshow(ref, cmap="gray"); ax[0, 0].set_title(f"Reference {cfg['ref_digit']}")
@@ -112,9 +115,6 @@ def main(cfg):
     plt.savefig(out, dpi=150)
     print("saved →", out)
     plt.show()
-
-    # — tidying up ————————————————————————————
-    jtc.close()
 
 # ───────────────────── CLI wrapper (optional) ──────────────────
 if __name__ == "__main__":
