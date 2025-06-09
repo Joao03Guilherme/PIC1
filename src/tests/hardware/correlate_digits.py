@@ -25,14 +25,10 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-# --- project imports -------------------------------------------
-root = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(root))                 # project root → PYTHONPATH
-
-from data.data import get_test_data
-from hardware.devices.SLM import ExulusSLM
-from hardware.devices.Camera import UC480Controller
-from distance.OpticalJTCorrelator import OpticalJTCorrelator
+from ...data.data import get_test_data
+from ...hardware.devices.SLM import ExulusSLM
+from ...hardware.devices.Camera import UC480Controller
+from ...distance.OpticalJTCorrelator import OpticalJTCorrelator
 
 # ─────────────────────── configuration ─────────────────────────
 cfg: dict = {

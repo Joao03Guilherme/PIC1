@@ -18,8 +18,8 @@ import numpy as np
 # 1.  Load Thorlabs’ SDK wrappers
 # ----------------------------------------------------------------
 try:
-    import EXULUS_COMMAND_LIB as ex      # device-control wrapper
-    import Thorlabs_EXULUS_CGHDisplay as disp  # display helper
+    from . import EXULUS_COMMAND_LIB as ex      # device-control wrapper
+    from . import Thorlabs_EXULUS_CGHDisplay as disp  # display helper
 except ImportError as exc:
     raise ImportError(
         "Thorlabs SDK modules not found.  Ensure the EXULUS SDK’s "
@@ -70,11 +70,13 @@ class ExulusSLM:
             raise RuntimeError("No EXULUS devices detected.")
         try:
             serial, dev_type = devs[device_index]
+            if "HD3" in dev_type:
+                dev_type = "EXULUS-HD3"
         except IndexError:
             raise ValueError(f"device_index {device_index} out of range.")
 
         # 2. open the chosen device
-        hdl = ex.EXULUSOpen(serial.encode(), 115200, 5)
+        hdl = ex.EXULUSOpen(serial, 115200, 5)
         if hdl < 0:
             raise RuntimeError(f"Failed to open EXULUS with serial {serial!s}")
         self.dev = hdl
