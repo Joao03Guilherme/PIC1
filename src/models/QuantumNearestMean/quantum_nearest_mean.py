@@ -1,9 +1,10 @@
-# src/models/QuantumNearestMean/quantum_nearestmean_network.py
 import numpy as np
+from functools import reduce
 from typing import Literal, Callable, Optional
 from sklearn.base import BaseEstimator, ClassifierMixin
+from collections import defaultdict
 
-# reuse the utility that already builds custom metrics for you
+# Re‑use the utility that already builds custom metrics for you
 from ..utils import make_distance_fn
 
 from ...distance.JTCorrelator import classical_jtc
@@ -25,61 +26,62 @@ from ...encodings.encodings import (
 
 
 class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
-    """
-    Quantum-inspired Nearest Mean Classifier (QNMC).
+    """Quantum‑inspired Nearest‑Mean Classifier (QNMC) with support for *m* tensor‑product copies.
 
     Parameters
     ----------
-    encoding : {'diag_prob', 'stereographic', 'informative'}, default='diag_prob'
-        How to map an input vector x ∈ R^d to a density operator p_x.
-        * diag_prob      : p_x = diag(x / sum(x))               (rank-≥1, diagonal)
-        * stereographic  : p_x = |ψ⟩⟨ψ| with ψ given by Eq.(2)-(3) of Sergioli et al.
-        * informative    : p_x = |ψ⟩⟨ψ| with ψ given by Eq.(7)-(10) of Sergioli et al.
+    encoding : {'diag_prob', 'stereographic', 'informative', 'standard', 'length_scaled'} (default='stereographic')
+        How to map an input vector *x* ∈ R^d to a quantum state ρₓ.
 
-    distance : {'trace', 'fidelity', 'optical_classical_jtc'}, default='trace'
-        Distance between density operators.  If not 'trace' or 'fidelity',
-        the string is passed to `make_distance_fn` and will be applied to
-        *vectors* that represent density matrices (diagonals for 'diag_prob';
-        flattened matrices otherwise).
-        'optical_classical_jtc' uses the OpticalJTCorrelator.
+    distance : {'trace', 'fidelity', 'optical_classical_jtc', ...} (default='fidelity')
+        Distance between density operators (or their vector representations).
+
+    copies : int, default=1
+        Number *m* of identical copies ρ⊗m used to enlarge the Hilbert space.  *copies=1* recovers the
+        original classifier.  Beware: dimension grows as d^m (diag_prob) or d^{2m} (matrix encodings).
 
     distance_squared : bool, default=False
-        Forwarded to `make_distance_fn` for your JTC-based metrics.
+        Forwarded to :func:`make_distance_fn` for JTC‑based metrics.
 
-    optical_correlator : OpticalJTCorrelator, optional
-        An instance of OpticalJTCorrelator, required if distance is 'optical_classical_jtc'.
-
+    optical_correlator : Optional[OpticalJTCorrelator]
+        Required when *distance=='optical_classical_jtc'*.
     """
 
+    # ---------------------------------------------------------------------
+    #                            INIT
+    # ---------------------------------------------------------------------
     def __init__(
         self,
         encoding: Literal[
-            "diag_prob", "stereographic", "informative", "standard"
+            "diag_prob", "stereographic", "informative", "standard", "length_scaled"
         ] = "stereographic",
         distance: str = "fidelity",
+        copies: int = 1,
         distance_squared: bool = False,
         optical_correlator: Optional[OpticalJTCorrelator] = None,
         random_state: Optional[int] = None,
     ):
+        if copies < 1 or not isinstance(copies, int):
+            raise ValueError("copies must be a positive integer")
+
         self.encoding = encoding
         self.distance = distance
+        self.copies = copies
         self.distance_squared = distance_squared
         self.optical_correlator = optical_correlator
         self.random_state = random_state
 
-        # Validate optical_correlator is provided if using optical distance
+        # Ensure optical correlator is provided when required
         if distance == "optical_classical_jtc" and optical_correlator is None:
             raise ValueError(
                 "optical_correlator must be provided for 'optical_classical_jtc' distance"
             )
 
-    # ------------------------------------------------------------------
-    #                      ENCODING HELPERS
-    # ------------------------------------------------------------------
-    # Encoding methods are now imported from src.encodings.encodings
-
-    # choose encoder at runtime
+    # ---------------------------------------------------------------------
+    #                       ENCODING HELPERS
+    # ---------------------------------------------------------------------
     def _encode(self, x: np.ndarray) -> np.ndarray:
+        """Map a raw feature vector to its *single‑copy* quantum representation."""
         if self.encoding == "diag_prob":
             return encode_diag_prob(x)
         elif self.encoding == "stereographic":
@@ -93,45 +95,38 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         else:
             raise ValueError(f"Unknown encoding '{self.encoding}'")
 
-    # ------------------------------------------------------------------
-    #                      DISTANCE HELPERS
-    # ------------------------------------------------------------------
-    # Distance helper methods are now imported from src.distance.quantum_distances
+    # ---------------------------------------------------------------------
+    #                    TENSOR‑PRODUCT  HELPERS
+    # ---------------------------------------------------------------------
+    def _tensor_product(self, obj: np.ndarray, diag: bool) -> np.ndarray:
+        """Return *m*-fold tensor product of *obj*.
 
-    # user-supplied or JTC distance (vector form)
+        * If *diag* is True, *obj* is treated as a probability vector and the
+          function returns the Kronecker product of vectors.
+        * Otherwise *obj* is a density **matrix** and the Kronecker product is
+          applied to the matrix (⨂ along both axes).
+        """
+        if self.copies == 1:
+            return obj
+
+        # numpy.kron already performs left Kronecker product for vectors/matrices
+        return reduce(np.kron, [obj] * self.copies)
+
+    # ---------------------------------------------------------------------
+    #                       DISTANCE  HELPERS
+    # ---------------------------------------------------------------------
     def _make_vector_metric(self) -> Callable[[np.ndarray, np.ndarray], float]:
-        # Include image shape and optical correlator for optical_classical_jtc distance
+        """Wrap :func:`make_distance_fn` to account for vector‑shaped inputs."""
         n_features = getattr(self, "n_features_", None)
-        shape = None  # Default shape
-        if n_features is not None:
-            # Determine H, W for reshaping vectors to images
-            h_candidate = int(np.sqrt(n_features))
-            if n_features > 0:  # Ensure n_features is positive
-                while h_candidate > 0 and n_features % h_candidate != 0:
-                    h_candidate -= 1
-
-            if (
-                h_candidate > 0 and n_features % h_candidate == 0
-            ):  # Found a valid factor
-                H = h_candidate
-                W = n_features // H
-            elif (
-                n_features > 0
-            ):  # if n_features is prime or no integer factor found, use 1 x n_features
-                H = 1
-                W = n_features
-            else:  # Fallback for n_features = 0 or other unexpected cases
-                H, W = 0, 0
-                print(
-                    f"Warning: Could not determine H, W for n_features={n_features}. Using ({H},{W})."
-                )
-            shape = (H, W)
+        shape = None
+        if n_features is not None and n_features > 0:
+            # Attempt to build a near‑square shape for JTC correlator visualisation
+            h = int(np.sqrt(n_features))
+            while h > 1 and n_features % h != 0:
+                h -= 1
+            shape = (h, n_features // h) if h > 1 else (1, n_features)
         else:
-            # Default shape if n_features is not yet set (e.g. MNIST default)
-            shape = (28, 28)
-            print(
-                f"Warning: n_features_ not set in _make_vector_metric. Defaulting shape to {shape}."
-            )
+            shape = (28, 28)  # sensible default for image datasets
 
         return make_distance_fn(
             name=self.distance,
@@ -140,135 +135,86 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
             optical_correlator=self.optical_correlator,
         )
 
-    # ------------------------------------------------------------------
-    #                       FIT
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------------------
+    #                                FIT
+    # ---------------------------------------------------------------------
     def fit(self, X: np.ndarray, y: np.ndarray):
-        """
-        Compute quantum centroids (average density operators) for each class.
-        """
+        """Compute class‑wise quantum centroids."""
         X = X.astype(np.float32, copy=False)
         self.classes_ = np.unique(y)
-        self.n_features_ = X.shape[1]  # Store for reshaping in distance calculation
+        self.n_features_ = X.shape[1]
 
+        # Determine dimensionality after encoding and tensor product
         if self.encoding == "diag_prob":
-            sums = {
-                label: np.zeros(X.shape[1], dtype=np.float32) for label in self.classes_
-            }
-
-        elif self.encoding in ("stereographic", "informative", "length_scaled"):  # d  ->  d+1
-            dim = X.shape[1] + 1
-            sums = {
-                label: np.zeros((dim, dim), dtype=np.float32) for label in self.classes_
-            }
-
-        elif self.encoding == "standard":  # stays at d
-            dim = X.shape[1]
-            sums = {
-                label: np.zeros((dim, dim), dtype=np.float32) for label in self.classes_
-            }
+            vec_dim = self.n_features_ ** self.copies
+            sums = {lbl: np.zeros(vec_dim, dtype=np.float32) for lbl in self.classes_}
         else:
-            raise ValueError("No valid encoding defined")
+            # Dimension of a single‑copy matrix
+            if self.encoding in ("stereographic", "informative", "length_scaled"):
+                d_single = X.shape[1] + 1
+            else:  # standard
+                d_single = X.shape[1]
+            d_tensor = d_single ** self.copies
+            sums = {
+                lbl: np.zeros((d_tensor, d_tensor), dtype=np.float32)
+                for lbl in self.classes_
+            }
 
-        counts = {label: 0 for label in self.classes_}
+        counts = defaultdict(int)
 
-        # accumulate outer products (or diagonals)
-        for xi, label in zip(X, y):
-            enc = self._encode(xi)
+        # -----------------------------------------------------------------
+        #                    ACCUMULATE CLASS CENTROIDS
+        # -----------------------------------------------------------------
+        for xi, lbl in zip(X, y):
+            enc = self._encode(xi)  # vector form |ψ⟩  or prob‐vector
+
             if self.encoding == "diag_prob":
-                sums[label] += enc  # vector
+                enc_tp = self._tensor_product(enc, diag=True)  # probability vector
+                sums[lbl] += enc_tp
             else:
-                sums[label] += np.outer(enc, enc)  # full density matrix
-            counts[label] += 1
+                rho = np.outer(enc, enc)  # single‑copy density matrix
+                rho_tp = self._tensor_product(rho, diag=False)
+                sums[lbl] += rho_tp
 
-        # final centroids
-        if self.encoding == "diag_prob":
-            self.centroids_ = {
-                label: sums[label] / counts[label] for label in self.classes_
-            }
-        else:
-            self.centroids_ = {
-                label: sums[label] / counts[label] for label in self.classes_
-            }
+            counts[lbl] += 1
 
-        # pick appropriate distance function
+        # Normalise sums to obtain centroids
+        self.centroids_ = {lbl: sums[lbl] / counts[lbl] for lbl in self.classes_}
+
+        # -----------------------------------------------------------------
+        #                       SELECT DISTANCE FUNCTION
+        # -----------------------------------------------------------------
         if self.distance == "trace":
             if self.encoding == "diag_prob":
                 self._metric_ = calculate_trace_distance_diag
             else:
                 self._metric_ = calculate_trace_distance_matrix
-
         elif self.distance == "fidelity":
             if self.encoding == "diag_prob":
-                self._metric_ = lambda p, q: 1.0 - np.sum(
-                    np.sqrt(p * q)
-                )  # Corrected fidelity for probability vectors
+                self._metric_ = lambda p, q: 1.0 - np.sum(np.sqrt(p * q))
             else:
                 self._metric_ = calculate_fidelity_distance_matrix
-
-        # All JTC-based distances (classical, optical, other custom) are handled here
-        else:
+        else:  # JTC or other custom metric working on vectors
             vecmetric = self._make_vector_metric()
 
             if self.encoding == "diag_prob":
                 self._metric_ = vecmetric
             else:
-                # For non-diag_prob encodings, centroids are density matrices.
-                # These need to be converted to vectors to be used with vecmetric.
+                # Need a wrapper converting matrices to flattened vectors
                 def _mat_to_vec(M: np.ndarray):
-                    # Ensure M is 2D
-                    if M.ndim == 1:
-                        print(
-                            f"Warning: _mat_to_vec received a 1D array for non-diag_prob encoding. Length: {len(M)}"
-                        )
-                        return M
-
-                    # Instead of using upper triangular indices, just flatten the matrix
-                    # This gives us a predictable length for calculating the image shape
                     return M.flatten()
 
-                # Create a custom vecmetric that recalculates the correct shape based on the flattened matrix
                 def custom_metric(A, B):
-                    v_A = _mat_to_vec(A)
-                    v_B = _mat_to_vec(B)
-
-                    # Get the length of the flattened vector
-                    vec_len = len(v_A)
-
-                    # Calculate a reasonable shape based on the vector length
-                    # Try to make it close to square
-                    h_candidate = int(np.sqrt(vec_len))
-                    while vec_len % h_candidate != 0 and h_candidate > 1:
-                        h_candidate -= 1
-
-                    if h_candidate > 0 and vec_len % h_candidate == 0:
-                        H = h_candidate
-                        W = vec_len // H
-                    else:
-                        H = 1
-                        W = vec_len
-
-                    # Create a new image shape
-                    new_shape = (H, W)
-                    print(f"Using shape {new_shape} for vectors of length {vec_len}")
-
-                    # Call the optical correlator with the correct shape
-                    if self.distance == "optical_classical_jtc":
-                        d, _, _, _ = self.optical_correlator.correlate(
-                            v_A, v_B, shape=new_shape
-                        )
-                        return d
-                    else:
-                        # For non-optical metrics, call with the recalculated shape
-                        return vecmetric(v_A, v_B)
+                    vA, vB = _mat_to_vec(A), _mat_to_vec(B)
+                    return vecmetric(vA, vB)
 
                 self._metric_ = custom_metric
 
         return self
 
-    # ------------------------------------------------------------------
-    #                       PREDICT
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------------------
+    #                              PREDICT
+    # ---------------------------------------------------------------------
     def predict(self, X: np.ndarray) -> np.ndarray:
         if not hasattr(self, "centroids_"):
             raise RuntimeError("Classifier has not been fitted.")
@@ -276,29 +222,20 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         X = X.astype(np.float32, copy=False)
         preds = np.empty(X.shape[0], dtype=self.classes_.dtype)
 
-        for idx, xi in enumerate(X):
+        for i, xi in enumerate(X):
             enc = self._encode(xi)
 
-            # choose representation to feed to distance metric
             if self.encoding == "diag_prob":
-                # no rep_x needed, enc is the vector
-                pass
+                rep_x = self._tensor_product(enc, diag=True)
             else:
-                # rep_x is the density matrix
-                rep_x = np.outer(enc, enc)
+                rho = np.outer(enc, enc)
+                rep_x = self._tensor_product(rho, diag=False)
 
-            best_dist = np.inf
-            best_lbl = None
-
+            best_dist, best_lbl = np.inf, None
             for lbl in self.classes_:
-                if self.encoding == "diag_prob":
-                    dist = self._metric_(enc, self.centroids_[lbl])
-                else:
-                    dist = self._metric_(rep_x, self.centroids_[lbl])
-
+                dist = self._metric_(rep_x, self.centroids_[lbl])
                 if dist < best_dist:
                     best_dist, best_lbl = dist, lbl
-
-            preds[idx] = best_lbl
+            preds[i] = best_lbl
 
         return preds

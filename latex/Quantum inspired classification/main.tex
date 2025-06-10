@@ -98,7 +98,7 @@ $(\mathbf M_{\text{test}},\mathbf y_{\text{test}})$
 gauges its ability to generalise to unseen data. 
 The algorithm is trained on the training set and evaluated on the test set. In this work we will be using the MNIST dataset (Fig.\ref{fig:mnist-examples}), with $60000$ training samples and $10000$ testing samples.
 
-\begin{figure}[htbp]
+\begin{figure}
   \centering
   % Replace digits_0.png ... digits_9.png with your own 28x28 PNGs
   \setlength{\tabcolsep}{2pt}
@@ -186,7 +186,7 @@ The CNM classifier assigns a test sample \(\mathbf x\) to the class $j$ if:
 where the distance \(d(\mathbf x, \mathbf y) = \|\mathbf x - \mathbf y\|\) is the Euclidean distance. 
 The CNM classifier is simple to implement, as it only requires the computation of the centroids and $K$ distance calculations, one for each centroid.
 
-\begin{figure}[h]
+\begin{figure}
     \centering
     \includegraphics[width=0.8\linewidth]{figures/nearest_mean_classifier.png}
     \caption{Ilustration of the CNM-C decision rule. The training set is split into two classes and the centroids are computed. The nearest centroid to the test sample is selected as the predicted class.}
@@ -524,23 +524,23 @@ Second, it ensures the correct phase of the first harmonic is preserved through 
 Besides those, the binary JTC has more benefits: it substantially increases the correlation-peak intensity, enhances the peak-to-sidelobe ratio, sharpens the correlation peak, and improves the signal-to-noise ratio compared to the classical JTC under the same illumination conditions, without requiring any additional hardware or optical components.
 
 
-\begin{figure}[htbp]
+\begin{figure}
   \centering
-  \begin{subfigure}[b]{0.9\linewidth}
+  \begin{subfigure}[b]{\linewidth}
     \centering
     \includegraphics[width=\linewidth]{figures/correlation/binary_input.png}
     \caption{Binary input images of the JTC, notice the grid introduced by the fill-factor of the SLM.}
     \label{fig:jtc-bin-input}
   \end{subfigure}
 
-  \begin{subfigure}[b]{0.9\linewidth}
+  \begin{subfigure}[b]{\linewidth}
     \centering
     \includegraphics[width=\linewidth]{figures/correlation/binary_jps.png}
     \caption{Binary joint power spectrum produced after tresholding the joint power spectrum measured by the camera.}%
     \label{fig:jtc-bin-jps}
   \end{subfigure}
 
-  \begin{subfigure}[b]{0.9\linewidth}
+  \begin{subfigure}[b]{\linewidth}
     \centering
     \includegraphics[width=\linewidth]{figures/correlation/binary_correlation.png}
     \caption{Correlation plane intensity, showing the cross-correlation peaks at the off-axis positions.}%
@@ -710,7 +710,7 @@ The simulation was used to validate the performance of the JTC and the classifie
 We ran all the classifiers using the MNIST dataset using the pre-processing pipeline described in Sec.~\ref{sec:ml-qic}. 
 The PCA reduced the number of features to \(d=50\). The results are presented in Table~\ref{tab:cls-results}. 
 
-\begin{table}[htbp]
+\begin{table}
   \centering
   \footnotesize                     % smaller font
   \setlength{\tabcolsep}{4pt}       % tighter columns
@@ -747,8 +747,7 @@ length and keeps only its direction - delivers the highest balanced
 accuracy when the \emph{exact} trace distance is used
 (\(85.8\,\%\)).  Augmenting the state with explicit norm information,
 either by the extra coordinate of the \emph{informative} (INF) map or
-by the quadratic term of the \emph{inverse-stereographic} (IS) map, does
-\emph{not} improve performance.
+by the quadratic term of the \emph{inverse-stereographic} (IS) map, does not improve performance.
 
 \medskip
 \textbf{(ii) Higher centroid purity narrows the trace–fidelity gap.}
@@ -758,7 +757,7 @@ state, the closer those two metrics become, and the smaller the
 difference between their BAs.  Table~\ref{tab:purity-gap} makes this
 relationship explicit.
 
-\begin{table}[h]
+\begin{table}
   \centering
   \caption{Average centroid purity and absolute BA gap between the trace and JTC-fidelity
            scores (values from Table~\ref{tab:cls-results}).}
@@ -786,37 +785,88 @@ This results highlights the importance of the encoding choice in quantum-inspire
 \section{Experimental results}
 \label{sec:experimental_results}
 
-The optical setup used for the experiments consisted of a reflective, phase-only SLM (Thorlabs Exulus-HD3), illuminated by a IR laser at a wavelength of \(\lambda = 845~\mathrm{nm}\). The laser beam was collimated and expanded to achieve a uniform illumination across the SLM. A Fourier-transform lens with a focal length of \(f = 75~\mathrm{mm}\) was used to perform the optical Fourier transform. 
-The CMOS camera at the fourier plane had a resolution of \(1280 \times 1024\) pixels and a pixel size of \(5.5~\mu m\), capturing the joint power spectrum and the correlation plane.
+The optical setup used to implement the binary JTC (Fig. \ref{fig:exp-setup}) consisted of a reflective, phase-only SLM (Thorlabs Exulus-HD3), illuminated by a IR laser at a wavelength of \(\lambda = 845~\mathrm{nm}\). The laser beam was collimated and expanded to achieve a uniform illumination across the SLM. A Fourier-transform lens with a focal length of \(f = 150~\mathrm{mm}\) was used to perform the optical Fourier transform. 
+The CMOS camera used was a Thorlabs model DCC1645C, placed at the fourier plane with a resolution of \(1280 \times 1024\) pixels, capturing the joint power spectrum and the correlation plane.
+We calibrated the SLM to our specific wavelength to ensure that the grayscale values in the images accurately corresponded to the intended phase shifts. Errors in the phase range ($0 to \pi$) can significantly degrade the correlation results.
 
-We calibrated the SLM to ensure that the grayscale values in the images accurately corresponded to the intended phase shifts. Errors in the phase range ($0 to \pi$) can significantly degrade the correlation results.
-The input patterns were encoded onto the SLM using binary phase modulation (\(0\) or \(\pi\)) to maximize diffraction efficiency while maintaining a clear mapping of input data. The fill-factor of the SLM introduced a visible grid pattern in the recorded images, resulting in diffraction effects that produced multiple correlation peaks in the Fourier plane.
-
-The camera was saturating due to the dynamic range of the spectrum, so we applied a checkerboard pattern to the SLM to replicate the fourier transforms at the corners (\cite{Wilkinson1998BinaryPOJTC})
-
-Figure~\ref{fig:exp-setup} illustrates the optical setup, including the laser, collimation optics, SLM, Fourier-transform lens, and CMOS camera.
-
-\begin{figure}[htbp]
+\begin{figure}
     \centering
-    \fbox{\includegraphics[width=\linewidth]{figures/experimental_setup_placeholder.png}}
+    \fbox{\includegraphics[width=\linewidth]{figures/setup/setup.png}}
     \caption{Schematic of the experimental setup for the JTC-based optical correlator. The laser beam is expanded and collimated, modulated by the SLM, and Fourier-transformed onto the CMOS camera.}
     \label{fig:exp-setup}
 \end{figure}
 
-The correlation plane exhibited distinct off-axis peaks corresponding to the cross-correlation between the reference and query patterns. When the query pattern matched the reference (e.g., a shifted version), these peaks were sharp and intense, demonstrating strong similarity. In contrast, when the query was unrelated to the reference, the correlation peaks were weak or absent, confirming low similarity. The presence of the SLM’s fill-factor grid caused diffraction effects, producing additional spots in the correlation plane, as expected from the pixelated structure of the modulator.
+Initialy, the camera was saturating due to the dynamic range of the spectrum, so we applied a checkerboard pattern to the SLM to replicate the fourier transforms at the corners (\cite{Wilkinson1998BinaryPOJTC}) and therefore reduce the dynamic range. 
 
-These observations confirm the effectiveness of the optical JTC implementation in detecting similarity between input patterns and validate its use in the proposed classifiers.
+\begin{figure}
+  \centering
+  \begin{subfigure}{\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]
+      {figures/experimental_images/1v1_0.8scale.png}
+    \caption{Digits \(1\) vs.\ \(1\).
+             After reducing the range to only capture the left part of the correlation plane, a (hard to see) off-axis
+             peak (red arrow) reveals the high similarity of the two
+             inputs.}
+    \label{fig:corr-1v1}
+  \end{subfigure}%
+  \vspace{6pt}
+
+  \begin{subfigure}{\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]
+      {figures/experimental_images/1v2_0.8scale.png}
+    \caption{Digits \(1\) vs.\ \(2\).
+             Under the same scaling no noticeable off-axis peak is
+             visible, indicating low similarity.}
+    \label{fig:corr-1v2}
+  \end{subfigure}
+
+  \caption{Experimental correlation planes recorded with the JTC setup.
+           A match (a) shows a cross-correlation peak,
+           whereas a mismatch (b) does not.}
+  \label{fig:jtc-exp-corr}
+\end{figure}
+
+Although an off-axis cross-correlation peak is still visible in
+Fig.~\ref{fig:corr-1v1}, its contrast is reduced by a strong constant
+term around the centre of the Fourier plane.  
+With a perfectly aligned \(\pm1\) checkerboard this central term should
+vanish, because the same number of \(+1\) and \(-1\) pixels cancel out
+the zero-order light~\cite{Wilkinson1998BinaryPOJTC}.  Its presence here suggests either a small
+mis-registration between the checkerboard and the SLM pixel grid, or an
+extra background signal that reaches the camera.
+
+We can sharpen the cross-correlation peaks by applying background subtraction, recording a reference frame with the SLM blank and subtract it from every measurement to remove the constant offset, and this can be done because the Fourier transform is a linear operation.
+We can also increase the laser power and/or the camera exposure so that the peaks are more pronounced, but this can lead to saturation of the camera and loss of information.
+
+(Develop more this part with results from the JTC)
 
 \section{Conclusion}
 \label{sec:conclusion}
 
+We have demonstrated how a quantum-inspired nearest-mean classifier can be implemented with a minimal optical setup using a single phase-only SLM and a 1-f Joint Transform Correlator.  By encoding classical feature vectors and leveraging the JTC's native ability to compute inner products (and hence fidelity, as we derived), we obtain direct, hardware-accelerated estimates of both Euclidean and trace-distance-based similarities without any electronic dot-product engine.
+
+Our prototype, currently limited to $\sim$2 correlations/s, is not constrained by optical physics but by the Python-based interface to the SLM and camera.  In an ideal time-multiplexed workflow, the ultimate rate is set solely by frame rates: with a 24fps camera and 60Hz SLM we can already achieve 12 correlations/s, while matching the camera to 60fps would boost this to 30 correlations/s.  Other faster technologies, such as the Ferroelectric liquid crystals (FLC) SLMs~\cite{Wilkinson1998BinaryPOJTC}, can achieve frame rates of 1kHz or more, which would allow us to reach hundreds of correlations per second.
+Moreover, the JTC's spatial parallelism allows multiple centroids to be displayed side by side.  By placing 10 class prototypes on the SLM simultaneously, one optical shot yields 10 correlations in parallel—effectively multiplying throughput by a factor of 10.  Taken together, these time- and space-multiplexed strategies promise scalable, real-time, low-power optical implementations of quantum-inspired learning for photonic systems.
+
+
 \section{Future Work}
-- Paralell JTC
-- Other optical architectures 
-- Check other encodings 
-- Explore other quantum inspired classifiers that can leverage optical implementations
-- Use Uhlman's theorem to compute the trace distance between two mixed states, allowing us to use the JTC to compute the trace distance between the quantum centroid and the input vector, which can then be used to classify the input vector.
-- Check other distance metrics instead of 1/sim
+\label{sec:future-work}
+
+There are several promising directions to extend this work. \textbf{Parallel JTC implementation} represents a natural next step. While our current setup performs correlations sequentially, the JTC's inherent spatial parallelism allows for multiple reference patterns to be displayed simultaneously on the SLM. With all classes encoded side by side, a single optical shot could evaluate all similarities at once, reducing inference time.
+
+\textbf{Encoding strategies} play a central role in the performance of quantum-inspired classifiers. Our results suggest that centroid purity significantly influences the effectiveness of optical trace distance approximations. Exploring other encodings—especially ones that preserve purity while retaining directional and norm information—could yield further improvements.
+
+We also see potential in extending this framework to \textbf{other quantum-inspired classifiers}, such as the pretty good measurement (PGM) classifier~\cite{Cruzeiro2024}, 
+
+Another important direction is the use of \textbf{Uhlmann's theorem} to estimate trace distances between mixed states. If we can find a practical way to compute the purifications of mixed states, we could compute the true trace distance between an input and a quantum centroid directly, thereby eliminating the fidelity approximation, and not being limited to high purity encodings.
+
+- Todo, use tensor product to get better accuracies
+
+\textbf{Alternative optical setups} are also very relevant. Beyond the JTC, there are other optical systems such as VanderLugt correlators~(\cite{VanderLugt1964}, \cite{Dragulinescu2023}) or optic-disk based systems~\cite{Neifeld1993} that may offer different trade-offs between complexity, robustness, and sensitivity. Investigating these could lead to architectures better suited for specific applications.
+
+Finally, the current approach defines dissimilarity as the \textbf{inverse of JTC similarity}, but this is not a metric in the strict sense. Exploring alternative similarity-to-distance mappings—such as angular distances, learned dissimilarities, or perceptually informed metrics—could improve classification performance. 
 \bibliography{references}{}
 \bibliographystyle{plain}
 
