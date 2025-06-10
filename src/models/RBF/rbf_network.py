@@ -7,7 +7,7 @@ from sklearn.cluster import MiniBatchKMeans
 from sklearn.metrics import pairwise_distances
 from sklearn.base import BaseEstimator, ClassifierMixin
 from ..utils import make_distance_fn
-from ...distance.OpticalJTCorrelator import OpticalJTCorrelator
+# from ...distance.OpticalJTCorrelator import OpticalJTCorrelator
 
 
 # -----------------------------------------------------------------------------

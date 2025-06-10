@@ -8,7 +8,7 @@ from collections import defaultdict
 from ..utils import make_distance_fn
 
 from ...distance.JTCorrelator import classical_jtc
-from ...distance.OpticalJTCorrelator import OpticalJTCorrelator
+# from ...distance.OpticalJTCorrelator import OpticalJTCorrelator
 from ...distance.quantum_distances import (
     calculate_trace_distance_diag,
     calculate_fidelity_distance_matrix,
@@ -58,7 +58,7 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
         distance: str = "fidelity",
         copies: int = 1,
         distance_squared: bool = False,
-        optical_correlator: Optional[OpticalJTCorrelator] = None,
+        optical_correlator = None,
         random_state: Optional[int] = None,
     ):
         if copies < 1 or not isinstance(copies, int):

@@ -3,7 +3,9 @@ from ..distance.JTCorrelator import (
     classical_jtc,
     binary_jtc,
 )
-from ..distance.OpticalJTCorrelator import OpticalJTCorrelator
+
+from ..hardware.simulations.binary_jtc_lightpipes import binary_jtc_correlate
+# from ..distance.OpticalJTCorrelator import OpticalJTCorrelator
 
 
 def make_distance_fn(
@@ -50,7 +52,7 @@ def make_distance_fn(
     elif name == "binary_jtc":
 
         def _d(X, Y):
-            d, _, _, _ = binary_jtc(
+            d, _, _, _ = binary_jtc_correlate(
                 X,
                 Y,
                 shape=shape,

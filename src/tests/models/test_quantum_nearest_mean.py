@@ -29,9 +29,8 @@ X_test = X_test_total
 y_train = y_train_total
 X_train = X_train_total
 
-"""
 # Define the percentage of the dataset to use
-sample_percentage = 0.025  # Using 2% as in the classical test script example
+sample_percentage = 0.01  # Using 2% as in the classical test script example
 
 # Create smaller, stratified training subset
 _, X_train, _, y_train = train_test_split(
@@ -50,7 +49,6 @@ _, X_test, _, y_test = train_test_split(
     stratify=y_test_total,
     random_state=0,
 )
-"""
 
 # Print the shapes of the training and testing sets
 print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
@@ -65,7 +63,7 @@ pca = PCA(
 )  
 
 qnmc = QuantumNearestMeanClassifier(
-    encoding="standard", distance="trace", random_state=0
+    encoding="standard", distance="fidelity", random_state=0
 )
 
 model = Pipeline(
