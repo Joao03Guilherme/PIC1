@@ -126,10 +126,10 @@ class OpticalJTCorrelator:
         cam: UC480Controller | None = None,
         binary_input: bool = True,
         binary_jps: bool = True,
-        checkerboard: bool = False,
-        display_scale: float = 0.05,
+        checkerboard: bool = True,
+        display_scale: float = 0.7,
         sleep_time: float = 0.1,
-        blocking_fraction: float = 0.005,
+        blocking_fraction: float = 0.05,
         exulus_kwargs: dict[str, Any] | None = None,
     ) -> None:
 
@@ -142,19 +142,55 @@ class OpticalJTCorrelator:
         self.display_scale = display_scale
         self.sleep_time = sleep_time
         self.blocking_fraction = blocking_fraction
+        self.background_noise: np.ndarray | None = None
 
         self.w, self.h = self.slm.width, self.slm.height
+        
+        # Pre-calculate checkerboard pattern if enabled
+        self.cb_pattern: np.ndarray | None = None
+        if self.checkerboard:
+            # Assuming _checkerboard is defined at the module level or accessible
+            self.cb_pattern = _checkerboard((self.h, self.w))
+            print("[OpticalJTC] Pre-calculated checkerboard pattern.")
+
         print(f"[OpticalJTC] SLM {self.w}×{self.h}  "
               f"binary_input={binary_input}  binary_jps={binary_jps}  "
               f"checkerboard={checkerboard}")
 
     # ------------- private wrappers ---------------------------------
+    def capture_background_noise(self) -> None:
+        """
+        Captures the current camera view and stores it as background noise.
+        This background will be subtracted from subsequent image captures in _upload_and_snap.
+        The user should ensure the optical setup is appropriate for capturing background
+        (e.g., SLM is off or displaying black).
+        """
+        print("[OpticalJTC] Capturing background noise...")
+        self.background_noise = self.cam.snap().astype(np.float32)
+        if self.background_noise is not None:
+            print(f"[OpticalJTC] Background noise captured with shape {self.background_noise.shape}.")
+        else:
+            print("[OpticalJTC] Failed to capture background noise.")
+
     def _upload_and_snap(self, phase_img: np.ndarray) -> np.ndarray:
         # Calibrate the grey image
         grey_img = self.slm.phase_to_grey(phase_img)
         self.slm.display_grey(grey_img)
         time.sleep(self.sleep_time)
-        return self.cam.snap().astype(np.float32)
+        
+        captured_image = self.cam.snap().astype(np.float32)
+        
+        if self.background_noise is not None:
+            if captured_image.shape == self.background_noise.shape:
+                print("[OpticalJTC] Subtracting background noise.")
+                # Subtract and clip at 0 to prevent negative intensities
+                captured_image = np.clip(captured_image - self.background_noise, 0, None)
+            else:
+                print(f"[OpticalJTC] Warning: Captured image shape {captured_image.shape} "
+                      f"does not match background noise shape {self.background_noise.shape}. "
+                      f"Skipping background subtraction.")
+            
+        return captured_image
 
     # ------------- public API ---------------------------------------
     def correlate(
@@ -174,8 +210,13 @@ class OpticalJTCorrelator:
             scale=self.display_scale,
             binarize=self.binary_input,
         )
-        if self.checkerboard:
+        if self.checkerboard and self.cb_pattern is not None: # Use pre-calculated pattern
+            a0 *= self.cb_pattern
+        elif self.checkerboard and self.cb_pattern is None:
+            # Fallback in case it wasn't initialized, though __init__ should handle it
+            print("[OpticalJTC] Warning: Checkerboard enabled but pattern not pre-calculated. Calculating now.")
             a0 *= _checkerboard((self.h, self.w))
+
 
         # map to 8-bit (0..127 (0...pi))
         if self.binary_input:

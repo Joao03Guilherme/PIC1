@@ -87,12 +87,15 @@ def main(cfg):
     ref, obj = load_two_digits(cfg["dataset"],
                                cfg["ref_digit"],
                                cfg["obj_digit"])
+    
+    # Perform background calibration
+    jtc.capture_background_noise()
 
     # — run correlation ————————————————————————
     pk, dc, shift, a0_8bit, jps_8bit, corr, masked = jtc.correlate(
         ref, obj, return_planes=True
     )
-    norm = pk / (dc + 1e-6)
+    norm = pk
 
     # — tidying up ————————————————————————————
     jtc.close()
