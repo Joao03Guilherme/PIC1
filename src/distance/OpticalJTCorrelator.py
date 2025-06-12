@@ -176,8 +176,6 @@ class OpticalJTCorrelator:
         # Calibrate the grey image
         grey_img = self.slm.phase_to_grey(phase_img)
         self.slm.display_grey(grey_img)
-        time.sleep(self.sleep_time)
-        
         captured_image = self.cam.snap().astype(np.float32)
         
         if self.background_noise is not None:

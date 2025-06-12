@@ -208,10 +208,24 @@ class ExulusSLM:
 
     def _send(self, img_u8: np.ndarray) -> None:
         """Push the buffer to the CGH-Display window and save a copy."""
-        # Save a copy of the image
+        
+        # Ensure contiguous array for the SDK call
+        buf = np.ascontiguousarray(img_u8)
+        ptr = buf.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
+        
+        # Call the SDK to display the image on the SLM FIRST
+        # This ensures the SLM update is initiated as quickly as possible.
+        ret = disp.CghDisplayShowWindow(self._win, ptr)
+        if ret != 0:
+            print(f"[Exulus] CghDisplayShowWindow failed (code {ret}).")
+            # Depending on desired behavior, one might choose to return or raise an error here.
+            # For now, we'll proceed to save even if display command failed, for debugging.
+
+        # Save a copy of the image AFTER sending the command to the SLM.
+        # This prevents the save operation from delaying the SLM update.
         import os
         from datetime import datetime
-        import matplotlib.pyplot as plt
+        import matplotlib.pyplot as plt # Ensure this import is available
         
         # Create output directory if it doesn't exist
         save_dir = os.path.join(os.path.expanduser("~"), "SLM_Images")
@@ -222,12 +236,8 @@ class ExulusSLM:
         filename = os.path.join(save_dir, f"slm_image_{timestamp}.png")
         
         # Save the image
-        plt.imsave(filename, img_u8, cmap='gray')
-        print(f"[Exulus] Image saved to {filename}")
-        
-        # Continue with normal operation
-        buf = np.ascontiguousarray(img_u8)
-        ptr = buf.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
-        ret = disp.CghDisplayShowWindow(self._win, ptr)
-        if ret != 0:
-            print(f"[Exulus] CghDisplayShowWindow failed (code {ret}).")
+        try:
+            plt.imsave(filename, img_u8, cmap='gray')
+            print(f"[Exulus] Image saved to {filename}")
+        except Exception as e:
+            print(f"[Exulus] Failed to save image {filename}: {e}")
