@@ -71,6 +71,7 @@ def main(cfg):
                     stroke_mode=cfg["stroke_mode"])
     cam = UC480Controller(serial=cfg["cam_serial"])
     cam.set_exposure(cfg["cam_exposure"])        # ms
+    cam.reset_roi() # Ensure camera is using full sensor
 
     jtc = OpticalJTCorrelator(
         slm=slm,
@@ -92,7 +93,8 @@ def main(cfg):
     jtc.capture_background_noise()
 
     # — run correlation ————————————————————————
-    pk, dc, shift, a0_8bit, jps_8bit, corr, masked = jtc.correlate(
+    # Unpack all returned planes, including the raw JPS capture
+    pk, dc, shift, a0_phase_map, jps_raw, jps_phase_map, corr_plane, masked = jtc.correlate(
         ref, obj, return_planes=True
     )
     norm = pk
@@ -104,12 +106,18 @@ def main(cfg):
     fig, ax = plt.subplots(2, 3, figsize=(16, 9))
     ax[0, 0].imshow(ref, cmap="gray"); ax[0, 0].set_title(f"Reference {cfg['ref_digit']}")
     ax[0, 1].imshow(obj, cmap="gray"); ax[0, 1].set_title(f"Object {cfg['obj_digit']}")
-    ax[0, 2].imshow(a0_8bit, cmap="gray"); ax[0, 2].set_title("SLM input (8-bit)")
+    # Display the a0_phase_map (phase map sent to SLM for JPS generation)
+    ax[0, 2].imshow(slm.phase_to_grey(a0_phase_map), cmap="gray"); ax[0, 2].set_title("SLM Input (Phase→Grey)")
 
-    ax[1, 0].imshow(jps_8bit, cmap="gray"); ax[1, 0].set_title("JPS → SLM (8-bit)")
-    im = ax[1, 1].imshow(corr, cmap="hot"); ax[1, 1].set_title("Correlation plane")
-    fig.colorbar(im, ax=ax[1, 1])
-    ax[1, 2].imshow(masked, cmap="hot"); ax[1, 2].set_title("Masked corr (peak)")
+    # Display the raw JPS captured by the camera
+    ax[1, 0].imshow(jps_raw, cmap="hot"); ax[1, 0].set_title("JPS Raw (Camera Capture)")
+    # Display the jps_phase_map (phase map sent to SLM for correlation)
+    im_jps_phase = ax[1, 1].imshow(slm.phase_to_grey(jps_phase_map), cmap="gray"); ax[1, 1].set_title("JPS Phase→Grey (To SLM)")
+    # fig.colorbar(im_jps_phase, ax=ax[1,1]) # Optional: colorbar for phase map if not greyscale
+    
+    im_corr = ax[1, 2].imshow(corr_plane, cmap="hot"); ax[1, 2].set_title("Correlation plane")
+    fig.colorbar(im_corr, ax=ax[1, 2]) # Keep colorbar for correlation plane
+    # ax[1, 2].imshow(masked, cmap="hot"); ax[1, 2].set_title("Masked corr (peak)") # This can be plotted separately if needed
     for a in ax.ravel(): a.axis("off")
     plt.suptitle(f"peak={pk:.3e}  DC={dc:.3e}  norm={norm:.4f}  shift={shift}")
     plt.tight_layout()

@@ -39,7 +39,7 @@ ANGLE_RANGE = np.pi      # use 0 to pi range for phase encoding
 # ----------------------------------------------------------------
 # Helper: ±1 checkerboard (5x5 pixel blocks)
 # ----------------------------------------------------------------
-def _checkerboard(shape: Tuple[int, int], block_size: int = 10) -> np.ndarray:
+def _checkerboard(shape: Tuple[int, int], block_size: int = 5) -> np.ndarray:
     height, width = shape
     pattern = np.ones(shape, dtype=float)
     
@@ -72,7 +72,7 @@ def create_joint_input_plane(
     obj: np.ndarray,
     slm_shape: Tuple[int, int],
     thresh,
-    scale: float = 0.05,
+    scale: float = 0.7,
     binarize: bool = True,
 ) -> np.ndarray:
     rows, cols = slm_shape
@@ -250,7 +250,8 @@ class OpticalJTCorrelator:
         dy, dx = py - cy, px - cx
 
         if return_planes:
-            return peak_val, dc_val, (dy, dx), a0_phase_map, jps_phase_map, corr_plane, masked
+            # Add jps_raw to the returned tuple
+            return peak_val, dc_val, (dy, dx), a0_phase_map, jps_raw, jps_phase_map, corr_plane, masked
         return peak_val, dc_val, (dy, dx)
 
     # ------------- context-manager sugar ----------------------------
