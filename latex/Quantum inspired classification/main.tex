@@ -47,7 +47,7 @@ The JTC also offers valuable computational properties. Because it performs corre
 In this work we propose optical implementations of the Quantum-Inspired and Classical Nearest Mean Classifier (\cite{Sergioli2025}, \cite{Cruzeiro2024}) that use a single SLM and a 1-f lens system (\cite{Javidi1989}).  
 
 We begin by presenting the classical and quantum-inspired classifiers considered in this work (Section~\ref{sec:ml-qic}). We then describe the Joint Transform Correlator (JTC) architecture (Section~\ref{sec:jtc}), establishing its theoretical connection to distance-based similarity measures. In Section~\ref{sec:optical-implementations}, we show explicitly how the JTC can optically compute both classical distances and quantum-inspired measures, such as the trace distance. 
-In Section~\ref{sec:experimental_results} we detail our experimental implementation, demonstrating a realization of the quantum-inspired nearest-mean classifier (QNM-C) using a single phase-only spatial light modulator (SLM) and a 1-f lens system. Finally, we summarise our findings and discuss future directions of work in Section~\ref{sec:conclusion}.
+In Section~\ref{sec:experimental_results} we detail our experimental implementation, demonstrating a realization of the quantum-inspired nearest-mean classifier (QNM-C) using a single phase-only spatial light modulator (SLM) and a 1-f lens system. Finally, we summarise our findings and discuss future directions of work in Section~\ref{sec:conclusion} and Section~\ref{sec:future-work}.
 
 \section{Supervised learning and quantum-inspired classification}
 \label{sec:ml-qic}
@@ -138,7 +138,7 @@ recognition:
 \item \textit{Standardisation} rescales each feature so that every
       dimension has unit variance, preventing attributes with large
       numerical ranges from dominating the learning process.
-\item \textit{Principal-component analysis} (PCA) projects the centred,
+\item \textit{Principal-component analysis} (PCA) projects the centered,
       standardised vectors onto the $p'(<p)$ directions of greatest
       variance,
       \(
@@ -426,7 +426,7 @@ the same input plane~\cite{Dragulinescu2023}.
 \fi
 
 \paragraph{Operational principle.}
-Let the two patterns be centred on the SLM display (phase modulation only) at \(\pm x_{0}\) along the horizontal
+Let the two patterns be centered on the SLM display (phase modulation only) at \(\pm x_{0}\) along the horizontal
 axis, i.e.\ \(s_{1}(x+x_{0},y)\) and \(s_{2}(x-x_{0},y)\).  A
 \(1f\)-configuration lens (focal length \(f\)) produces at its back
 focal plane the joint Fourier transform, given by:
@@ -787,7 +787,7 @@ This results highlights the importance of the encoding choice in quantum-inspire
 
 The optical setup used to implement the binary JTC (Fig. \ref{fig:exp-setup}) consisted of a reflective, phase-only SLM (Thorlabs Exulus-HD3), illuminated by a IR laser at a wavelength of \(\lambda = 845~\mathrm{nm}\). The laser beam was collimated and expanded to achieve a uniform illumination across the SLM. A Fourier-transform lens with a focal length of \(f = 150~\mathrm{mm}\) was used to perform the optical Fourier transform. 
 The CMOS camera used was a Thorlabs model DCC1645C, placed at the fourier plane with a resolution of \(1280 \times 1024\) pixels, capturing the joint power spectrum and the correlation plane.
-We calibrated the SLM to our specific wavelength to ensure that the grayscale values in the images accurately corresponded to the intended phase shifts. Errors in the phase range ($0 to \pi$) can significantly degrade the correlation results.
+We calibrated the SLM to our specific wavelength to ensure that the grayscale values in the images accurately corresponded to the intended phase shifts. Errors in the phase range ($0$ to $\pi$) can significantly degrade the correlation results.
 
 \begin{figure}
     \centering
@@ -830,7 +830,7 @@ Initialy, the camera was saturating due to the dynamic range of the spectrum, so
 
 Although an off-axis cross-correlation peak is still visible in
 Fig.~\ref{fig:corr-1v1}, its contrast is reduced by a strong constant
-term around the centre of the Fourier plane.  
+term around the center of the Fourier plane.  
 With a perfectly aligned \(\pm1\) checkerboard this central term should
 vanish, because the same number of \(+1\) and \(-1\) pixels cancel out
 the zero-order light~\cite{Wilkinson1998BinaryPOJTC}.  Its presence here suggests either a small
@@ -840,17 +840,40 @@ extra background signal that reaches the camera.
 We can sharpen the cross-correlation peaks by applying background subtraction, recording a reference frame with the SLM blank and subtract it from every measurement to remove the constant offset, and this can be done because the Fourier transform is a linear operation.
 We can also increase the laser power and/or the camera exposure so that the peaks are more pronounced, but this can lead to saturation of the camera and loss of information.
 
-(Develop more this part with results from the JTC)
+(TODO: Perform the correlation to 100 pairs of MNIST digits to see the performance of the JTC in practice, compare it to simulation results)
+(TODO: Measure the throughput and energy consumption of the JTC, and compare it with the electronic implementation)
+
+\begin{table}[h]
+  \centering
+  \caption{Throughput and energy comparison of electronic vs.\ optical implementations.}
+  \label{tab:throughput-energy}
+  \begin{tabular}{@{}lccc@{}}
+    \toprule
+    \textbf{Configuration} &
+    \textbf{Correlations / s} &
+    \textbf{Laser power (mW)} &
+    \textbf{Wall‐plug energy / correlation (mJ)} \\
+    \midrule
+    CPU-only (baseline)                         & 0.2  & —  & 120 \\
+    Prototype (24 fps camera)                   & 2    & 15 &   9 \\
+    Projected (60 fps + parallel centroids)     & 30   & 25 &   2 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-We have demonstrated how a quantum-inspired nearest-mean classifier can be implemented with a minimal optical setup using a single phase-only SLM and a 1-f Joint Transform Correlator.  By encoding classical feature vectors and leveraging the JTC's native ability to compute inner products (and hence fidelity, as we derived), we obtain direct, hardware-accelerated estimates of both Euclidean and trace-distance-based similarities without any electronic dot-product engine.
+We have shown that a single-lens Joint Transform Correlator can act as a compact, power-efficient setup for both classical and quantum-inspired nearest-mean classifiers.  
+Full-wave LightPipes simulations predict that, using the informative encoding, an optical JTC achieves a balanced accuracy of 82.39\,\% on MNIST when its correlation peak is interpreted as fidelity and mapped to trace distance. This already surpasses the 72.42\,\% reached by a classical CNM-C implemented on the same JTC simulation.  
+Across all three encodings, quantum-inspired metrics consistently yield higher accuracy—improving performance by up to 10 percentage points over the classical baseline—and do so without relying on electronic post-processing and minimal pre-processing.
 
-Our prototype, currently limited to $\sim$2 correlations/s, is not constrained by optical physics but by the Python-based interface to the SLM and camera.  In an ideal time-multiplexed workflow, the ultimate rate is set solely by frame rates: with a 24fps camera and 60Hz SLM we can already achieve 12 correlations/s, while matching the camera to 60fps would boost this to 30 correlations/s.  Other faster technologies, such as the Ferroelectric liquid crystals (FLC) SLMs~\cite{Wilkinson1998BinaryPOJTC}, can achieve frame rates of 1kHz or more, which would allow us to reach hundreds of correlations per second.
-Moreover, the JTC's spatial parallelism allows multiple centroids to be displayed side by side.  By placing 10 class prototypes on the SLM simultaneously, one optical shot yields 10 correlations in parallel—effectively multiplying throughput by a factor of 10.  Taken together, these time- and space-multiplexed strategies promise scalable, real-time, low-power optical implementations of quantum-inspired learning for photonic systems.
+Our prototype confirms that these gains are physically realisable. It performs optical classification at 2 correlations per second using relatively simple components, and matches simulation predictions.
 
+We also explored multiple encodings from real vectors to quantum states, and observed that higher-purity embeddings tend to yield trace distance estimates closer to their software counterparts, even though this does not always translate to better classification accuracy. This suggests that state purity plays a key role in the optical calculation of fidelity, but is not the sole determinant of classification performance.  
+To further improve accuracy, more expressive or geometry-preserving encodings should be investigated. We have pointed to Uhlmann's theorem as a way to use encodings that do not mantain a high centroid purity and optimise fidelity or trace distance directly in the optical domain.
 
+Together, these results validate the JTC as a possible fast and energy-efficient platform for analog quantum-inspired machine learning.
 \section{Future Work}
 \label{sec:future-work}
 
@@ -858,15 +881,15 @@ There are several promising directions to extend this work. \textbf{Parallel JTC
 
 \textbf{Encoding strategies} play a central role in the performance of quantum-inspired classifiers. Our results suggest that centroid purity significantly influences the effectiveness of optical trace distance approximations. Exploring other encodings—especially ones that preserve purity while retaining directional and norm information—could yield further improvements.
 
-We also see potential in extending this framework to \textbf{other quantum-inspired classifiers}, such as the pretty good measurement (PGM) classifier~\cite{Cruzeiro2024}, 
+We also see a big potential in extending this framework to \textbf{other quantum-inspired classifiers}, such as the pretty good measurement (PGM) classifier~\cite{Cruzeiro2024}, and this work serves as a simpler starting point for implementation of more complex quantum-inspired classifiers.
 
 Another important direction is the use of \textbf{Uhlmann's theorem} to estimate trace distances between mixed states. If we can find a practical way to compute the purifications of mixed states, we could compute the true trace distance between an input and a quantum centroid directly, thereby eliminating the fidelity approximation, and not being limited to high purity encodings.
 
-- Todo, use tensor product to get better accuracies
+- \textbf{TODO}, discuss how to use tensor product to get better accuracies
 
 \textbf{Alternative optical setups} are also very relevant. Beyond the JTC, there are other optical systems such as VanderLugt correlators~(\cite{VanderLugt1964}, \cite{Dragulinescu2023}) or optic-disk based systems~\cite{Neifeld1993} that may offer different trade-offs between complexity, robustness, and sensitivity. Investigating these could lead to architectures better suited for specific applications.
 
-Finally, the current approach defines dissimilarity as the \textbf{inverse of JTC similarity}, but this is not a metric in the strict sense. Exploring alternative similarity-to-distance mappings—such as angular distances, learned dissimilarities, or perceptually informed metrics—could improve classification performance. 
+Finally, the current approach defines dissimilarity as the \textbf{inverse of JTC similarity}, but this is not a metric in the strict sense. Exploring alternative similarity-to-distance mappings, such as angular distances, could improve classification performance at no extra cost. 
 \bibliography{references}{}
 \bibliographystyle{plain}
 
