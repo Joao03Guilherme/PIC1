@@ -1,95 +1,168 @@
-# exulus_adapter.py  ─────────────────────────────────────────────
-# Drop-in replacement for Thorlabs’ ExulusSLM based on slmPy
+# exulus_driver.py
+# ───────────────────────────────────────────────────────────────
+# Lightweight Python interface for a Thorlabs EXULUS-HD SLM
+# © 2025 – MIT licence
 #
-# Requires:
-#   • the original slmPy classes (SLMdisplay, etc.) to be importable
+# Requirements
+#   • Thorlabs EXULUS software 2.5 or newer
+#       – EXULUS_COMMAND_LIB.py
+#       – Thorlabs_EXULUS_CGHDisplay.py
+#       – exulus_command_library.dll  (same folder / on PATH)
 #   • numpy ≥ 1.20
-# ────────────────────────────────────────────────────────────────
-from __future__ import annotations
-import os
-from datetime import datetime
+# ───────────────────────────────────────────────────────────────
+import ctypes
 from pathlib import Path
-import warnings
 import numpy as np
 
+# ----------------------------------------------------------------
+# 1.  Load Thorlabs’ SDK wrappers
+# ----------------------------------------------------------------
 try:
-    from .slmpy import SLMdisplay        # ← your first code base
+    from . import EXULUS_COMMAND_LIB as ex               # device control
+    from . import Thorlabs_EXULUS_CGHDisplay as disp      # display helper
 except ImportError as exc:
     raise ImportError(
-        "Cannot import SLMdisplay from slmPy.  "
-        "Ensure the slmPy package / folder is on PYTHONPATH."
+        "Thorlabs SDK modules not found.  Ensure the EXULUS SDK’s "
+        "Python folder is on PYTHONPATH and the DLL is on PATH."
     ) from exc
 
+# ----------------------------------------------------------------
+# 1a.  Declare C-function prototypes (prevents access-violation)
+# ----------------------------------------------------------------
+disp.CghDisplayCreateWindow.argtypes = (
+    ctypes.c_int,      # monitor index
+    ctypes.c_int,      # width
+    ctypes.c_int,      # height
+    ctypes.c_char_p,   # ANSI title
+)
+disp.CghDisplayCreateWindow.restype  = ctypes.c_int
 
+disp.CghDisplaySetWindowInfo.argtypes = (
+    ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int)
+disp.CghDisplaySetWindowInfo.restype  = ctypes.c_int
+
+disp.CghDisplayShowWindow.argtypes = (
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_uint8),
+)
+disp.CghDisplayShowWindow.restype  = ctypes.c_int
+
+# ----------------------------------------------------------------
+# 2.  Panel resolutions (pixels) – WUXGA for every HD model
+# ----------------------------------------------------------------
+_PANEL_SIZE = {
+    "EXULUS-HD2":   (1920, 1200),
+    "EXULUS-HD3":   (1920, 1200),
+    "EXULUS-HD4":   (1920, 1200),
+    "EXULUS-HDxHP": (3840, 2160),   # 4 K high-power head
+    "EXULUS-4K1":   (3840, 2160),
+}
+
+# ----------------------------------------------------------------
+# 3.  Helper class
+# ----------------------------------------------------------------
 class ExulusSLM:
     """
-    Thin wrapper that mimics Thorlabs’ ExulusSLM API using *slmPy*.
+    Thin wrapper around the EXULUS Python SDK.
 
     Parameters
     ----------
-    monitor : int, default 1
-        Physical monitor index for the SLM window (0 = primary).
-    isImageLock : bool, default False
-        Whether to wait for the previous frame to finish drawing.
-    alwaysTop : bool, default False
-        If True the SLM window is kept top-most.
+    device_index : int
+        0 for the first SLM returned by EXULUSListDevices().
     m, b : float
         Calibration coefficients so that
             phase [rad] = m * grey + b
-        (defaults match the Thorlabs sample).
-    stroke_mode : {"half", "full"}, default "half"
-        π-stroke or 2π-stroke.  slmPy has no equivalent, so the value
-        is remembered but not applied to hardware.
-    save_dir : str or Path, optional
-        If given, every buffer sent to the SLM is saved as a PNG here.
-        (Handy for debugging and synchronisation.)
+        (half-wave calibration by default:  grey 127 → π).
+    stroke_mode : {"half", "full"}
+        Select π- or 2π-stroke immediately after opening the device.
     """
 
-    # ───── initialisation & tear-down ──────────────────────────
-    def __init__(
-        self,
-        *,
-        monitor: int = 1,
-        isImageLock: bool = False,
-        alwaysTop: bool = False,
-        m: float = 0.0174,
-        b: float = 0.3639,
-        stroke_mode: str = "half",
-        save_dir: str | os.PathLike | None = None,
-    ) -> None:
+    # ———————————————————————————————————————————————
+    # initialisation & tear-down
+    # ———————————————————————————————————————————————
+    def __init__(self, *, device_index=0, m=0.0174, b=0.3639,
+                 stroke_mode="half") -> None:
 
-        # 1. bring up the SLM window
-        self._slm = SLMdisplay(
-            monitor=monitor, isImageLock=isImageLock, alwaysTop=alwaysTop
-        )
-        self.width, self.height = self._slm.getSize()
+        # 1. enumerate devices
+        devs = ex.EXULUSListDevices()
+        if not devs:
+            raise RuntimeError("No EXULUS devices detected.")
+        try:
+            serial, dev_type_raw = devs[device_index]
+        except IndexError:
+            raise ValueError(f"device_index {device_index} out of range.")
 
-        # 2. calibration & mode bookkeeping
-        self.m = float(m)
-        self.b = float(b)
-        self._stroke_mode = None
+        # normalise dev_type to one of our table keys
+        dev_type_raw = dev_type_raw.upper()
+        if   "HD2" in dev_type_raw: dev_type = "EXULUS-HD2"
+        elif "HD3" in dev_type_raw: dev_type = "EXULUS-HD3"
+        elif "HD4" in dev_type_raw: dev_type = "EXULUS-HD4"
+        elif "4K"  in dev_type_raw: dev_type = "EXULUS-4K1"
+        else:                       dev_type = dev_type_raw  # hope for match
+
+        # 2. open the chosen device
+        hdl = ex.EXULUSOpen(serial, 115200, 5)
+        if hdl < 0:
+            raise RuntimeError(f"Failed to open EXULUS with serial {serial}")
+        self.dev = hdl
+
+        # 3. resolution lookup
+        try:
+            self.width, self.height = _PANEL_SIZE[dev_type]
+        except KeyError:
+            raise RuntimeError(f"Unknown EXULUS type '{dev_type}' – "
+                               "add its resolution to _PANEL_SIZE.")
+
+        # 4. set stroke mode
         self.set_stroke_mode(stroke_mode)
 
-        # 3. optional frame capture
-        if save_dir is not None:
-            self._save_dir = Path(save_dir).expanduser()
-            self._save_dir.mkdir(parents=True, exist_ok=True)
-        else:
-            self._save_dir = None
+        # 5. create a full-screen, border-less window – try every monitor
+        mon_cnt = disp.CghDisplayGetMonitorCount()
+        if mon_cnt == 0:
+            raise RuntimeError("CGH-Display DLL reports no monitors.")
 
-        print(
-            f"[Exulus] virtual SLM opened  ({self.width}×{self.height})  "
-            f"stroke={self._stroke_mode}"
+        self._win = 0
+        title = "EXULUS SLM"                              
+        for mon_id in range(mon_cnt):
+            try:
+                win = disp.CghDisplayCreateWindow(
+                    mon_id, self.width, self.height, title
+                )
+            except:
+                print(f"[Exulus] CghDisplayCreateWindow failed on monitor {mon_id}.")
+                continue
+
+            if win > 0:                                    # success
+                self._win = win
+                break
+
+        if self._win <= 0:
+            print("[Exulus] CghDisplayCreateWindow failed on all monitors.")
+
+        ret = disp.CghDisplaySetWindowInfo(
+            self._win, self.width, self.height, 1  # 1 = 8-bit greyscale
         )
+        if ret != 0:
+            print(f"[Exulus] CghDisplaySetWindowInfo failed (code {ret}).")
+
+        # calibration parameters
+        self.m = float(m)
+        self.b = float(b)
+
+        print(f"[Exulus] opened serial {serial}  "
+              f"{self.width}×{self.height}  stroke={stroke_mode}")
 
     def close(self) -> None:
         """Gracefully release resources."""
-        self._slm.close()
+        disp.CghDisplayCloseWindow(self._win)
+        ex.EXULUSClose(self.dev)
         print("[Exulus] closed")
 
-    # ───── public API (matches Thorlabs) ───────────────────────
+    # ———————————————————————————————————————————————
+    # public API
+    # ———————————————————————————————————————————————
     def phase_to_grey(self, phase_rad: np.ndarray) -> np.ndarray:
-        """Phase (rad) → 8-bit greyscale image."""
+        """Phase (rad) → 8-bit greyscale."""
         grey = (phase_rad - self.b) / self.m
         return np.clip(np.rint(grey), 0, 255).astype(np.uint8)
 
@@ -110,69 +183,51 @@ class ExulusSLM:
         self._send(img)
 
     def set_stroke_mode(self, mode: str) -> None:
-        """
-        “half” → π-stroke, “full” → 2π-stroke.
-
-        slmPy cannot change liquid-crystal stroke; the value is stored
-        for parity with Thorlabs’ API and printed as a warning once.
-        """
+        """“half” → π-stroke, “full” → 2π-stroke."""
         mode = mode.lower()
-        if mode.startswith("half"):
-            self._stroke_mode = "half"
-        elif mode.startswith("full"):
-            self._stroke_mode = "full"
-        else:
-            raise ValueError("stroke_mode must be 'half' or 'full'")
+        if   mode.startswith("half"): ex.EXULUSSetPhaseStrokeMode(self.dev, 0x01)
+        elif mode.startswith("full"): ex.EXULUSSetPhaseStrokeMode(self.dev, 0x00)
+        else: raise ValueError("stroke_mode must be 'half' or 'full'")
 
-        warnings.filterwarnings("once", category=UserWarning)
-        warnings.warn(
-            "stroke_mode is recorded but has no effect in the slmPy "
-            "backend (this is a hardware feature).",
-            RuntimeWarning,
-            stacklevel=2,
-        )
-
-    # ───── internal helpers ────────────────────────────────────
+    # ———————————————————————————————————————————————
+    # internal helpers
+    # ———————————————————————————————————————————————
     def _shape_guard(self, arr: np.ndarray) -> np.ndarray:
-        """Ensure the array matches the SLM shape; pad/centre if needed."""
+        """Ensure array matches the SLM shape; pad/centre if needed."""
         if arr.shape == (self.height, self.width):
             return arr
-
         padded = np.zeros((self.height, self.width), dtype=arr.dtype)
         # centre (crop if larger)
         y0 = max(0, (self.height - arr.shape[0]) // 2)
         x0 = max(0, (self.width  - arr.shape[1]) // 2)
         ys = slice(0, min(arr.shape[0], self.height))
         xs = slice(0, min(arr.shape[1], self.width))
-        padded[y0 : y0 + ys.stop, x0 : x0 + xs.stop] = arr[ys, xs]
-        print(f"[Exulus] resized input {arr.shape} → {(self.height, self.width)}")
+        padded[y0:y0+ys.stop, x0:x0+xs.stop] = arr[ys, xs]
+        print(f"Resized input {arr.shape} → {(self.height, self.width)}")
         return padded
 
     def _send(self, img_u8: np.ndarray) -> None:
-        """Push the buffer to slmPy’s display and optionally save a copy."""
-        # 1. optional PNG dump
-        if self._save_dir is not None:
-            ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-            filename = self._save_dir / f"slm_image_{ts}.png"
-            try:
-                import matplotlib.pyplot as plt
-
-                plt.imsave(filename, img_u8, cmap="gray")
-                print(f"[Exulus] image saved to {filename}")
-            except Exception as exc:
-                print(f"[Exulus] failed to save {filename}: {exc}")
-
-        # 2. show the image
-        self._slm.updateArray(img_u8, sleep=0.0)
-
-    # ───── convenience aliases (optional) ──────────────────────
-    # keep parity with original Exulus driver attributes
-    @property
-    def dev(self):
-        """Dummy attribute to satisfy code expecting .dev."""
-        return None
-
-    @property
-    def _win(self):
-        """Dummy attribute to satisfy code expecting ._win."""
-        return None
+        """Push the buffer to the CGH-Display window and save a copy."""
+        # Save a copy of the image
+        import os
+        from datetime import datetime
+        import matplotlib.pyplot as plt
+        
+        # Create output directory if it doesn't exist
+        save_dir = os.path.join(os.path.expanduser("~"), "SLM_Images")
+        os.makedirs(save_dir, exist_ok=True)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        filename = os.path.join(save_dir, f"slm_image_{timestamp}.png")
+        
+        # Save the image
+        plt.imsave(filename, img_u8, cmap='gray')
+        print(f"[Exulus] Image saved to {filename}")
+        
+        # Continue with normal operation
+        buf = np.ascontiguousarray(img_u8)
+        ptr = buf.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
+        ret = disp.CghDisplayShowWindow(self._win, ptr)
+        if ret != 0:
+            print(f"[Exulus] CghDisplayShowWindow failed (code {ret}).")
