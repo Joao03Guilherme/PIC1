@@ -13,7 +13,7 @@ import warnings
 import numpy as np
 
 try:
-    from slmPy import SLMdisplay        # ← your first code base
+    from .slmpy import SLMdisplay        # ← your first code base
 except ImportError as exc:
     raise ImportError(
         "Cannot import SLMdisplay from slmPy.  "
