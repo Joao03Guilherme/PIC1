@@ -98,13 +98,8 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
     # ---------------------------------------------------------------------
     #                    TENSOR‑PRODUCT  HELPERS
     # ---------------------------------------------------------------------
-    def _tensor_product(self, obj: np.ndarray, diag: bool) -> np.ndarray:
+    def _tensor_product(self, obj: np.ndarray) -> np.ndarray:
         """Return *m*-fold tensor product of *obj*.
-
-        * If *diag* is True, *obj* is treated as a probability vector and the
-          function returns the Kronecker product of vectors.
-        * Otherwise *obj* is a density **matrix** and the Kronecker product is
-          applied to the matrix (⨂ along both axes).
         """
         if self.copies == 1:
             return obj
@@ -169,11 +164,11 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
             enc = self._encode(xi)  # vector form |ψ⟩  or prob‐vector
 
             if self.encoding == "diag_prob":
-                enc_tp = self._tensor_product(enc, diag=True)  # probability vector
+                enc_tp = self._tensor_product(enc)  # probability vector
                 sums[lbl] += enc_tp
             else:
                 rho = np.outer(enc, enc)  # single‑copy density matrix
-                rho_tp = self._tensor_product(rho, diag=False)
+                rho_tp = self._tensor_product(rho)
                 sums[lbl] += rho_tp
 
             counts[lbl] += 1
@@ -226,10 +221,10 @@ class QuantumNearestMeanClassifier(BaseEstimator, ClassifierMixin):
             enc = self._encode(xi)
 
             if self.encoding == "diag_prob":
-                rep_x = self._tensor_product(enc, diag=True)
+                rep_x = self._tensor_product(enc)
             else:
                 rho = np.outer(enc, enc)
-                rep_x = self._tensor_product(rho, diag=False)
+                rep_x = self._tensor_product(rho)
 
             best_dist, best_lbl = np.inf, None
             for lbl in self.classes_:

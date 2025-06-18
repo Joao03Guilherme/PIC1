@@ -41,78 +41,104 @@
 \newlabel{fig:mnist-examples}{{1}{2}{One representative example per class from the MNIST dataset. Each \(28\times 28\) grayscale image is flattened to a \(d=784\)-dimensional feature vector before the pre-processing (centering, standardisation, PCA).\relax }{figure.caption.3}{}}
 \@writefile{toc}{\contentsline {paragraph}{Pre-processing.}{2}{paragraph*.4}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Balanced accuracy.}{2}{paragraph*.5}\protected@file@percent }
+\newlabel{eq:balanced-accuracy}{{1}{2}{Balanced accuracy}{equation.2.1}{}}
 \@writefile{toc}{\contentsline {paragraph}{Classical Nearest-Mean Classifier (CNM-C).}{2}{paragraph*.6}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Ilustration of the CNM-C decision rule. The training set is split into two classes and the centroids are computed. The nearest centroid to the test sample is selected as the predicted class.\relax }}{2}{figure.caption.7}\protected@file@percent }
-\newlabel{fig:nearest_mean_classifier}{{2}{2}{Ilustration of the CNM-C decision rule. The training set is split into two classes and the centroids are computed. The nearest centroid to the test sample is selected as the predicted class.\relax }{figure.caption.7}{}}
+\newlabel{eq:class-centroid}{{2}{2}{Classical Nearest-Mean Classifier (CNM-C)}{equation.2.2}{}}
+\newlabel{eq:nearest-mean-rule}{{3}{2}{Classical Nearest-Mean Classifier (CNM-C)}{equation.2.3}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {ii}Quantum-inspired classification}{2}{subsection.2.2}\protected@file@percent }
 \newlabel{subsec:qic}{{ii}{2}{Quantum-inspired classification}{subsection.2.2}{}}
-\@writefile{toc}{\contentsline {paragraph}{Density--pattern encodings.}{2}{paragraph*.8}\protected@file@percent }
-\newlabel{par:encodings}{{ii}{2}{Density--pattern encodings}{paragraph*.8}{}}
+\@writefile{toc}{\contentsline {paragraph}{Density--pattern encodings.}{2}{paragraph*.7}\protected@file@percent }
+\newlabel{par:encodings}{{ii}{2}{Density--pattern encodings}{paragraph*.7}{}}
 \citation{Sergioli2025}
 \citation{Dragulinescu2023}
-\@writefile{toc}{\contentsline {paragraph}{Quantum centroid.}{3}{paragraph*.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Quantum distance measure.}{3}{paragraph*.10}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Quantum-inspired nearest-mean classifier (QNM-C).}{3}{paragraph*.11}\protected@file@percent }
+\newlabel{eq:density-definition}{{4}{3}{Density--pattern encodings}{equation.2.4}{}}
+\@writefile{toc}{\contentsline {paragraph}{Quantum centroid.}{3}{paragraph*.8}\protected@file@percent }
+\newlabel{eq:quantum-centroid}{{5}{3}{Quantum centroid}{equation.2.5}{}}
+\@writefile{toc}{\contentsline {paragraph}{Quantum distance measure.}{3}{paragraph*.9}\protected@file@percent }
+\newlabel{eq:trace-distance-def}{{6}{3}{Quantum distance measure}{equation.2.6}{}}
+\@writefile{toc}{\contentsline {paragraph}{Quantum-inspired nearest-mean classifier (QNM-C).}{3}{paragraph*.10}\protected@file@percent }
+\newlabel{eq:quantum-centroid-avg}{{7}{3}{Quantum-inspired nearest-mean classifier (QNM-C)}{equation.2.7}{}}
+\newlabel{eq:qnm-decision-rule}{{8}{3}{Quantum-inspired nearest-mean classifier (QNM-C)}{equation.2.8}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {III}Joint Transform Correlator}{3}{section.3}\protected@file@percent }
 \newlabel{sec:jtc}{{III}{3}{Joint Transform Correlator}{section.3}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {i}Classical Joint Transform Correlator}{3}{subsection.3.1}\protected@file@percent }
 \newlabel{subsec:classical-jtc}{{i}{3}{Classical Joint Transform Correlator}{subsection.3.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{Operational principle.}{3}{paragraph*.11}\protected@file@percent }
+\newlabel{eq:joint-ft}{{9}{3}{Operational principle}{equation.3.9}{}}
+\newlabel{eq:jps-components}{{10}{3}{Operational principle}{equation.3.10}{}}
 \citation{Psaltis1984}
 \citation{Javidi1989}
 \citation{Dragulinescu2023}
 \citation{alfalou2024understanding}
 \citation{Javidi1989}
-\@writefile{toc}{\contentsline {paragraph}{Operational principle.}{4}{paragraph*.12}\protected@file@percent }
+\newlabel{eq:correlation-signals}{{11}{4}{Operational principle}{equation.3.11}{}}
+\newlabel{eq:rij}{{12}{4}{Operational principle}{equation.3.12}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {ii}Binary Joint Transform Correlator}{4}{subsection.3.2}\protected@file@percent }
 \newlabel{subsec:binary-jtc}{{ii}{4}{Binary Joint Transform Correlator}{subsection.3.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {iii}JTC-based dissimilarity}{4}{subsection.3.3}\protected@file@percent }
-\newlabel{subsec:jtc-dissimilarity}{{iii}{4}{JTC-based dissimilarity}{subsection.3.3}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {IV}Optical implementations of the classifiers}{4}{section.4}\protected@file@percent }
-\newlabel{sec:optical-implementations}{{IV}{4}{Optical implementations of the classifiers}{section.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {i}Optical implementation of the CNM-C}{4}{subsection.4.1}\protected@file@percent }
-\newlabel{subsec:cnm-optical}{{i}{4}{Optical implementation of the CNM-C}{subsection.4.1}{}}
-\citation{mcmahonoptical2023}
-\newlabel{fig:jtc-bin-input}{{3a}{5}{Binary input images of the JTC, notice the grid introduced by the fill-factor of the SLM.\relax }{figure.caption.13}{}}
-\newlabel{sub@fig:jtc-bin-input}{{a}{5}{Binary input images of the JTC, notice the grid introduced by the fill-factor of the SLM.\relax }{figure.caption.13}{}}
-\newlabel{fig:jtc-bin-jps}{{3b}{5}{Binary joint power spectrum produced after tresholding the joint power spectrum measured by the camera.\relax }{figure.caption.13}{}}
-\newlabel{sub@fig:jtc-bin-jps}{{b}{5}{Binary joint power spectrum produced after tresholding the joint power spectrum measured by the camera.\relax }{figure.caption.13}{}}
-\newlabel{fig:jtc-bin-corr-plane}{{3c}{5}{Correlation plane intensity, showing the cross-correlation peaks at the off-axis positions.\relax }{figure.caption.13}{}}
-\newlabel{sub@fig:jtc-bin-corr-plane}{{c}{5}{Correlation plane intensity, showing the cross-correlation peaks at the off-axis positions.\relax }{figure.caption.13}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Python-based optical simulation of a binary-input Joint Transform Correlator, implemented with LightPipes for realistic wave-propagation and Fourier-transform modeling. The fill factor of the SLM is being simulated by an added grid pattern.\relax }}{5}{figure.caption.13}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Scatter plot of the JTC dissimilarity versus the Euclidean distance for $100$ random pairs of MNIST digits. The coefficient of determination is \(R^{2}=0.428\). While the $R^2$ value is relatively low, multiple outliers contribute to this reduction. However, the general trend of the data is well captured by the fitted line, indicating a meaningful correlation between JTC dissimilarity and Euclidean distance.\relax }}{5}{figure.caption.14}\protected@file@percent }
-\newlabel{fig:euclidean_vs_jtc}{{4}{5}{Scatter plot of the JTC dissimilarity versus the Euclidean distance for $100$ random pairs of MNIST digits. The coefficient of determination is \(R^{2}=0.428\). While the $R^2$ value is relatively low, multiple outliers contribute to this reduction. However, the general trend of the data is well captured by the fitted line, indicating a meaningful correlation between JTC dissimilarity and Euclidean distance.\relax }{figure.caption.14}{}}
+\newlabel{fig:jtc-bin-input}{{2a}{4}{Binary input images of the JTC, notice the grid introduced by the fill-factor of the SLM.\relax }{figure.caption.12}{}}
+\newlabel{sub@fig:jtc-bin-input}{{a}{4}{Binary input images of the JTC, notice the grid introduced by the fill-factor of the SLM.\relax }{figure.caption.12}{}}
+\newlabel{fig:jtc-bin-jps}{{2b}{4}{Binary joint power spectrum produced after tresholding the joint power spectrum measured by the camera.\relax }{figure.caption.12}{}}
+\newlabel{sub@fig:jtc-bin-jps}{{b}{4}{Binary joint power spectrum produced after tresholding the joint power spectrum measured by the camera.\relax }{figure.caption.12}{}}
+\newlabel{fig:jtc-bin-corr-plane}{{2c}{4}{Correlation plane intensity, showing the cross-correlation peaks at the off-axis positions.\relax }{figure.caption.12}{}}
+\newlabel{sub@fig:jtc-bin-corr-plane}{{c}{4}{Correlation plane intensity, showing the cross-correlation peaks at the off-axis positions.\relax }{figure.caption.12}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Python-based optical simulation of a binary-input Joint Transform Correlator, implemented with LightPipes for realistic wave-propagation and Fourier-transform modeling. The fill factor of the SLM is being simulated by an added grid pattern.\relax }}{4}{figure.caption.12}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Scatter plot of the JTC dissimilarity versus the Euclidean distance for $100$ random pairs of MNIST digits. The coefficient of determination is \(R^{2}=0.428\). While the $R^2$ value is relatively low, multiple outliers contribute to this reduction. However, the general trend of the data is well captured by the fitted line, indicating a meaningful correlation between JTC dissimilarity and Euclidean distance.\relax }}{5}{figure.caption.13}\protected@file@percent }
+\newlabel{fig:euclidean_vs_jtc}{{3}{5}{Scatter plot of the JTC dissimilarity versus the Euclidean distance for $100$ random pairs of MNIST digits. The coefficient of determination is \(R^{2}=0.428\). While the $R^2$ value is relatively low, multiple outliers contribute to this reduction. However, the general trend of the data is well captured by the fitted line, indicating a meaningful correlation between JTC dissimilarity and Euclidean distance.\relax }{figure.caption.13}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {iii}JTC-based dissimilarity}{5}{subsection.3.3}\protected@file@percent }
+\newlabel{subsec:jtc-dissimilarity}{{iii}{5}{JTC-based dissimilarity}{subsection.3.3}{}}
+\newlabel{eq:jtc-dissim}{{13}{5}{JTC-based dissimilarity}{equation.3.13}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Optical implementations of the classifiers}{5}{section.4}\protected@file@percent }
+\newlabel{sec:optical-implementations}{{IV}{5}{Optical implementations of the classifiers}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {i}Optical implementation of the CNM-C}{5}{subsection.4.1}\protected@file@percent }
+\newlabel{subsec:cnm-optical}{{i}{5}{Optical implementation of the CNM-C}{subsection.4.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {ii}Optical implementation of the QNM–C}{5}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Purity.}{5}{paragraph*.14}\protected@file@percent }
+\newlabel{eq:purity}{{14}{5}{Purity}{equation.4.14}{}}
+\@writefile{toc}{\contentsline {paragraph}{Fidelity.}{5}{paragraph*.15}\protected@file@percent }
+\newlabel{eq:fidelity-general}{{15}{5}{Fidelity}{equation.4.15}{}}
+\newlabel{eq:fidelity-pure}{{16}{5}{Fidelity}{equation.4.16}{}}
+\@writefile{toc}{\contentsline {paragraph}{Trace distance from fidelity.}{5}{paragraph*.16}\protected@file@percent }
+\newlabel{eq:fuchs-vdg}{{17}{5}{Trace distance from fidelity}{equation.4.17}{}}
+\newlabel{eq:trace-from-fidelity}{{18}{5}{Trace distance from fidelity}{equation.4.18}{}}
 \citation{lightpipes2021}
-\@writefile{toc}{\contentsline {paragraph}{Purity.}{6}{paragraph*.15}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Fidelity.}{6}{paragraph*.16}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Trace distance from fidelity.}{6}{paragraph*.17}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Uhlmann's theorem.}{6}{paragraph*.19}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Trace distance vs. fidelity distance computed with the JTC using the inverse stereographic encoding. The $R^2$ value of $0.986$ indicates a strong linear relationship between the two measures, confirming that the JTC can effectively estimate the trace distance.\relax }}{6}{figure.caption.18}\protected@file@percent }
-\newlabel{fig:trace_vs_fidelity}{{5}{6}{Trace distance vs. fidelity distance computed with the JTC using the inverse stereographic encoding. The $R^2$ value of $0.986$ indicates a strong linear relationship between the two measures, confirming that the JTC can effectively estimate the trace distance.\relax }{figure.caption.18}{}}
-\@writefile{toc}{\contentsline {paragraph}{Choosing the correct encoding.}{6}{paragraph*.20}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Trace distance vs. fidelity distance computed with the JTC using the inverse stereographic encoding. The $R^2$ value of $0.986$ indicates a strong linear relationship between the two measures, confirming that the JTC can effectively estimate the trace distance.\relax }}{6}{figure.caption.17}\protected@file@percent }
+\newlabel{fig:trace_vs_fidelity}{{4}{6}{Trace distance vs. fidelity distance computed with the JTC using the inverse stereographic encoding. The $R^2$ value of $0.986$ indicates a strong linear relationship between the two measures, confirming that the JTC can effectively estimate the trace distance.\relax }{figure.caption.17}{}}
+\newlabel{eq:trace-from-sim}{{19}{6}{Trace distance from fidelity}{equation.4.19}{}}
+\@writefile{toc}{\contentsline {paragraph}{Uhlmann's theorem.}{6}{paragraph*.18}\protected@file@percent }
+\newlabel{eq:uhlmann}{{20}{6}{Uhlmann's theorem}{equation.4.20}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Centroid purity for each MNIST class under the three encodings described in Sec.~\ref {par:encodings}.\relax }}{6}{table.caption.20}\protected@file@percent }
+\newlabel{tab:centroidpurity}{{1}{6}{Centroid purity for each MNIST class under the three encodings described in Sec.~\ref {par:encodings}.\relax }{table.caption.20}{}}
+\@writefile{toc}{\contentsline {paragraph}{Choosing the correct encoding.}{6}{paragraph*.19}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {iii}Computational simulations}{6}{subsection.4.3}\protected@file@percent }
 \citation{Wilkinson1998BinaryPOJTC}
 \citation{Wilkinson1998BinaryPOJTC}
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Centroid purity for each MNIST class under the three encodings described in Sec.~\ref {par:encodings}.\relax }}{7}{table.caption.21}\protected@file@percent }
-\newlabel{tab:centroidpurity}{{1}{7}{Centroid purity for each MNIST class under the three encodings described in Sec.~\ref {par:encodings}.\relax }{table.caption.21}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Balanced accuracy (\%\,mean $\pm $ std.) on MNIST. For the CNM-C the encoding is not applicable, so we leave it empty. For the QNM-C we show the results for the three encodings described in Sec.~\ref {par:encodings}. The Fidelity distance is being calculated using the software implementation of the JTC. The two best results are in \textbf  {bold}.\relax }}{7}{table.caption.22}\protected@file@percent }
-\newlabel{tab:cls-results}{{2}{7}{Balanced accuracy (\%\,mean $\pm $ std.) on MNIST. For the CNM-C the encoding is not applicable, so we leave it empty. For the QNM-C we show the results for the three encodings described in Sec.~\ref {par:encodings}. The Fidelity distance is being calculated using the software implementation of the JTC. The two best results are in \textbf {bold}.\relax }{table.caption.22}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {iii}Computational simulations}{7}{subsection.4.3}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Average centroid purity and absolute BA gap between the trace and JTC-fidelity scores (values from Table~\ref {tab:cls-results}).\relax }}{7}{table.caption.23}\protected@file@percent }
-\newlabel{tab:purity-gap}{{3}{7}{Average centroid purity and absolute BA gap between the trace and JTC-fidelity scores (values from Table~\ref {tab:cls-results}).\relax }{table.caption.23}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Balanced accuracy (\%\,mean $\pm $ std.) on MNIST. For the CNM-C the encoding is not applicable, so we leave it empty. For the QNM-C we show the results for the three encodings described in Sec.~\ref {par:encodings}. The Fidelity distance is being calculated using the software implementation of the JTC. The two best results are in \textbf  {bold}.\relax }}{7}{table.caption.21}\protected@file@percent }
+\newlabel{tab:cls-results}{{2}{7}{Balanced accuracy (\%\,mean $\pm $ std.) on MNIST. For the CNM-C the encoding is not applicable, so we leave it empty. For the QNM-C we show the results for the three encodings described in Sec.~\ref {par:encodings}. The Fidelity distance is being calculated using the software implementation of the JTC. The two best results are in \textbf {bold}.\relax }{table.caption.21}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Average centroid purity and absolute BA gap between the trace and JTC-fidelity scores (values from Table~\ref {tab:cls-results}).\relax }}{7}{table.caption.22}\protected@file@percent }
+\newlabel{tab:purity-gap}{{3}{7}{Average centroid purity and absolute BA gap between the trace and JTC-fidelity scores (values from Table~\ref {tab:cls-results}).\relax }{table.caption.22}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Schematic of the experimental setup for the JTC-based optical correlator. The laser beam is expanded and collimated, modulated by the SLM, and Fourier-transformed onto the CMOS camera.\relax }}{7}{figure.caption.23}\protected@file@percent }
+\newlabel{fig:exp-setup}{{5}{7}{Schematic of the experimental setup for the JTC-based optical correlator. The laser beam is expanded and collimated, modulated by the SLM, and Fourier-transformed onto the CMOS camera.\relax }{figure.caption.23}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {V}Experimental results}{7}{section.5}\protected@file@percent }
 \newlabel{sec:experimental_results}{{V}{7}{Experimental results}{section.5}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Schematic of the experimental setup for the JTC-based optical correlator. The laser beam is expanded and collimated, modulated by the SLM, and Fourier-transformed onto the CMOS camera.\relax }}{8}{figure.caption.24}\protected@file@percent }
-\newlabel{fig:exp-setup}{{6}{8}{Schematic of the experimental setup for the JTC-based optical correlator. The laser beam is expanded and collimated, modulated by the SLM, and Fourier-transformed onto the CMOS camera.\relax }{figure.caption.24}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Throughput and energy comparison of electronic vs.\ optical implementations.\relax }}{8}{table.caption.26}\protected@file@percent }
-\newlabel{tab:throughput-energy}{{4}{8}{Throughput and energy comparison of electronic vs.\ optical implementations.\relax }{table.caption.26}{}}
+\citation{Wilkinson1998BinaryPOJTC}
+\newlabel{fig:corr-1v1}{{6a}{8}{Digits \(1\) vs.\ \(1\). After reducing the range to only capture the left part of the correlation plane, a off-axis peak (indicated by a red arrow) reveals the high similarity of the two inputs.\relax }{figure.caption.24}{}}
+\newlabel{sub@fig:corr-1v1}{{a}{8}{Digits \(1\) vs.\ \(1\). After reducing the range to only capture the left part of the correlation plane, a off-axis peak (indicated by a red arrow) reveals the high similarity of the two inputs.\relax }{figure.caption.24}{}}
+\newlabel{fig:corr-1v2}{{6b}{8}{Digits \(1\) vs.\ \(2\). Under the same scaling no noticeable off-axis peak is visible, indicating low similarity.\relax }{figure.caption.24}{}}
+\newlabel{sub@fig:corr-1v2}{{b}{8}{Digits \(1\) vs.\ \(2\). Under the same scaling no noticeable off-axis peak is visible, indicating low similarity.\relax }{figure.caption.24}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Experimental correlation planes recorded with the JTC setup. A match (a) shows a cross-correlation peak, whereas a mismatch (b) does not.\relax }}{8}{figure.caption.24}\protected@file@percent }
+\newlabel{fig:jtc-exp-corr}{{6}{8}{Experimental correlation planes recorded with the JTC setup. A match (a) shows a cross-correlation peak, whereas a mismatch (b) does not.\relax }{figure.caption.24}{}}
+\newlabel{fig:cc_scale06}{{7a}{8}{Cross-correlation peaks at the off-axis positions, scale \(0.6\).\relax }{figure.caption.25}{}}
+\newlabel{sub@fig:cc_scale06}{{a}{8}{Cross-correlation peaks at the off-axis positions, scale \(0.6\).\relax }{figure.caption.25}{}}
+\newlabel{fig:cc_scale05}{{7b}{8}{Cross-correlation peaks at the off-axis positions, scale \(0.5\). Notice that the peaks move toward the centre.\relax }{figure.caption.25}{}}
+\newlabel{sub@fig:cc_scale05}{{b}{8}{Cross-correlation peaks at the off-axis positions, scale \(0.5\). Notice that the peaks move toward the centre.\relax }{figure.caption.25}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Experimental correlation planes recorded with the JTC setup for the digit pair \(1\) vs.~\(1\). Reducing the image scale shifts the cross-correlation peaks toward the centre of the plane.\relax }}{8}{figure.caption.25}\protected@file@percent }
+\newlabel{fig:jtc_correlation_planes}{{7}{8}{Experimental correlation planes recorded with the JTC setup for the digit pair \(1\) vs.~\(1\). Reducing the image scale shifts the cross-correlation peaks toward the centre of the plane.\relax }{figure.caption.25}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Maximum pixel values after a Gaussian filter ($\sigma =3.0$).\relax }}{8}{table.caption.26}\protected@file@percent }
+\newlabel{tab:max-pixel-values}{{4}{8}{Maximum pixel values after a Gaussian filter ($\sigma =3.0$).\relax }{table.caption.26}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {VI}Conclusion}{8}{section.6}\protected@file@percent }
 \newlabel{sec:conclusion}{{VI}{8}{Conclusion}{section.6}{}}
-\newlabel{fig:corr-1v1}{{7a}{8}{Digits \(1\) vs.\ \(1\). After reducing the range to only capture the left part of the correlation plane, a (hard to see) off-axis peak (red arrow) reveals the high similarity of the two inputs.\relax }{figure.caption.25}{}}
-\newlabel{sub@fig:corr-1v1}{{a}{8}{Digits \(1\) vs.\ \(1\). After reducing the range to only capture the left part of the correlation plane, a (hard to see) off-axis peak (red arrow) reveals the high similarity of the two inputs.\relax }{figure.caption.25}{}}
-\newlabel{fig:corr-1v2}{{7b}{8}{Digits \(1\) vs.\ \(2\). Under the same scaling no noticeable off-axis peak is visible, indicating low similarity.\relax }{figure.caption.25}{}}
-\newlabel{sub@fig:corr-1v2}{{b}{8}{Digits \(1\) vs.\ \(2\). Under the same scaling no noticeable off-axis peak is visible, indicating low similarity.\relax }{figure.caption.25}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Experimental correlation planes recorded with the JTC setup. A match (a) shows a cross-correlation peak, whereas a mismatch (b) does not.\relax }}{8}{figure.caption.25}\protected@file@percent }
-\newlabel{fig:jtc-exp-corr}{{7}{8}{Experimental correlation planes recorded with the JTC setup. A match (a) shows a cross-correlation peak, whereas a mismatch (b) does not.\relax }{figure.caption.25}{}}
+\citation{lightpipes2021}
+\citation{Cruzeiro2024}
 \citation{Cruzeiro2024}
 \citation{VanderLugt1964}
 \citation{Dragulinescu2023}

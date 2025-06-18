@@ -14,11 +14,8 @@
   \begin{@twocolumnfalse}
     \begin{abstract}
       \noindent
-      We explore optical implementations of classical and quantum-inspired distance-based classifiers using a Joint Transform Correlator (JTC). 
-      These include the classical and quantum-inspired nearest-mean classifiers (CNM-C, QNM-C). 
-      We define and compare multiple quantum encodings that map real feature vectors to density matrices, and propose a method to compute the trace distance between pure states optically using the JTC. 
-      The optical approach offers inherent parallelism, high speed, and energy efficiency, enabling fast, low-power classification. 
-      Our framework is validated through simulations and experiments on the MNIST dataset.
+      We present optical implementations of classical and quantum-inspired nearest-mean classifiers using a Joint Transform Correlator (JTC). The quantum-inspired classifiers encode classical feature vectors into quantum states, enabling the use of trace distance as a similarity measure. We propose and evaluate several quantum encodings—standard amplitude, informative, and inverse stereographic—and demonstrate a method to estimate trace distance optically via fidelity measurements from the JTC. Numerical simulations on the MNIST dataset confirm that quantum-inspired methods outperform classical baselines, achieving balanced accuracies up to 82.4\% with the informative encoding. 
+      Experimental validation using a simple, phase-only SLM and single-lens optical setup confirms the feasibility of implementing this quantum-inspired classifier in hardware, highlighting its potential for fast and energy-efficient analog computation.
     \end{abstract}
   \end{@twocolumnfalse}
 ]
@@ -59,7 +56,7 @@ Machine learning (ML) provides algorithmic tools that \emph{learn}
 directly from data rather than relying on hand-crafted rules.
 In the \emph{supervised} setting, learning is guided by \emph{examples}
 whose correct answers are known in advance.  We review the key
-ingredients used throughout this work.
+concepts used throughout this work.
 
 \paragraph{Input data.}
 We start from $N$ \emph{raw samples}
@@ -156,10 +153,10 @@ Performance is summarised through the
 $V_{k'k}$, whose entry counts how many test samples belonging to class
 $k$ are classified as $k'$.  The
 \emph{balanced accuracy} (BA)
-\[
-\mathrm{BA}=
-\frac{1}{K}\sum_{k=1}^{K}\frac{V_{kk}}{N_k}
-\]
+\begin{equation}
+  \mathrm{BA}= \frac{1}{K}\sum_{k=1}^{K}\frac{V_{kk}}{N_k}
+  \label{eq:balanced-accuracy}
+\end{equation}
 computes the mean of the per-class accuracies and is robust to class
 imbalance. When classes are homogeneous in size, BA reduces to
 the usual accuracy.
@@ -167,25 +164,27 @@ the usual accuracy.
 \paragraph{Classical Nearest-Mean Classifier (CNM-C).}
 The nearest-mean classifier (NMC) is a simple, interpretable
 classifier that assigns a label to a test sample based on the
-\emph{centroid} of the training samples in each class (Fig. \ref{fig:nearest_mean_classifier}).  The
+\emph{centroid} of the training samples in each class. The
 \emph{centroid} of class \(k\) is defined as the mean of the training
 samples in that class:
 
-\[
-  \boldsymbol\mu_k
-  =\frac{1}{N_k}\sum_{i=1}^{N_k}\mathbf u_i,
-  \qquad
-  \text{where } \mathbf u_i\in C_k.
-\]
+\begin{equation}
+  \boldsymbol\mu_k = \frac{1}{N_k}\sum_{i=1}^{N_k}\mathbf u_i,
+  \qquad \text{where }\mathbf u_i\in C_k.
+  \label{eq:class-centroid}
+\end{equation}
 
 The CNM classifier assigns a test sample \(\mathbf x\) to the class $j$ if:
-\[
-    d(\mathbf x,\boldsymbol\mu_j) = \min_{k=1,\dots,K} d(\mathbf x,\boldsymbol\mu_k),
-\]
+\begin{equation}
+  d(\mathbf x,\boldsymbol\mu_j)
+  = \min_{k=1,\dots,K} d(\mathbf x,\boldsymbol\mu_k)
+  \label{eq:nearest-mean-rule}
+\end{equation}
 
 where the distance \(d(\mathbf x, \mathbf y) = \|\mathbf x - \mathbf y\|\) is the Euclidean distance. 
 The CNM classifier is simple to implement, as it only requires the computation of the centroids and $K$ distance calculations, one for each centroid.
 
+\iffalse
 \begin{figure}
     \centering
     \includegraphics[width=0.8\linewidth]{figures/nearest_mean_classifier.png}
@@ -193,7 +192,6 @@ The CNM classifier is simple to implement, as it only requires the computation o
     \label{fig:nearest_mean_classifier}
 \end{figure}
 
-\iffalse
 \paragraph{Radial-Basis-Function Classifier (RBF-C).}
 The RBF model represents a target function as a weighted sum of Gaussian basis functions, each centered at a specific location in the input space. These Gaussian functions produce localized responses that decrease with distance from their centers, allowing the model to approximate smooth and continuous mappings. By tuning the centers, widths, and weights of the basis functions, the RBF network can adapt to complex data distributions and interpolate between training samples with controlled generalization.
 
@@ -346,10 +344,11 @@ We must define a a map that sends a real feature vector \(\mathbf x\in\mathbb R^
 For any of the above encodings, the corresponding \emph{density
 operator} is obtained by taking the outer product of the encoded
 vector with itself:
-\[
-  \rho_{\mathbf x}= \tilde{\mathbf x}\,
-                    \tilde{\mathbf x}^{\!\top}.
-\]
+\begin{equation}
+  \rho_{\mathbf x}= \tilde{\mathbf x}\,\tilde{\mathbf x}^{\!\top}
+  \label{eq:density-definition}
+\end{equation}
+
 This guarantees \(\rho_{\mathbf x}\) is positive semidefinite,
 unit-trace, and idempotent (\(\rho_{\mathbf x}^{2}=\rho_{\mathbf x}\)),
 hence a valid pure quantum state.
@@ -360,11 +359,13 @@ significantly affect classification performance.
 For each class \(k\) with training subset
 \(\mathcal S_{k}^{\mathrm{tr}}\), define its \emph{quantum centroid} as the sum of the density operators from the class, divided by the number of elements in the class:
 
-\[
-\varrho_{k}=\frac{1}{\lvert\mathcal S_{k}^{\mathrm{tr}}\rvert}
-            \sum_{(\mathbf x_i)\in\mathcal S_{k}^{\mathrm{tr}}}
-            \rho_{\mathbf x_i}.
-\]
+\begin{equation}
+  \varrho_{k}= \frac{1}{\lvert\mathcal S_{k}^{\mathrm{tr}}\rvert}
+               \sum_{(\mathbf x_i)\in\mathcal S_{k}^{\mathrm{tr}}}
+               \rho_{\mathbf x_i}
+  \label{eq:quantum-centroid}
+\end{equation}
+
 
 Unlike the classical centroid, \(\varrho_{k}\) is usually a
 \emph{mixed} state and has no direct counterpart in the original
@@ -373,10 +374,11 @@ feature space.
 \paragraph{Quantum distance measure.}
 Similarity between two density patterns is quantified by the
 \emph{trace distance},
-\[
+\begin{equation}
   d_{\operatorname{tr}}(\rho,\sigma)=
   \tfrac12\operatorname{Tr}\!\bigl|\rho-\sigma\bigr|,
-\]
+  \label{eq:trace-distance-def}
+\end{equation}
 where \(\lvert A\rvert=\sqrt{A^{\dagger}A}\). Note that the trace distance defines a metric; it satisfies the triangle inequality, $d_{tr}(\rho, \sigma) \geq 0$ and $d_{tr}(\rho, \sigma) = d_{tr}(\sigma, \rho)$, and is equal to zero if and only if $\rho = \sigma$.
 
 \smallskip
@@ -390,14 +392,19 @@ The QNM-C is the exact same as the CNM-C, but uses the quantum centroid and quan
       \(\rho_{\mathbf x_i}\) using one of the encodings described in \ref{par:encodings}.
 
     \item Compute the quantum centroid for each class \(k\):
-        \[
-            \varrho_{k}=\frac{1}{N_k}\sum_{i=1}^{N_k}\rho_{\mathbf x_i}.
-        \]
+        \begin{equation}
+          \varrho_{k}= \frac{1}{N_k}\sum_{i=1}^{N_k}\rho_{\mathbf x_i}
+          \label{eq:quantum-centroid-avg}
+        \end{equation}
 
     \item For each test density operator \(\rho_{\mathbf x}\), assign the class $k$ if 
-        \[
-            d_{\operatorname{tr}}(\rho_{\mathbf x},\varrho_{k}) = \min_{j=1,\dots,K} d_{\operatorname{tr}}(\rho_{\mathbf x},\varrho_{j}).
-        \]
+        \begin{equation}
+          d_{\operatorname{tr}}\!\bigl(\rho_{\mathbf x},\varrho_{k}\bigr)
+          = \min_{j=1,\dots,K}
+            d_{\operatorname{tr}}\!\bigl(\rho_{\mathbf x},\varrho_{j}\bigr)
+          \label{eq:qnm-decision-rule}
+        \end{equation}
+
 \end{enumerate}
 
 Having defined both the classical and quantum-inspired nearest-mean classifiers, we can now describe the joint transform correlator (JTC) and how it can be used to implement these classifiers optically.
@@ -430,38 +437,55 @@ Let the two patterns be centered on the SLM display (phase modulation only) at \
 axis, i.e.\ \(s_{1}(x+x_{0},y)\) and \(s_{2}(x-x_{0},y)\).  A
 \(1f\)-configuration lens (focal length \(f\)) produces at its back
 focal plane the joint Fourier transform, given by:
-\[
-  G(\alpha,\beta)=
-    S_{1}\!\bigl(\tfrac{\alpha}{\lambda f},
-                 \tfrac{\beta}{\lambda f}\bigr)\,
-      e^{-i2\pi x_{0}\alpha/\lambda f}
-  + S_{2}\!\bigl(\tfrac{\alpha}{\lambda f},
-                 \tfrac{\beta}{\lambda f}\bigr)\,
-      e^{+i2\pi x_{0}\alpha/\lambda f},
-\]
+\begin{equation}
+\begin{aligned}
+G(\alpha,\beta)=\; &
+  S_{1}\!\bigl(\tfrac{\alpha}{\lambda f},
+               \tfrac{\beta}{\lambda f}\bigr)\,
+    e^{-i2\pi x_{0}\alpha/(\lambda f)} \\[2pt]
++\; &
+  S_{2}\!\bigl(\tfrac{\alpha}{\lambda f},
+               \tfrac{\beta}{\lambda f}\bigr)\,
+    e^{+i2\pi x_{0}\alpha/(\lambda f)}
+\end{aligned}
+\label{eq:joint-ft}
+\end{equation}
+
+
 where \((\alpha,\beta)\) are spatial-frequency coordinates and
 \(S_{j}\) denotes the Fourier transform of \(s_{j}\).
 A CMOS camera records and stores the \emph{joint power spectrum}
 \(|G|^{2}\); its intensity contains four terms:
 
-\[
-  |G|^{2}
-  =|S_{1}|^{2}+|S_{2}|^{2}
-   +S_{1}S_{2}^{\!*}e^{-i4\pi x_{0}\alpha/\lambda f}
-   +S_{2}S_{1}^{\!*}e^{+i4\pi x_{0}\alpha/\lambda f}.
-\]
+\begin{equation}
+\begin{aligned}
+|G|^{2} =\;& |S_{1}|^{2} + |S_{2}|^{2} \\[2pt]
+          & {}+ S_{1}S_{2}^{\!*}\,
+               e^{-i4\pi x_{0}\alpha/(\lambda f)} \\[2pt]
+          & {}+ S_{2}S_{1}^{\!*}\,
+               e^{+i4\pi x_{0}\alpha/(\lambda f)}
+\end{aligned}
+\label{eq:jps-components}
+\end{equation}
 
 The SLM displays the joint power spectrum and the same lens takes the inverse Fourier transform of this intensity
 pattern. This produces at the fourier plane the correlation signals of the two images, given by:
-\begin{multline*}
-g(x', y') = R_{11}(x',y') + R_{22}(x',y') \\
-+ R_{12}(x' - 2x_{0},y') + R_{21}(x' + 2x_{0},y')
-\end{multline*}
+\begin{equation}
+\begin{aligned}
+g(x',y') \;=\;& R_{11}(x',y') + R_{22}(x',y') \\[2pt]
+              &{}+ R_{12}\!\bigl(x' - 2x_{0},y'\bigr)
+              + R_{21}\!\bigl(x' + 2x_{0},y'\bigr)
+\end{aligned}
+\label{eq:correlation-signals}
+\end{equation}
 
 where $(x', y')$ are the coordinates at the correlation plane and the correlation signals are defined as:
-\[
-R_{ij}(x',y') = \int \int s_i(x' - x, y' - y)s_j(x', y') \, dx \, dy
-\]
+\begin{equation}
+  R_{ij}(x',y') =
+  \iint s_i\bigl(x' - x,\; y' - y\bigr)\,
+        s_j(x,y)\,dx\,dy
+  \label{eq:rij}
+\end{equation}
 
 The constant terms yield \emph{autocorrelation}
 peaks near the optic axis, whereas the two cross-terms produce a pair
@@ -557,9 +581,12 @@ Let \(\operatorname{sim}(s_{1},s_{2})\in[0,1]\) denote the normalised
 height of the cross-correlation peak produced by the joint transform
 correlator when the input patterns are \(s_{1}\) and \(s_{2}\).
 We quantify dissimilarity through its reciprocal,
-\[
-  d_{\text{JTC}}(s_{1},s_{2})=\frac{1}{\operatorname{sim}(s_{1},s_{2})}.
-\]
+\begin{equation}
+  d_{\text{JTC}}(s_{1},s_{2})
+  = \frac{1}{\operatorname{sim}(s_{1},s_{2})}
+  \label{eq:jtc-dissim}
+\end{equation}
+
 Because \(\operatorname{sim}=1\) for identical patterns and decreases
 towards 0 as the patterns diverge, \(d_{\text{JTC}}\) is
 non-negative and symmetric, but it is \emph{not} a metric in the strict
@@ -606,50 +633,65 @@ class with the smallest distance.  The result is a hardware-minimal
 classifier: training remains purely digital, while the costly dot-
 product stage is performed optically. 
 
+\iffalse
 Because light propagates in parallel across all spatial channels, one can display every class centroid simultaneously on different SLM regions and let the JTC evaluate all similarities in a single optical shot \cite{mcmahonoptical2023}, offering a speed-up that is difficult to match with sequential electronic computations.
 However, our present prototype still processes the centroids serially, so full parallel operation is left to future work.
+\fi
 
 \subsection{Optical implementation of the QNM–C}
 In Sec.~\ref{subsec:qic} we defined the QNM-C. There, the decision rule was formulated in terms of the \emph{trace distance}, yet this quantity is not directly accessible in a classical–optical setup: a JTC yields a scalar similarity signal rather than the operator norm \(\tfrac12\lVert\rho-\sigma\rVert_{1}\). So in order to implement the QNM-C we need to find a method to use the JTC to obtain an estimate of the trace distance, which we can then use to classify the test samples. We will start by defining the purity of a quantum state, then the fidelity between two quantum states, and finally relate the fidelity to the trace distance. This will allow us to use the JTC to estimate the trace distance and implement the QNM-C classifier.
 
 \paragraph{Purity.}
 For a single state the purity
-\[
-P(\rho)=\operatorname{Tr}\!\bigl(\rho^{2}\bigr)
-\]
+\begin{equation}
+  P(\rho)=\operatorname{Tr}\!\bigl(\rho^{2}\bigr)
+  \label{eq:purity}
+\end{equation}
 ranges from \(1\) (pure state) to \(1/d\) (maximally mixed state in Hilbert space of dimension \(d\)). 
 
 \paragraph{Fidelity.}
 For two states \(\rho,\sigma\) the fidelity is defined as%
 \footnote{See, e.g.\ M.~A.~Nielsen and I.~L.~Chuang, \emph{Quantum Computation and Quantum Information}, 10th~anniv.\ ed., 2010.}
-\[
-F(\rho,\sigma)=\bigl[\operatorname{Tr}\!\bigl(\sqrt{\smash[b]{\sqrt{\rho}\,\sigma\sqrt{\rho}}}\bigr)\bigr]^{2}.
-\]
+\begin{equation}
+  F(\rho,\sigma)=
+  \bigl[\operatorname{Tr}\!\bigl(
+    \sqrt{\smash[b]{\sqrt{\rho}\,\sigma\sqrt{\rho}}}
+  \bigr)\bigr]^{2}
+  \label{eq:fidelity-general}
+\end{equation}
+
 When both states are pure, \(\rho=\lvert\psi\rangle\!\langle\psi\rvert\) and \(\sigma=\lvert\phi\rangle\!\langle\phi\rvert\), this simplifies to
-\[
-F(\rho,\sigma)=\lvert\langle\psi\mid\phi\rangle\rvert^{2}.
-\]
+\begin{equation}
+  F(\rho,\sigma)=\lvert\langle\psi\mid\phi\rangle\rvert^{2}
+  \label{eq:fidelity-pure}
+\end{equation}
+
 Because the JTC similarity is proportional to \(\langle\psi\mid\phi\rangle\), its squared magnitude is directly proportional to the fidelity of two pure optical encodings. This is only true for pure states, for mixed states the fidelity cannot be calculated directly from the JTC similarity, which can be a problem if the quantum centroids have a low purity.
 
 \paragraph{Trace distance from fidelity.}
 The \textbf{Fuchs–van de Graaf inequalities} relate fidelity and trace distance \(D_{\mathrm{tr}}\):
-\[
-1-\sqrt{F(\rho,\sigma)}
-\;\le\;
-D_{\mathrm{tr}}(\rho,\sigma)
-\;\le\;
-\sqrt{1-F(\rho,\sigma)}.
-\]
+\begin{equation}
+  1-\sqrt{F(\rho,\sigma)}
+  \;\le\;
+  D_{\mathrm{tr}}(\rho,\sigma)
+  \;\le\;
+  \sqrt{1-F(\rho,\sigma)}
+  \label{eq:fuchs-vdg}
+\end{equation}
+
 If one of the states is pure (in our case, the input vectors are always pure, by construction), the trace distance can be expressed in terms of the fidelity:
-\[
-D_{\mathrm{tr}}(\rho,\sigma)=\sqrt{1-F(\rho,\sigma)}.
-\]
+\begin{equation}
+  D_{\mathrm{tr}}(\rho,\sigma)=\sqrt{1-F(\rho,\sigma)}
+  \label{eq:trace-from-fidelity}
+\end{equation}
+
 Denoting the JTC similarity output by \(\operatorname{sim}(\rho,\sigma)=\lvert\langle\psi\mid\phi\rangle\rvert\), the trace distance between a quantum centroid \(\varrho\) and an input state \(\rho\) can be expressed as
-\[
-D_{\mathrm{tr}}(\varrho,\rho)
-=
-\sqrt{1-\operatorname{sim}(\varrho,\rho)^{2}}.
-\]
+\begin{equation}
+  D_{\mathrm{tr}}\!\bigl(\varrho,\rho\bigr)
+  = \sqrt{\,1-\operatorname{sim}\!\bigl(\varrho,\rho\bigr)^{2}}
+  \label{eq:trace-from-sim}
+\end{equation}
+
 
 It can be seen in Figure~\ref{fig:trace_vs_fidelity} that, for the inverse stereographic encoding, the trace distance and fidelity are strongly correlated, with an $R^2$ value of $0.986$. This confirms that the JTC can effectively estimate the trace distance from the fidelity, allowing us to use the JTC to implement the QNM-C.
 This calculation of the trace distance using the JTC is not exclusive to the QNM-C classifier, it can be used by any quantum-inspired classifier that uses the trace distance to perform classification. 
@@ -665,9 +707,13 @@ This calculation of the trace distance using the JTC is not exclusive to the QNM
 The main difficulty in using this approach to compute the trace distance is that we can only evaluate the Fidelity (and therefore the trace distance) directly with the JTC for pure states, whereas quantum centroids are generally mixed states (Table~\ref{tab:centroidpurity}). 
 However, Uhlmann's theorem allows us to calculate the fidelity between two mixed states by using their purifications. A purification is the process of representing a mixed state as a pure quantum state of higher-dimensional Hilbert space.
 Uhlmann's theorem states that for any two density operators \(\rho\) and \(\sigma\), there exist purifications \(\lvert \psi_p \rangle\) of \(\rho\) and \(\lvert \phi_p \rangle\) of \(\sigma\) such that
-\[
-F(\rho, \sigma) = \max_{|\psi_p\rangle, |\phi_p\rangle} |\langle \psi_p | \phi_p \rangle|^2
-\]
+\begin{equation}
+  F(\rho,\sigma)=
+  \max_{|\psi_p\rangle,\,|\phi_p\rangle}
+  |\langle \psi_p \mid \phi_p \rangle|^{2}
+  \label{eq:uhlmann}
+\end{equation}
+
 where the maximum is taken over all purifications of \(\rho\) and \(\sigma\). This means that we can compute the trace distance between two mixed states by computing the fidelity between their purifications, which can be done using the JTC.
 
 Although each quantum centroid is, in general, a mixed state, we can still evaluate its trace-distance to a (pure) input state by first selecting an appropriate purification for the centroid. 
@@ -776,11 +822,17 @@ worse estimate for the trace distance, hence a large performance
 gap.  With IS, centroids are pure (\(P=1\)), so the estimation of the fidelity is better and the gap almost vanishes.  INF sits in between on
 both counts.
 
-\bigskip
 In short, SA wins when the true trace distance is used, hinting
 that direction dominates class separation, while high-purity encodings
 (IS, INF) make the JTC fidelity metric a better replacement of the trace distance, giving more accurate results. 
 This results highlights the importance of the encoding choice in quantum-inspired classifiers, especially when using optical implementations like the JTC.
+
+The choice of encoding is not the only improvement we can do. Another way to improve the BA of the QNM-c
+is to supply \(m>1\) identical copies of the test state.
+Taking the tensor product \(\rho^{\otimes m}\) is the quantum
+analogue of a polynomial feature expansion: it embeds the data in a
+larger space where classes separate more easily.  Even a modest
+setting such as \(m=2\) or \(3\) can improve the BA by up to \(10\) percentage points, but that is left for future work.
 
 \section{Experimental results}
 \label{sec:experimental_results}
@@ -805,8 +857,8 @@ Initialy, the camera was saturating due to the dynamic range of the spectrum, so
     \includegraphics[width=\linewidth]
       {figures/experimental_images/1v1_0.8scale.png}
     \caption{Digits \(1\) vs.\ \(1\).
-             After reducing the range to only capture the left part of the correlation plane, a (hard to see) off-axis
-             peak (red arrow) reveals the high similarity of the two
+             After reducing the range to only capture the left part of the correlation plane, a off-axis
+             peak (indicated by a red arrow) reveals the high similarity of the two
              inputs.}
     \label{fig:corr-1v1}
   \end{subfigure}%
@@ -828,38 +880,77 @@ Initialy, the camera was saturating due to the dynamic range of the spectrum, so
   \label{fig:jtc-exp-corr}
 \end{figure}
 
-Although an off-axis cross-correlation peak is still visible in
+Although an off-axis cross-correlation peak is visible in
 Fig.~\ref{fig:corr-1v1}, its contrast is reduced by a strong constant
-term around the center of the Fourier plane.  
-With a perfectly aligned \(\pm1\) checkerboard this central term should
+term around the center of the Fourier plane. For Figurre~\ref{fig:corr-1v2} we see no cross-correlation peak, which is expected because the two digits are not similar.
+With a perfectly aligned \(\pm1\) checkerboard the central term should
 vanish, because the same number of \(+1\) and \(-1\) pixels cancel out
 the zero-order light~\cite{Wilkinson1998BinaryPOJTC}.  Its presence here suggests either a small
 mis-registration between the checkerboard and the SLM pixel grid, or an
 extra background signal that reaches the camera.
 
-We can sharpen the cross-correlation peaks by applying background subtraction, recording a reference frame with the SLM blank and subtract it from every measurement to remove the constant offset, and this can be done because the Fourier transform is a linear operation.
-We can also increase the laser power and/or the camera exposure so that the peaks are more pronounced, but this can lead to saturation of the camera and loss of information.
+According to equation~\ref{eq:correlation-signals}, the cross-correlation peaks should be located at \((\pm2x_{0},0)\), where \(x_{0}\) is the distance from the axis of the SLM to the image center. By varying the scale (i.e., the size of the images displayed on the SLM), we change the distance \(x_{0}\) and therefore the position of the cross-correlation peaks. That is what we observe in Figures~\ref{fig:cc_scale06} and~\ref{fig:cc_scale05}, where the cross-correlation peaks get closer to the center of the correlation plane as we reduce the scale of the images. 
 
-(TODO: Perform the correlation to 100 pairs of MNIST digits to see the performance of the JTC in practice, compare it to simulation results)
-(TODO: Measure the throughput and energy consumption of the JTC, and compare it with the electronic implementation)
-
-\begin{table}[h]
+\begin{figure}
   \centering
-  \caption{Throughput and energy comparison of electronic vs.\ optical implementations.}
-  \label{tab:throughput-energy}
-  \begin{tabular}{@{}lccc@{}}
+
+  % top image ----------------------------------------------------------
+  \begin{subfigure}{\linewidth}      % <- use \linewidth, not \textwidth
+    \centering
+    \includegraphics[width=\linewidth]{figures/experimental_images/scale0.6.png}
+    \caption{Cross-correlation peaks at the off-axis positions, scale \(0.6\).}
+    \label{fig:cc_scale06}
+  \end{subfigure}
+
+  % bottom image -------------------------------------------------------
+  \begin{subfigure}{\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/experimental_images/scale0.5.png}
+    \caption{Cross-correlation peaks at the off-axis positions, scale \(0.5\). Notice that the peaks move toward the centre.}
+    \label{fig:cc_scale05}
+  \end{subfigure}
+
+  \caption{Experimental correlation planes recorded with the JTC setup for the digit pair \(1\) vs.~\(1\).  
+           Reducing the image scale shifts the cross-correlation peaks toward the centre of the plane.}
+  \label{fig:jtc_correlation_planes}
+\end{figure}
+
+To test the performance of the JTC, we recorded the correlation plane for some pairs of digits and measured the intensity of the cross-correlation peaks. The results are shown in Table~\ref{tab:max-pixel-values}. We added a gaussian filter to prevent single pixel noise spikes from affecting the results, and we measured the maximum pixel value in the correlation plane after applying the filter. The maximum pixel value is a measure of the similarity between the two images, so we expect that similar images will have higher maximum pixel values than dissimilar images.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Maximum pixel values after a Gaussian filter ($\sigma=3.0$).}
+  \label{tab:max-pixel-values}
+  \renewcommand{\arraystretch}{1.1}   % optional: slightly more row height
+  \begin{tabular}{lc}
     \toprule
-    \textbf{Configuration} &
-    \textbf{Correlations / s} &
-    \textbf{Laser power (mW)} &
-    \textbf{Wall‐plug energy / correlation (mJ)} \\
+    \textbf{Image pattern} & \textbf{Maximum pixel value} \\ 
     \midrule
-    CPU-only (baseline)                         & 0.2  & —  & 120 \\
-    Prototype (24 fps camera)                   & 2    & 15 &   9 \\
-    Projected (60 fps + parallel centroids)     & 30   & 25 &   2 \\
+    $1 \times 1$ & 232.0 \\
+    $1 \times 2$ & 100.0 \\
+    $5 \times 5$ & 245.0 \\
+    $5 \times 2$ & 151.0 \\
+    $9 \times 9$ & 253.0 \\
+    $9 \times 0$ & 125.0 \\
     \bottomrule
   \end{tabular}
 \end{table}
+
+Table~\ref{tab:max-pixel-values} shows that similar image pairs—%
+for example \(1\times1\) and \(5\times5\)—give higher correlation peaks %
+than different pairs such as \(1\times2\) or \(5\times2\). %
+This confirms that the JTC distinguishes between similar and %
+dissimilar inputs. %
+Note, however, that the CMOS sensor has only 8-bit depth; %
+pixel values clip at 255, so the tallest peaks are partly %
+lost to saturation. 
+
+We can improve the resolution of the peaks by background subtraction: recording a reference frame with the SLM blank and subtract it from every measurement to remove the constant offset, and this can be done because the Fourier transform is a linear operation. To prevent the saturation, we can reduce the power of the laser or reduce the camera exposure time, which should improve the discrimination between similar and dissimilar images.
+
+The experimental JTC behaves exactly as predicted by the simulations. 
+At present, the bottleneck is the data link between the computer, SLM, 
+and camera; its limited throughput keeps the processing rate from increasing. 
+
 
 \section{Conclusion}
 \label{sec:conclusion}
@@ -868,28 +959,29 @@ We have shown that a single-lens Joint Transform Correlator can act as a compact
 Full-wave LightPipes simulations predict that, using the informative encoding, an optical JTC achieves a balanced accuracy of 82.39\,\% on MNIST when its correlation peak is interpreted as fidelity and mapped to trace distance. This already surpasses the 72.42\,\% reached by a classical CNM-C implemented on the same JTC simulation.  
 Across all three encodings, quantum-inspired metrics consistently yield higher accuracy—improving performance by up to 10 percentage points over the classical baseline—and do so without relying on electronic post-processing and minimal pre-processing.
 
-Our prototype confirms that these gains are physically realisable. It performs optical classification at 2 correlations per second using relatively simple components, and matches simulation predictions.
+Our prototype confirms that these performance gains are physically realizable, achieving optical classification at 2 correlations per second using relatively simple components, with results consistent with simulation predictions. This rate is primarily constrained by the interface between the PC, SLM, and camera, with additional limitations from the camera's frame rate and the SLM's refresh rate. Throughput could be significantly improved by not only upgrading to faster components—such as a ferroelectric liquid crystal SLM (FLC-SLM)~\cite{Wilkinson1998BinaryPOJTC} and a high-speed camera—but also by optimizing the interface between them. 
 
 We also explored multiple encodings from real vectors to quantum states, and observed that higher-purity embeddings tend to yield trace distance estimates closer to their software counterparts, even though this does not always translate to better classification accuracy. This suggests that state purity plays a key role in the optical calculation of fidelity, but is not the sole determinant of classification performance.  
-To further improve accuracy, more expressive or geometry-preserving encodings should be investigated. We have pointed to Uhlmann's theorem as a way to use encodings that do not mantain a high centroid purity and optimise fidelity or trace distance directly in the optical domain.
-
 Together, these results validate the JTC as a possible fast and energy-efficient platform for analog quantum-inspired machine learning.
 \section{Future Work}
 \label{sec:future-work}
 
-There are several promising directions to extend this work. \textbf{Parallel JTC implementation} represents a natural next step. While our current setup performs correlations sequentially, the JTC's inherent spatial parallelism allows for multiple reference patterns to be displayed simultaneously on the SLM. With all classes encoded side by side, a single optical shot could evaluate all similarities at once, reducing inference time.
+There are several promising directions to extend this work. \textbf{Parallel JTC implementation} represents a natural next step. While our current setup performs correlations sequentially, the JTC's inherent spatial parallelism~\cite{lightpipes2021} allows for multiple reference patterns to be displayed simultaneously on the SLM. With all classes encoded side by side, a single optical shot could evaluate all similarities at once, reducing inference time.
 
 \textbf{Encoding strategies} play a central role in the performance of quantum-inspired classifiers. Our results suggest that centroid purity significantly influences the effectiveness of optical trace distance approximations. Exploring other encodings—especially ones that preserve purity while retaining directional and norm information—could yield further improvements.
+
+Using \textbf{multiple copies} of the input state is another promising direction. By taking the tensor product of \(m\) identical copies, we can embed the data in a higher-dimensional space where classes may separate more easily. This approach has been shown to improve classification performance in quantum-inspired classifiers~\cite{Cruzeiro2024}, and could be adapted to work with the JTC.
 
 We also see a big potential in extending this framework to \textbf{other quantum-inspired classifiers}, such as the pretty good measurement (PGM) classifier~\cite{Cruzeiro2024}, and this work serves as a simpler starting point for implementation of more complex quantum-inspired classifiers.
 
 Another important direction is the use of \textbf{Uhlmann's theorem} to estimate trace distances between mixed states. If we can find a practical way to compute the purifications of mixed states, we could compute the true trace distance between an input and a quantum centroid directly, thereby eliminating the fidelity approximation, and not being limited to high purity encodings.
 
-- \textbf{TODO}, discuss how to use tensor product to get better accuracies
-
 \textbf{Alternative optical setups} are also very relevant. Beyond the JTC, there are other optical systems such as VanderLugt correlators~(\cite{VanderLugt1964}, \cite{Dragulinescu2023}) or optic-disk based systems~\cite{Neifeld1993} that may offer different trade-offs between complexity, robustness, and sensitivity. Investigating these could lead to architectures better suited for specific applications.
 
-Finally, the current approach defines dissimilarity as the \textbf{inverse of JTC similarity}, but this is not a metric in the strict sense. Exploring alternative similarity-to-distance mappings, such as angular distances, could improve classification performance at no extra cost. 
+\section*{Acknowledgments}
+I would like to thank Emmanuel Cruzeiro for guidance; Preeti, Carolina, and José for hands-on help in the experiments; and the QuLab group in general for steady support and helpful discussions.
+
+
 \bibliography{references}{}
 \bibliographystyle{plain}
 
