@@ -59,11 +59,11 @@ print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 # ---------------------------------------------------------------------
 scaler = StandardScaler()  # Add StandardScaler
 pca = PCA(
-    n_components=20, svd_solver="full", random_state=0
+    n_components=50, svd_solver="full", random_state=0
 )  
 
 qnmc = QuantumNearestMeanClassifier(
-    encoding="standard", distance="fidelity", random_state=0, copies=2
+    encoding="informative", distance="trace", random_state=0, copies=1
 )
 
 model = Pipeline(

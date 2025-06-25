@@ -91,8 +91,8 @@ def encode_informative(x: np.ndarray) -> np.ndarray:
         psi[-1] = 1.0
         return psi
 
-    vec = np.concatenate([x / norm, [1]], dtype=np.float32)
-    return 1 / np.sqrt(2) * vec
+    vec = np.concatenate([x, [norm]], dtype=np.float32)
+    return vec / (np.sqrt(norm**2 + 1))
 
 def encode_length_scaled(x):
     x = x.astype(np.float32)

@@ -1,14 +1,14 @@
 # Fdb version 4
-["bibtex main"] 1750177819 "main.aux" "main.bbl" "main" 1750177827 0
+["bibtex main"] 1750693102 "main.aux" "main.bbl" "main" 1750693335 2
   "./references.bib" 1749403509 3899 a0b41628013dec8e112ee4fbff4471a0 ""
   "/usr/local/texlive/2023/texmf-dist/bibtex/bst/base/plain.bst" 1292289607 20613 bd3fbfa9f64872b81ac57a0dd2ed855f ""
-  "main.aux" 1750177827 15128 423023e02b9fbaa0f8986c19eda645cb "pdflatex"
+  "main.aux" 1750693334 16684 7b40540086782537d383aa1ca911a7cf "pdflatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1750177823 "/Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/latex/Quantum inspired classification/main.tex" "main.pdf" "main" 1750177827 2
-  "/Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/latex/Quantum inspired classification/main.tex" 1750177772 53266 b532d89746c49f0fddeca3875459ac5a ""
+["pdflatex"] 1750693331 "/Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/latex/Quantum inspired classification/main.tex" "main.pdf" "main" 1750693335 2
+  "/Users/joaoguilherme/Library/CloudStorage/OneDrive-UniversidadedeLisboa/Programação/PIC1/latex/Quantum inspired classification/main.tex" 1750693318 57882 5a58f7e606d8e5db327abf5e2a74524e ""
   "/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/base/8r.enc" 1165713224 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/usr/local/texlive/2023/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2023/texmf-dist/fonts/tfm/adobe/palatino/pplb8r.tfm" 1136768653 2532 9ad73cf4dd2173a847f2a5f5608e0b9a ""
@@ -187,12 +187,12 @@
   "figures/experimental_images/scale0.5.png" 1750176993 835471 d570dd4223c6ddf450a3275c5918040a ""
   "figures/experimental_images/scale0.6.png" 1750176963 820090 d95af15bb770af12be97f3a992e21b10 ""
   "figures/setup/setup.png" 1749499328 85394 a34c9e23402c3be5495efb51ad487c01 ""
-  "main.aux" 1750177827 15128 423023e02b9fbaa0f8986c19eda645cb "pdflatex"
-  "main.bbl" 1750177819 2519 843818dff9809cb97070a112ae3c29b8 "bibtex main"
+  "main.aux" 1750693334 16684 7b40540086782537d383aa1ca911a7cf "pdflatex"
+  "main.bbl" 1750693334 0 d41d8cd98f00b204e9800998ecf8427e "bibtex main"
   "main.gnuploterrors" 1745407397 0 d41d8cd98f00b204e9800998ecf8427e ""
-  "main.out" 1750177827 2921 a51e203707514eec97c08d99bd102909 "pdflatex"
-  "main.tex" 1750177772 53266 b532d89746c49f0fddeca3875459ac5a ""
-  "preamble.sty" 1749149635 2936 e18a3be67b8849408fd4e0a8e1aaf274 ""
+  "main.out" 1750693334 2921 a51e203707514eec97c08d99bd102909 "pdflatex"
+  "main.tex" 1750693318 57882 5a58f7e606d8e5db327abf5e2a74524e ""
+  "preamble.sty" 1750518164 3270 70da124abf3995c22f7efa9f70d893e1 ""
   (generated)
   "main.aux"
   "main.log"

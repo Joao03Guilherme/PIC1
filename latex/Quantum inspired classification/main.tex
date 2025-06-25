@@ -28,8 +28,7 @@
 Quantum-inspired algorithms are classical routines that use the mathematical formalism and physical intuitions from quantum mechanics — such as superposition-style probability amplitudes, interference or quantum state discrimination — yet run entirely on conventional hardware.  
 These algorithms have multiple applications, including machine learning, where they promise faster convergence or reduced dimensional dependence compared with traditional methods.
 
-Quantum-inspired algorithms often outperform classical ones in software, but optical implementations can offer further advantages — particularly for high-dimensional data streams or large-scale datasets—by leveraging speed, parallelism, and energy efficiency.
-There have been optical implementations of classical classification algorithms (\cite{Neifeld1993}, \cite{Foor1995}). 
+Quantum-inspired algorithms often outperform classical ones in software, but optical implementations can offer further advantages — particularly for high-dimensional data streams or large-scale datasets—by leveraging speed, parallelism, and energy efficiency~(\cite{Neifeld1993},\cite{Foor1995}).
 
 These advantages arise not simply because light travels fast, but because optical systems can naturally perform certain operations, such as the Fourier transform, in constant time via light propagation and using lenses. 
 Optical setups can also exploit massive spatial parallelism, allowing many operations to be carried out simultaneously. In contrast to digital processors that are limited by clocking, thermal dissipation, and wiring constraints, optical systems offer nearly dissipationless computation through physical propagation, supporting high processing power with minimal energy loss. 
@@ -43,7 +42,7 @@ The JTC also offers valuable computational properties. Because it performs corre
 
 In this work we propose optical implementations of the Quantum-Inspired and Classical Nearest Mean Classifier (\cite{Sergioli2025}, \cite{Cruzeiro2024}) that use a single SLM and a 1-f lens system (\cite{Javidi1989}).  
 
-We begin by presenting the classical and quantum-inspired classifiers considered in this work (Section~\ref{sec:ml-qic}). We then describe the Joint Transform Correlator (JTC) architecture (Section~\ref{sec:jtc}), establishing its theoretical connection to distance-based similarity measures. In Section~\ref{sec:optical-implementations}, we show explicitly how the JTC can optically compute both classical distances and quantum-inspired measures, such as the trace distance. 
+We begin by presenting the classical and quantum-inspired classifiers considered in this work (Section~\ref{sec:ml-qic}). We then describe the Joint Transform Correlator (JTC) (Section~\ref{sec:jtc}), establishing its theoretical connection to distance-based similarity measures. In Section~\ref{sec:optical-implementations}, we show explicitly how the JTC can optically compute both classical distances and quantum-inspired measures, such as the trace distance. 
 In Section~\ref{sec:experimental_results} we detail our experimental implementation, demonstrating a realization of the quantum-inspired nearest-mean classifier (QNM-C) using a single phase-only spatial light modulator (SLM) and a 1-f lens system. Finally, we summarise our findings and discuss future directions of work in Section~\ref{sec:conclusion} and Section~\ref{sec:future-work}.
 
 \section{Supervised learning and quantum-inspired classification}
@@ -273,8 +272,8 @@ and assigns the class with a winner-takes-all rule:
 \label{subsec:qic}
 %--------------------------------------------------------------
 
-Quantum-inspired learning uses the mathematical formalism native to
-quantum mechanics - density operators, trace distance, superposition — but applies them on ordinary CPUs/GPUs.  By
+Quantum-inspired machine learning uses the mathematical formalism native to
+quantum mechanics - density operators, trace distance, state discrimination — but applies them on ordinary CPUs/GPUs.  By
 embedding classical feature vectors in a Hilbert space, one can exploit
 the geometry of quantum states to obtain alternative similarity
 measures that sometimes improve accuracy or robustness compared with
@@ -323,22 +322,30 @@ We must define a a map that sends a real feature vector \(\mathbf x\in\mathbb R^
 
 %----------------------------------------------------------
 \item \textbf{Informative (INF) encoding~\cite{Sergioli2025}.}\\[2pt]
-      Attach the norm as an extra amplitude so that both direction and
-      length of \(\mathbf x\) affect the representation:
+      Attach the norm as an extra amplitude so that both the direction
+      and \emph{length} of a real vector $\mathbf{x}\in\mathbb{R}^{d}$ affect
+      its quantum representation:
       \[
-        \tilde{\mathbf x}^{(\mathrm{INF})}
-          =\begin{cases}
-             \displaystyle
-             \frac{1}{\sqrt{2}}
-             \Bigl(\frac{\mathbf x}{\lVert\mathbf x\rVert},\,1\Bigr)^{\!\top},
-               &\mathbf x\neq\mathbf 0,\\[8pt]
-             (0,\dots,0,1)^{\!\top},
-               &\mathbf x=\mathbf 0.
-           \end{cases}
+        \tilde{\mathbf{x}}^{(\mathrm{INF})}
+          =
+          \begin{cases}
+            \bigl(
+              \dfrac{x^{1}}{\lVert\mathbf{x}\rVert\sqrt{\lVert\mathbf{x}\rVert^{2}+1}},
+              ...,
+              \dfrac{\lVert\mathbf{x}\rVert}{\sqrt{\lVert\mathbf{x}\rVert^{2}+1}}
+            \bigr)^{\!\top},
+              & \mathbf{x}\neq\mathbf{0},\\[6pt]
+            (1,0,\dots,0)^{\!\top},
+              & \mathbf{x}=\mathbf{0}
+          \end{cases}
       \]
 
-      This encoding is virtually identical to the standard amplitude encoding, it normalizes the input vector to unit length, but it adds an extra dimension that encodes the norm of the input vector, preserving both direction and norm information. The $\frac{1}{\sqrt{2}}$ factor ensures that the resulting vector is normalized to unit length, so it can be used to construct a valid density operator. 
+      Hence, this encoding maps real $d$-dimensional vectors $\mathbf{x}$
+      into a $(d+1)$-dimensional vector.
+      In this way we obtain an embedding that retains the information
+      about the original vector norm and also preserves the information about the direction.
 \end{enumerate}
+
 
 \medskip
 For any of the above encodings, the corresponding \emph{density
@@ -571,15 +578,14 @@ Besides those, the binary JTC has more benefits: it substantially increases the 
     \label{fig:jtc-bin-corr-plane}
   \end{subfigure}
   
-  \caption{Python-based optical simulation of a binary-input Joint Transform Correlator, implemented with LightPipes for realistic wave-propagation and Fourier-transform modeling. The fill factor of the SLM is being simulated by an added grid pattern.}
+  \caption{Python-based optical simulation of a binary-input Joint Transform Correlator, implemented with LightPipes~\cite{lightpipes2021} for realistic wave-propagation and Fourier-transform modeling. The fill factor of the SLM is being simulated by an added grid pattern.}
 \end{figure}
 
 \subsection{JTC-based dissimilarity}
 \label{subsec:jtc-dissimilarity}
 
 Let \(\operatorname{sim}(s_{1},s_{2})\in[0,1]\) denote the normalised
-height of the cross-correlation peak produced by the joint transform
-correlator when the input patterns are \(s_{1}\) and \(s_{2}\).
+height of the cross-correlation peak produced by the JTC when the input patterns are \(s_{1}\) and \(s_{2}\).
 We quantify dissimilarity through its reciprocal,
 \begin{equation}
   d_{\text{JTC}}(s_{1},s_{2})
@@ -595,7 +601,7 @@ purpose as a distance — patterns that are more alike yield a smaller
 \(d_{\text{JTC}}\), and that is the most important property for the classification task.
 
 We can see in Figure~\ref{fig:euclidean_vs_jtc} that the JTC dissimilarity is moderately correlated with the Euclidean distance, with a coefficient of \(R^{2}=0.428\).
-There are some outliers that contribute to this low correlation, but the general trend of the data is well captured by the fitted line. This indicates that the JTC dissimilarity is a meaningful measure of dissimilarity between patterns, and it can be used as a distance measure for the CNM-C and QNM-C classifiers.
+There are some outliers that contribute to this low correlation, but the general trend of the data is well captured by the fitted line. This indicates that the JTC dissimilarity is a meaningful measure of dissimilarity between patterns, and it can be used as a distance measure for the CNM-C.
 
 \begin{figure}
   \centering
@@ -619,8 +625,7 @@ The optical version of the classical nearest-mean classifier keeps all
 training-time work in software: after the usual pre-processing pipeline
 (PCA, centring, standardisation) each class centroid
 \(\boldsymbol\mu_k\) is computed numerically on the CPU and stored once.
-At inference time only the similarity calculation is off-loaded to the
-Joint Transform Correlator.  A query vector \(\mathbf x\) is encoded on
+At inference time only the similarity calculation is off-loaded to the JTC.  A query vector \(\mathbf x\) is encoded on
 the left half of the SLM, while a stored centroid pattern
 \(\boldsymbol\mu_k\) is written on the right.  The two-pass JTC then
 produces a single normalised correlation peak whose inverse,
@@ -717,7 +722,7 @@ Uhlmann's theorem states that for any two density operators \(\rho\) and \(\sigm
 where the maximum is taken over all purifications of \(\rho\) and \(\sigma\). This means that we can compute the trace distance between two mixed states by computing the fidelity between their purifications, which can be done using the JTC.
 
 Although each quantum centroid is, in general, a mixed state, we can still evaluate its trace-distance to a (pure) input state by first selecting an appropriate purification for the centroid. 
-With that purification, the Joint Transform Correlator (JTC) can be used to calculate the trace distance between the centroid and the input, and that distance then serves as our classification metric. 
+With that purification, the JTC can be used to calculate the trace distance between the centroid and the input, and that distance then serves as our classification metric. 
 
 Implementing this calculation based on Uhlmann's theorem lies beyond the scope of the present study; we mention it only as a promising direction for future improvements to this implementation of the QNM-C.
 
@@ -915,42 +920,47 @@ According to equation~\ref{eq:correlation-signals}, the cross-correlation peaks 
   \label{fig:jtc_correlation_planes}
 \end{figure}
 
-To test the performance of the JTC, we recorded the correlation plane for some pairs of digits and measured the intensity of the cross-correlation peaks. The results are shown in Table~\ref{tab:max-pixel-values}. We added a gaussian filter to prevent single pixel noise spikes from affecting the results, and we measured the maximum pixel value in the correlation plane after applying the filter. The maximum pixel value is a measure of the similarity between the two images, so we expect that similar images will have higher maximum pixel values than dissimilar images.
+\medskip
+To evaluate the performance of the JTC we recorded the correlation plane for twenty identical‐digit
+pairs and, after a Gaussian pre-filter (\(\sigma = 3\)), extracted two key
+metrics for each peak: the full-width at half-maximum (FWHM) along both axes
+and the signal-to-noise ratio (SNR) defined in~\cite{Javidi1989}:
+\[
+\mathrm{SNR}= \frac{R_{\max}}{\sigma_{n}},
+\]
+where \(R_{\max}\) is the correlation-peak amplitude and
+\(\sigma_{n}\) is the rms noise measured outside the 50 \% response region.
 
 \begin{table}[htbp]
   \centering
-  \caption{Maximum pixel values after a Gaussian filter ($\sigma=3.0$).}
-  \label{tab:max-pixel-values}
-  \renewcommand{\arraystretch}{1.1}   % optional: slightly more row height
-  \begin{tabular}{lc}
-    \toprule
-    \textbf{Image pattern} & \textbf{Maximum pixel value} \\ 
-    \midrule
-    $1 \times 1$ & 232.0 \\
-    $1 \times 2$ & 100.0 \\
-    $5 \times 5$ & 245.0 \\
-    $5 \times 2$ & 151.0 \\
-    $9 \times 9$ & 253.0 \\
-    $9 \times 0$ & 125.0 \\
-    \bottomrule
+  \caption{FWHM and SNR for identical-digit correlation peaks.}
+  \label{tab:avg-fwhm-snr}
+  \renewcommand{\arraystretch}{1.1}
+  \begin{tabular}{ccc}
+  \toprule
+  \textbf{FWHM (px)} & \textbf{SNR (linear)} & \textbf{SNR (dB)} \\
+  \midrule
+  $(29,27) \pm (5, 5)$ & $8.16 \pm 0.06$ & $18.23 \pm 0.05$ \\
+  \bottomrule
   \end{tabular}
 \end{table}
 
-Table~\ref{tab:max-pixel-values} shows that similar image pairs—%
-for example \(1\times1\) and \(5\times5\)—give higher correlation peaks %
-than different pairs such as \(1\times2\) or \(5\times2\). %
-This confirms that the JTC distinguishes between similar and %
-dissimilar inputs. %
-Note, however, that the CMOS sensor has only 8-bit depth; %
-pixel values clip at 255, so the tallest peaks are partly %
-lost to saturation. 
+Table~\ref{tab:avg-fwhm-snr} shows that the mean peak size almost matches the \(28\times28\) input
+digits, confirming that the JTC preserves all spatial detail required
+for a parallel implementation.  The slight \(x\)–\(y\) asymmetry
+(2 px) and the 18 \% spread are consistent with minor alignment
+drift rather than optical diffraction.  An average SNR of
+\(8.16\pm0.06\) places the peak about eight times above the
+background, well above typical detection thresholds, yet still limited
+by the 8-bit dynamic range of the camera-therefore several peaks already clip at full
+scale.  Lowering the laser power or reducing the exposure time of the camera would increase headroom and boost the SNR.
 
-We can improve the resolution of the peaks by background subtraction: recording a reference frame with the SLM blank and subtract it from every measurement to remove the constant offset, and this can be done because the Fourier transform is a linear operation. To prevent the saturation, we can reduce the power of the laser or reduce the camera exposure time, which should improve the discrimination between similar and dissimilar images.
-
-The experimental JTC behaves exactly as predicted by the simulations. 
-At present, the bottleneck is the data link between the computer, SLM, 
-and camera; its limited throughput keeps the processing rate from increasing. 
-
+The experimental figures coincide with those predicted by our numerical
+simulations, validating the optical model.  At present, the principal
+bottleneck is not optical but electronic: the data link between the computer,
+SLM, and camera limits the achievable rate of the JTC to 2 correlations per second.  Upgrading this interface, by using C++ instead of Python, or
+moving, for example, to on-board FPGA processing would allow the demonstrated optical
+resolution and SNR to translate directly into higher number of correlations per second.
 
 \section{Conclusion}
 \label{sec:conclusion}
@@ -979,8 +989,7 @@ Another important direction is the use of \textbf{Uhlmann's theorem} to estimate
 \textbf{Alternative optical setups} are also very relevant. Beyond the JTC, there are other optical systems such as VanderLugt correlators~(\cite{VanderLugt1964}, \cite{Dragulinescu2023}) or optic-disk based systems~\cite{Neifeld1993} that may offer different trade-offs between complexity, robustness, and sensitivity. Investigating these could lead to architectures better suited for specific applications.
 
 \section*{Acknowledgments}
-I would like to thank Emmanuel Cruzeiro for guidance; Preeti, Carolina, and José for hands-on help in the experiments; and the QuLab group in general for steady support and helpful discussions.
-
+I would like to thank Emmanuel Cruzeiro for all the guidance; Preeti, Carolina, and José for hands-on help in the experiments; and the QuLab group in general for steady support and helpful discussions.
 
 \bibliography{references}{}
 \bibliographystyle{plain}
