@@ -1,6 +1,6 @@
 # PIC1: Optical and Quantum-Inspired Classification
 
-A Python framework for developing, simulating, and testing classical, quantum-inspired, and optical machine learning models. The library provides implementations of nearest-mean and RBF classifiers, along with tools for hardware control (SLM, camera) and optical system simulation.
+A Python framework for developing, simulating, and testing classical, quantum-inspired, and optical machine learning models. The library provides implementations of nearest-mean and RBF classifiers, along with tools for hardware control (SLM, camera) and optical system simulation. The paper describing the setup can be found in [this link](https://drive.google.com/file/d/1IwIhSAKLq2WOcpDLARszxPggppIq1sO6/view?usp=sharing).
 
 ## Features
 
